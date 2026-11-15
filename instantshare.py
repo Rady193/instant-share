@@ -1927,6 +1927,14 @@ a.btn { color: inherit; text-decoration: none }
 .sheet-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line) }
 .sheet-head h2 { flex: 1; margin: 0; font-size: 15px; font-weight: 600 }
 .sec { margin: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px }
+/* Settings without scrolling where it can be helped: on a laptop-wide window the sheet is wider and its sections flow
+   into two or three columns; on a narrow one (a phone) it stays one column. */
+@media (min-width: 900px) {
+  .sheet { width: min(1060px, 94vw) }
+  .sheet-body { column-count: 2; column-gap: 0; padding: 10px 0 0 }
+  .sheet-body .sec { break-inside: avoid; margin: 0 10px 10px }
+}
+@media (min-width: 1150px) { .sheet-body { column-count: 3 } }
 .sec h3 { margin: 0 0 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--dim) }
 .line { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 4px 0 }
 .line + .line { border-top: 1px solid var(--line) }
@@ -2090,6 +2098,8 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
 <div id="sheet" class="sheet-back" hidden>
   <div class="sheet" role="dialog" aria-label="Settings">
     <div class="sheet-head"><h2>Settings</h2><button id="sheetClose" class="icon-btn" type="button" title="Close">✕</button></div>
+    <div class="sheet-body">  <!-- columns on a wide window, so Settings fits without scrolling -->
+
     <section class="sec"><h3>This device</h3>
       <div class="line"><input id="setName" type="text" maxlength="40" autocomplete="off" spellcheck="false"><button id="setNameSave" class="btn" type="button">Save</button></div>
       <span class="sub">Shown next to everything it shares, and in the other devices' lists.</span>
@@ -2129,6 +2139,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
       <label class="line" id="updAutoLine" hidden><span class="label">Check for updates once a day<span class="sub">Asks GitHub whether a newer version is out; nothing else is sent</span></span><input type="checkbox" class="switch" id="setUpdAuto"></label>
       <div class="line" id="quitLine" hidden><span class="label">Quit Instant Share<span class="sub" id="quitSub">Closes it completely: no more pop-ups until you start it again</span></span><button id="quitApp" class="btn sm" type="button">Quit</button></div>
     </section>
+    </div>
   </div>
 </div>
 
