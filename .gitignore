@@ -1,0 +1,15 @@
+# Build output (the program goes on the GitHub Releases page, not in the repository)
+release/
+dist/
+__pycache__/
+*.spec
+
+# Logs and local clutter
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# OneDrive / sync conflict copies
+*-ROG.*
+*-DESKTOP-*.*
