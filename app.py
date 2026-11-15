@@ -1630,10 +1630,7 @@ REGISTER = """
     <p class="err" id="err"></p>
     <button class="btn primary" id="go" style="width: 100%; height: 38px">Continue</button>
   </div>
-  <p class="lead" style="font-size: 12px; max-width: 460px; margin: 22px auto 0">Your name and e-mail address are sent to
-  SCAFFApps with this app's name and version and your Windows version, so we know who uses our apps. Nothing else about
-  you or this computer is sent. The other SCAFFApps apps on this Windows account use the same details and do not ask
-  again. Published by SCAFFApps · www.scaffapps.com</p>
+  <p class="lead" style="font-size: 12px; margin: 22px auto 0">Published by SCAFFApps · www.scaffapps.com</p>
 </div>
 <script>
 {ready}

@@ -1,5 +1,42 @@
 # Release notes
 
+## 1.3.2 — 16 November 2026
+
+A shorter welcome page, and the program's folder of supporting files is called `resources`.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.3.2.exe` | 13.8 MB | `5ED97307B34C3760FF9E9B8D56A2103D916F0E16C4504FC65017F5C1AB17F6DA` |
+| `Instant-Share-1.3.2.apk` | 70 KB | `83FDF9D02F53B9B89F7633A50DF90F7CB1CF2F11281FFBFC54FE7080B07A8EA1` |
+| `instantshare.py` | 167 KB | `254A1D5327958F41E35AE03D3D071644668817F9845867A471AD3C8B3200289E` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `4A1BE7F24972C63F485C7CD217D91A5662B405CF50BCD2195773BF020F0DA386` |
+
+For 64-bit Windows 10 and 11. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
+
+### Changed
+
+- **The welcome page** (your name and e-mail, asked once) ends with just "Published by SCAFFApps · www.scaffapps.com", without the paragraph above it.
+- **`resources`, not `_internal`.** `C:\Program Files\SCAFFApps\Instant Share` holds `Instant Share.exe`, its uninstaller and one folder, `resources` (Python, the libraries, the icons), named like the other SCAFFApps apps' folder. Updating from 1.3.1 removes its `_internal` folder.
+- Nothing else changed. The Android app and `instantshare.py` are 1.3.2 only to keep the versions together.
+
+### Updating
+
+- **From 1.3.0 or 1.3.1:** Settings > Updates > **Update now**, or **Update** in the SCAFFApps Suite.
+- **Android:** nothing changed for phones; update when convenient.
+- From 1.2 or earlier: run the installer once (see 1.3.0).
+
+### Tested
+
+- 1.3.1 updated to 1.3.2 by its installer without pages, as Update now runs it, with Windows' permission: `_internal` gone, `resources` in its place, the installed files identical to the build, Windows lists 1.3.2, Instant Share opened again. (1.3.0's own **Update now** was tested with 1.3.1.)
+- The welcome page at 600, 1200 and its own window width: everything centred, the shorter ending. The setup page, keeping the history, handing the Android app to phones.
+- Microsoft Defender finds nothing in the installer or the installed program.
+
+### Not tested
+
+- Uninstalling, and the Android app on a real phone.
+
 ## 1.3.1 — 16 November 2026
 
 Instant Share for Windows is installed as a folder instead of one self-unpacking file: it opens faster and is less likely to alarm antivirus programs. The welcome page's form is centred.

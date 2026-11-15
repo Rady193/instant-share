@@ -5,7 +5,7 @@ network. Share on one, and the others have it at once, with a notification and a
 share. Everything stays in a history you can search, copy from and delete from. It is encrypted, only devices that
 joined with a pairing code get in. Sharing needs no internet: nothing shared ever leaves your network.
 
-Version 1.3.1 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
+Version 1.3.2 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
 
 The **[handbook](Instant%20Share%20Handbook.pdf)** explains everything, with pictures.
 
@@ -46,8 +46,8 @@ Download from the [Releases page](https://github.com/Rady193/instant-share/relea
 
 | File | What it is |
 |---|---|
-| `Instant-Share-Setup-1.3.1.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; **Get the app** on Instant Share's page leads to it. The SCAFFApps Suite installs it too. |
-| `Instant-Share-1.3.1.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
+| `Instant-Share-Setup-1.3.2.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; **Get the app** on Instant Share's page leads to it. The SCAFFApps Suite installs it too. |
+| `Instant-Share-1.3.2.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
 | `Instant-Share-Handbook-<version>.pdf` | The handbook, in the SCAFFApps style: added to the release when it is ready. |
 | `instantshare.py` | Instant Share as a plain server, for Mac and Linux: `python3 instantshare.py` (Python 3.10 or newer, nothing else) keeps the history there, and every device uses a browser. |
 | `THIRD-PARTY-NOTICES.txt` | The licences of the parts the Windows app carries inside it. |
@@ -78,7 +78,7 @@ Both are required. What is sent is under [Security](#security).
    address). It asks for a pairing code: on the first computer, open **Settings > Devices > Add a device** (or **Add a
    device…** in the tray menu) and type the 6-digit code it shows. Each code is good for 10 minutes and one device.
 3. Leave **Start Instant Share when I sign in to Windows** ticked.
-4. Phones: install `Instant-Share-1.3.1.apk`, choose the computer, and type a code the same way. iPhones and other
+4. Phones: install `Instant-Share-1.3.2.apk`, choose the computer, and type a code the same way. iPhones and other
    browsers open the address in Settings > Phones and browsers (for example `https://OFFICE-PC:8765`), continue past
    the browser's certificate warning the first time, and type a code.
 
@@ -154,7 +154,7 @@ Starting the program while it is already running brings its window to the front.
 
 | What | Where |
 |---|---|
-| The program | `C:\Program Files\SCAFFApps\Instant Share`: `Instant Share.exe` and its `_internal` folder (Python and the libraries it uses) |
+| The program | `C:\Program Files\SCAFFApps\Instant Share`: `Instant Share.exe` and its `resources` folder (Python and the libraries it uses) |
 | Your registration (name and e-mail, shared by every SCAFFApps app) | `%APPDATA%\SCAFFApps\registration.json` |
 | The history, files included | `%LOCALAPPDATA%\InstantShare\history.db` on the computer that keeps it. To back it up, quit Instant Share and copy it. |
 | Settings (setup, name, appearance) | `%LOCALAPPDATA%\InstantShare\settings.json` on each computer |

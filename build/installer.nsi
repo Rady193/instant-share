@@ -1,8 +1,8 @@
 ; Instant Share's installer (NSIS), made by build.py:
-;   makensis /DVERSION=1.3.1 /DPROGRAM_DIR=<the folder PyInstaller made> /DOUTFILE=<...Setup.exe> build\installer.nsi
+;   makensis /DVERSION=1.3.2 /DPROGRAM_DIR=<the folder PyInstaller made> /DOUTFILE=<...Setup.exe> build\installer.nsi
 ;
-; The program is a folder: Instant Share.exe and its _internal folder (Python and the libraries). Until 1.3.0 it was
-; one self-unpacking .exe; an update from that just adds _internal beside the new .exe.
+; The program is a folder: Instant Share.exe and its resources folder (Python, the libraries, the icons). Until 1.3.0
+; it was one self-unpacking .exe; 1.3.1 called the folder _internal (PyInstaller's name), removed when updating.
 ;
 ; Installs for everyone in "C:\Program Files\SCAFFApps\Instant Share", like every SCAFFApps app, with shortcuts in the
 ; Start menu's SCAFFApps folder and on the desktop, and an entry in Windows' list of installed programs. The history,
@@ -93,7 +93,8 @@ Section "Install"
   SetShellVarContext all
   !insertmacro CloseInstantShare
   SetOutPath "$INSTDIR"
-  RMDir /r "$INSTDIR\_internal"                      ; the version before's libraries: nothing of it left behind
+  RMDir /r "$INSTDIR\resources"                      ; the version before's libraries: nothing of it left behind
+  RMDir /r "$INSTDIR\_internal"                      ; (1.3.1's name for that folder)
   File /r "${PROGRAM_DIR}\*"
   Delete "$INSTDIR\Instant-Share-Setup-*.exe"         ; a copy an early 1.3.0 test build left there
   WriteUninstaller "$INSTDIR\${UNINSTALLER}"
@@ -129,6 +130,7 @@ Section "Uninstall"
   Sleep 1500
   nsExec::Exec 'taskkill /F /IM "${EXE}" /T'
   Sleep 800
+  RMDir /r "$INSTDIR\resources"
   RMDir /r "$INSTDIR\_internal"
   Delete "$INSTDIR\${EXE}"
   Delete "$INSTDIR\Instant-Share-Setup-*.exe"

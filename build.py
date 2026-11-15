@@ -5,7 +5,7 @@
 The first run makes the build environment, C:\\venvs\\textshare-build (outside OneDrive: thousands of small files),
 with the versions below. The program is app.py (its window, tray and notifications; the window drawn by Windows' own Edge WebView2)
 around instantshare.py, and carries its own Python, so the computers it runs on need nothing. It is built as a folder
-(Instant Share.exe and its _internal folder, as installed), not as one self-unpacking file: it starts without
+(Instant Share.exe and its resources folder, as installed), not as one self-unpacking file: it starts without
 unpacking itself first, and antivirus programs are less likely to mistake it for something else. release/ also gets
 instantshare.py itself, for Mac and Linux (python3 instantshare.py), and the files' SHA-256 checksums.
 """
@@ -153,11 +153,11 @@ def main():
 
     release = HERE / "release"
     release.mkdir(exist_ok=True)
-    program = WORK / "program" / exe_name[:-4]                 # Instant Share.exe and _internal
+    program = WORK / "program" / exe_name[:-4]                 # Instant Share.exe and resources
     shutil.rmtree(WORK / "program", ignore_errors=True)
     apk = android(v, release)                                  # the phone app first: the .exe hands it to phones
     run(PY, "-m", "PyInstaller", "--noconfirm", "--clean", "--log-level", "WARN",
-        "--onedir", "--contents-directory", "_internal", "--windowed", "--name", exe_name[:-4],
+        "--onedir", "--contents-directory", "resources", "--windowed", "--name", exe_name[:-4],
         "--icon", HERE / "build" / "icon.ico",
         "--add-data", f"{HERE / 'build' / 'icon.png'};build", "--add-data", f"{HERE / 'build' / 'icon.ico'};build",
         "--exclude-module", "tkinter", "--exclude-module", "playwright", "--exclude-module", "pystray",
@@ -166,8 +166,8 @@ def main():
         "--version-file", version_file(v, exe_name),
         "--distpath", WORK / "program", "--workpath", WORK, "--specpath", WORK,
         HERE / "app.py")
-    if not (program / exe_name).exists() or not (program / "_internal").is_dir():
-        sys.exit(f"PyInstaller did not make {program / exe_name} and its _internal folder")
+    if not (program / exe_name).exists() or not (program / "resources").is_dir():
+        sys.exit(f"PyInstaller did not make {program / exe_name} and its resources folder")
     run(MAKENSIS, "/V2", f"/DVERSION={v}", f"/DPROGRAM_DIR={program}", f"/DOUTFILE={release / setup_name}",
         HERE / "build" / "installer.nsi")
     shutil.copy2(HERE / "instantshare.py", release / "instantshare.py")
