@@ -1,5 +1,43 @@
 # Release notes
 
+## 1.3.0 — 16 November 2026
+
+An installer instead of the single file, the SCAFFApps colours, and your name and e-mail asked once.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.3.0.exe` | 16.8 MB | `35D2D9D7855DEBB750F3EB63850B4090AF898A4186DA1E027A95B7E3DCB63AB4` |
+| `Instant-Share-1.3.0.apk` | 70 KB | `C26AD6099DC8F97C1429BC3DB27F1637F4051BA62EBD844288C12813F13043D9` |
+| `instantshare.py` | 167 KB | `FF20EB56E9C47DBA7EF7A579BAD921E02B27035D05F94A7EA902BF1657286DA8` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `288A31546C419317E87BF89C92C7E878681F62B89A9C36EA3675602293C845A1` |
+
+### Changed
+
+- **Installed, not portable.** `Instant-Share-Setup-1.3.0.exe` installs for everyone in `C:\Program Files\SCAFFApps\Instant Share`, with shortcuts in the Start menu's **SCAFFApps** folder and on the desktop, and an entry in Windows' list of programs. It closes a running Instant Share (an old single-file copy too) first. The history, settings and pairing stay in `%LOCALAPPDATA%\InstantShare`.
+- **Updates through the installer.** **Update now** downloads the new installer, checks its SHA-256, and runs it with Windows' permission: Instant Share closes, is updated in place and opens again.
+- **Get the app** leads to this Releases page (the installer) instead of handing out the program.
+- **The SCAFFApps colours**, on Windows, in the pages the history computer serves and on Android: buttons and checkboxes in SCAFFApps purple, highlights in gold; the light appearance white, with cream only behind the content.
+- **Your name and e-mail, once** (the Windows app). The first SCAFFApps app to start on a Windows account asks for them; the others (the SCAFFApps Suite, Multi Screens, Smart Snap) do not ask again. They are sent to SCAFFApps (`www.scaffapps.com`) with the app's name and version, the Windows version and a random number made for the Windows account. Nothing shared, and nothing else, is sent.
+- **The SCAFFApps Suite** installs, opens and updates Instant Share.
+
+### Updating from 1.2
+
+- **Windows:** 1.2 cannot update itself to 1.3 (it looks for a single file, which 1.3 does not have). On each computer, run the installer once: it closes the old copy; then open Instant Share from the Start menu. Start with Windows moves to the installed program; delete the old file.
+- **Android:** install the new app over the old one, or use **Update now** in the app.
+- 1.3 and 1.2 work together; nothing changed in how devices talk to each other.
+
+### Tested
+
+- Installed without pages, with Windows' permission: in `C:\Program Files\SCAFFApps\Instant Share`, Start menu and desktop shortcuts, Windows lists 1.3.0 by SCAFFApps. Microsoft Defender finds nothing in the installer or the program.
+- The installed program, isolated (its own data folder, start-up entry and notification name): the registration page first (empty details refused), then setup; the registration reached a local copy of the website.
+- Found and fixed while testing: an installer that closed itself (it closed every "Instant-Share-*" program, its own name included), and an installer that kept a copy of itself in the program's folder, which Microsoft Defender's machine-learning check took for a trojan (a false alarm, gone without that step).
+
+### Not tested
+
+- **Update now** from 1.3 to a later version (needs a later release), and the Android app on a real phone.
+
 ## 1.2.0 — 15 November 2026
 
 Instant Share now keeps strangers out: everything is encrypted, and only devices that joined with a pairing code get
