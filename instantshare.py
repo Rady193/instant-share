@@ -1729,7 +1729,7 @@ PAGE = r"""<!DOCTYPE html>
   --bg: #121314; --surface: #191a1b; --surface-2: #202122; --surface-3: #2a2b2c;
   --line: #2a2b2c; --line-strong: #333536; --text: #cccccc; --dim: #8c8c8c;
   --accent: #f0c33c; --accent-strong: #5b2c83; --accent-hover: #45215f;
-  --accent-soft: rgba(91, 44, 131, .3); --accent-line: rgba(240, 195, 60, .5);
+  --accent-soft: rgba(91, 44, 131, .3); --accent-line: rgba(240, 195, 60, .5); --inset: #121314;
   --danger: #f48771; --danger-fill: #c74e39; --ok: #73c991;
   --shadow: 0 12px 36px rgba(0, 0, 0, .55);
   --mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
@@ -1737,12 +1737,12 @@ PAGE = r"""<!DOCTYPE html>
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --bg: #fbf6ea; --surface: #ffffff; --surface-2: #f7f1e4; --surface-3: #eee5d3;
-  --line: #e9dfca; --line-strong: #d6c8a9; --text: #17141c; --dim: #6a6175;
+  --bg: #fbf6ea; --surface: #ffffff; --surface-2: #f6f5f8; --surface-3: #eceaf0;
+  --line: #e7e4ec; --line-strong: #d4d0dc; --text: #17141c; --dim: #6a6175;
   --accent: #5b2c83; --accent-strong: #5b2c83; --accent-hover: #45215f;
-  --accent-soft: rgba(91, 44, 131, .1); --accent-line: rgba(91, 44, 131, .4);
+  --accent-soft: rgba(91, 44, 131, .1); --accent-line: rgba(91, 44, 131, .4); --inset: #f6f5f8;
   --danger: #e5484d; --danger-fill: #e5484d; --ok: #1a7f37;
-  --shadow: 0 12px 30px rgba(60, 40, 20, .2);
+  --shadow: 0 12px 30px rgba(23, 20, 28, .2);
   color-scheme: light;
 }
 * { box-sizing: border-box }
@@ -1759,7 +1759,7 @@ input[type="checkbox"] { accent-color: var(--accent-strong) }
 svg.icon { display: block; width: 18px; height: 18px; flex: none }
 
 .top { display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 14px; background: var(--surface); border-bottom: 1px solid var(--line) }
-:root[data-theme="light"] .top { box-shadow: 0 6px 18px rgba(60, 40, 20, .08) }
+:root[data-theme="light"] .top { box-shadow: 0 6px 18px rgba(23, 20, 28, .08) }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; white-space: nowrap }
 .status { display: flex; align-items: center; gap: 8px; color: var(--dim); min-width: 0 }
 .status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -1893,7 +1893,8 @@ a.btn { color: inherit; text-decoration: none }
 .lightbox img { max-width: 94vw; max-height: 92vh; border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6) }
 
 .sheet-back { position: fixed; inset: 0; z-index: 40; display: flex; justify-content: flex-end; background: rgba(0, 0, 0, .45) }
-:root[data-theme="light"] .sheet-back { background: rgba(60, 40, 20, .22) }
+:root[data-theme="light"] .sheet { background: var(--surface) }
+:root[data-theme="light"] .sheet-back { background: rgba(23, 20, 28, .22) }
 .sheet { width: min(460px, 100%); height: 100%; overflow-y: auto; background: var(--bg); border-left: 1px solid var(--line-strong); box-shadow: var(--shadow); animation: sheet-in .18s ease-out }
 @keyframes sheet-in { from { transform: translateX(24px); opacity: 0 } }
 .sheet-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line) }
@@ -1904,12 +1905,12 @@ a.btn { color: inherit; text-decoration: none }
 .line + .line { border-top: 1px solid var(--line) }
 .line .label { flex: 1; min-width: 0 }
 .sub { display: block; color: var(--dim); font-size: 12px; overflow-wrap: anywhere }
-.sec input[type="text"] { flex: 1; min-width: 0; height: 32px; padding: 0 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; outline: none; transition: border-color .12s, box-shadow .12s }
+.sec input[type="text"] { flex: 1; min-width: 0; height: 32px; padding: 0 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 8px; outline: none; transition: border-color .12s, box-shadow .12s }
 .sec input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
 .seg { display: inline-flex; padding: 2px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px }
 .seg button { height: 28px; padding: 0 14px; background: none; border: 0; border-radius: 6px; color: var(--dim); cursor: pointer }
 .seg button.on { background: var(--surface-3); color: var(--text) }
-:root[data-theme="light"] .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(60, 40, 20, .18) }
+:root[data-theme="light"] .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(23, 20, 28, .18) }
 input.switch { appearance: none; flex: none; position: relative; width: 38px; height: 22px; margin: 0; border-radius: 99px; background: var(--surface-3); border: 1px solid var(--line-strong); cursor: pointer; transition: background .15s }
 input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--dim); transition: transform .15s, background .15s }
 input.switch:checked { background: var(--accent-strong); border-color: transparent }
@@ -1931,7 +1932,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
 .legend .size { text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums }
 
 .dialog-back { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .5) }
-:root[data-theme="light"] .dialog-back { background: rgba(60, 40, 20, .3) }
+:root[data-theme="light"] .dialog-back { background: rgba(23, 20, 28, .3) }
 .dialog { width: min(400px, 100%); padding: 18px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow); animation: pop-in .14s ease-out }
 .dialog h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600 }
 .dialog p { margin: 0 0 16px; color: var(--dim) }

@@ -1389,11 +1389,11 @@ class Api:
 PAGE_STYLE = """
 :root { --bg: #121314; --surface: #191a1b; --surface-2: #202122; --surface-3: #2a2b2c; --line: #2a2b2c;
   --line-strong: #333536; --text: #cccccc; --dim: #8c8c8c; --accent: #f0c33c; --accent-strong: #5b2c83;
-  --accent-hover: #45215f; --accent-soft: rgba(91,44,131,.3); --danger: #f48771; --danger-fill: #c74e39;
+  --accent-hover: #45215f; --accent-soft: rgba(91,44,131,.3); --inset: #121314; --danger: #f48771; --danger-fill: #c74e39;
   --ok: #73c991; color-scheme: dark }
-:root[data-theme="light"] { --bg: #fbf6ea; --surface: #ffffff; --surface-2: #f7f1e4; --surface-3: #eee5d3;
-  --line: #e9dfca; --line-strong: #d6c8a9; --text: #17141c; --dim: #6a6175; --accent: #5b2c83;
-  --accent-strong: #5b2c83; --accent-hover: #45215f; --accent-soft: rgba(91,44,131,.1); --danger: #e5484d;
+:root[data-theme="light"] { --bg: #fbf6ea; --surface: #ffffff; --surface-2: #f6f5f8; --surface-3: #eceaf0;
+  --line: #e7e4ec; --line-strong: #d4d0dc; --text: #17141c; --dim: #6a6175; --accent: #5b2c83;
+  --accent-strong: #5b2c83; --accent-hover: #45215f; --accent-soft: rgba(91,44,131,.1); --inset: #f6f5f8; --danger: #e5484d;
   --danger-fill: #e5484d; --ok: #1a7f37; color-scheme: light }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -1432,7 +1432,7 @@ button { font: inherit; color: inherit; cursor: pointer }
 .status { color: var(--dim); margin: 0 0 10px }
 label.small { display: block; margin: 14px 0 6px; color: var(--dim) }
 .row { display: flex; gap: 8px }
-input:not([type]) { flex: 1; min-width: 0; height: 32px; padding: 0 10px; background: var(--bg);
+input:not([type]) { flex: 1; min-width: 0; height: 32px; padding: 0 10px; background: var(--inset);
   border: 1px solid var(--line); border-radius: 8px; color: var(--text); font: inherit; outline: none;
   transition: border-color .12s, box-shadow .12s }
 input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
