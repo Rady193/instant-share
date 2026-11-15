@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Talking to the computer that keeps the history (the Text Share server on the same network), and what this phone
+ * Talking to the computer that keeps the history (the Instant Share server on the same network), and what this phone
  * remembers about it. Every request says which device is asking (its id, made up once) and its name, as the
  * Windows app does, so the phone shows up in the others' "Who should see it" list.
  */
@@ -100,7 +100,7 @@ final class Net {
     /** GET a path (or a full address on the same computer) as this device: the answer's bytes, or an exception. */
     static byte[] get(Context c, String urlOrPath) throws Exception {
         String base = base(c);
-        if (base == null) throw new java.io.IOException("Text Share is not set up yet");
+        if (base == null) throw new java.io.IOException("Instant Share is not set up yet");
         String url = urlOrPath.startsWith("/") ? base + urlOrPath : urlOrPath;
         if (!url.startsWith(base + "/")) throw new java.io.IOException("not from the computer that keeps the history");
         HttpURLConnection con = open(c, url, 30000);
@@ -112,7 +112,7 @@ final class Net {
         }
     }
 
-    /** Text Share's answer at host:port (it says its computer's name), or null. */
+    /** Instant Share's answer at host:port (it says its computer's name), or null. */
     static JSONObject hello(String host, int port, int timeoutMs) {
         HttpURLConnection con = null;
         try {
@@ -128,7 +128,7 @@ final class Net {
         }
     }
 
-    /** The computers on this network running Text Share: [{name, address, port}], asked by a broadcast. */
+    /** The computers on this network running Instant Share: [{name, address, port}], asked by a broadcast. */
     static JSONArray discover(Context c, int ms) {
         Map<String, JSONObject> found = new LinkedHashMap<>();
         try (DatagramSocket s = new DatagramSocket()) {

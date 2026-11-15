@@ -1,4 +1,4 @@
-"""Draws the Text Share icon (icon.png, icon.ico) from the same shapes as icon.svg. Needs Pillow; build.py runs it."""
+"""Draws the Instant Share icon (icon.png, icon.ico) from the same shapes as icon.svg. Needs Pillow; build.py runs it."""
 
 from pathlib import Path
 

@@ -10,7 +10,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import app  # noqa: E402
-import textshare  # noqa: E402
+import instantshare as textshare  # noqa: E402
 
 BODY = """
 <div class="wrap">
@@ -22,12 +22,12 @@ BODY = """
       <button class="btn" id="other">Choose another computer</button></div>
   </div>
   <div id="choose" hidden>
-    <h1>Set up Text Share on this phone</h1>
-    <p class="lead">Text Share keeps its history on one computer on your Wi-Fi. Choose it below: Text Share must be
+    <h1>Set up Instant Share on this phone</h1>
+    <p class="lead">Instant Share keeps its history on one computer on your Wi-Fi. Choose it below: Instant Share must be
     running there, and this phone on the same Wi-Fi.</p>
     <section class="card">
       <h2>The computer that keeps the history</h2>
-      <p class="status" id="status"><span class="spin"></span>Looking for Text Share on your Wi-Fi…</p>
+      <p class="status" id="status"><span class="spin"></span>Looking for Instant Share on your Wi-Fi…</p>
       <div class="found" id="found"></div>
       <button class="link" id="again" hidden>Look again</button>
       <label class="small" for="addr">Not listed? Its name or address:</label>
@@ -36,7 +36,7 @@ BODY = """
       <p class="err" id="err"></p>
     </section>
   </div>
-  <div class="foot"><span>This phone: <b id="me"></b></span><span>Text Share {version} · SCAFFApps</span>
+  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share {version} · SCAFFApps</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
@@ -56,11 +56,11 @@ const fail = (r) => { busy(false); $("#err").textContent = (r && r.error) || "So
 async function find() {
   $("#again").hidden = true;
   $("#found").textContent = "";
-  $("#status").innerHTML = '<span class="spin"></span>Looking for Text Share on your Wi-Fi…';
+  $("#status").innerHTML = '<span class="spin"></span>Looking for Instant Share on your Wi-Fi…';
   const r = await ask("find");
   const found = (r && r.found) || [];
   $("#status").textContent = found.length ? "Found on your Wi-Fi:"
-    : "None found. Is Text Share running on the computer that keeps the history, and this phone on the same Wi-Fi?";
+    : "None found. Is Instant Share running on the computer that keeps the history, and this phone on the same Wi-Fi?";
   for (const f of found) {
     const b = document.createElement("button");
     const left = document.createElement("span"), right = document.createElement("small");
@@ -93,7 +93,7 @@ $("#other").addEventListener("click", choose);
 
 if (q.get("unreachable") && info.host) {        // set up, but the computer does not answer: say so, try again by itself
   $("#awayTitle").textContent = "Can't reach " + info.host;
-  $("#awayText").textContent = "Text Share must be running on " + info.host + ", and this phone must be on the same "
+  $("#awayText").textContent = "Instant Share must be running on " + info.host + ", and this phone must be on the same "
     + "Wi-Fi. Trying again every few seconds…";
   $("#away").hidden = false;
   setTimeout(() => A.retry(), 6000);
@@ -114,7 +114,7 @@ EXTRA_STYLE = """
 def main():
     body = BODY.replace("{mark}", app.MARK).replace("{version}", textshare.VERSION)
     page = ('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Text Share</title>'
+            '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Instant Share</title>'
             '<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "light"'
             ' ? "light" : "dark";</script>'
             f"<style>{app.PAGE_STYLE}{EXTRA_STYLE}</style></head><body>{body}</body></html>")

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Text Share Handbook</title>
+<title>Instant Share Handbook</title>
 <style>
   /* The look of the Multi Screens handbook (light print, accent #4a6cf5), as for every SCAFFApps tool. */
   * { box-sizing: border-box; }
@@ -73,129 +73,125 @@
 
 <div class="cover">
   <img src="../build/icon.png" alt="">
-  <h1>Text Share</h1>
+  <h1>Instant Share</h1>
   <div class="sub">Handbook</div>
   <div class="line"></div>
-  <p>Pass text, photos and PDFs between the computers and Android phones on your own network. Share on one, and the others have it at once, with a pop-up or a notification and a Copy button. Choose who sees it. No internet, no accounts.</p>
-  <div class="meta">Version 1.0.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps</div>
+  <p>Pass text, photos, documents and voice notes between the computers and Android phones on your own network. Share on one, and the others have it at once, with a pop-up or a notification and a Copy button. Choose who sees it; pin, archive, edit. No internet, no accounts.</p>
+  <div class="meta">Version 1.1.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps</div>
 </div>
 
 <section>
   <h2>Contents</h2>
   <ol class="toc">
-    <li><b>1</b> What Text Share is</li>
+    <li><b>1</b> What Instant Share is</li>
     <li><b>2</b> Installing and setting up</li>
     <li><b>3</b> The window at a glance</li>
-    <li><b>4</b> Sharing text, photos and PDFs</li>
+    <li><b>4</b> Sharing text and files</li>
     <li><b>5</b> Who should see it</li>
     <li><b>6</b> The history</li>
-    <li><b>7</b> Pop-ups by the clock</li>
-    <li><b>8</b> The Android app, and browsers</li>
-    <li><b>9</b> The tray icon and keeping it running</li>
-    <li><b>10</b> Options, shortcuts and files</li>
-    <li><b>11</b> Privacy and security</li>
-    <li><b>12</b> Troubleshooting</li>
+    <li><b>7</b> Settings</li>
+    <li><b>8</b> Pop-ups by the clock</li>
+    <li><b>9</b> The Android app, and browsers</li>
+    <li><b>10</b> The tray icon and keeping it running</li>
+    <li><b>11</b> Shortcuts, options and files</li>
+    <li><b>12</b> Privacy and security</li>
+    <li><b>13</b> Troubleshooting</li>
   </ol>
 
-  <h3 style="margin-top:12mm">1. What Text Share is</h3>
-  <p class="lead">Text Share passes text, photos and PDFs between the computers on your own network: commands, addresses, links, notes, code, a photo of a drawing, a form to sign. Anything you would otherwise e-mail to yourself, carry on a USB stick or type again.</p>
-  <p><strong>One</strong> computer keeps the history. The other computers run the same app and connect to it, and Android phones run Text Share for Android; they find it on the network by themselves. Anything else (an iPhone, a computer without the app) uses a browser.</p>
+  <h3 style="margin-top:12mm">1. What Instant Share is</h3>
+  <p class="lead">Instant Share passes things between the devices on your own network: commands, addresses, links, notes, code, a photo of a drawing, a quotation, a voice note. Anything you would otherwise e-mail to yourself, carry on a USB stick or type again.</p>
+  <p><strong>One</strong> computer keeps the history. The other computers run the same app and connect to it, and Android phones run Instant Share for Android; they find it on the network by themselves. Anything else (an iPhone, a computer without the app) uses a browser.</p>
   <div class="flow">
     <div class="many">
-      <div class="box">Laptop<small>Text Share app</small></div>
-      <div class="box">Another computer<small>Text Share app</small></div>
-      <div class="box">Android phone<small>Text Share for Android</small></div>
+      <div class="box">Laptop<small>Instant Share app</small></div>
+      <div class="box">Android phone<small>Instant Share for Android</small></div>
       <div class="box">iPhone, tablet<small>any browser</small></div>
     </div>
     <div class="arrow">→</div>
-    <div class="hub"><b>The computer that keeps the history</b><span>Text Share app · answers only your own network · no internet needed</span></div>
+    <div class="hub"><b>The computer that keeps the history</b><span>Instant Share app · answers only your own network · no internet needed</span></div>
   </div>
   <ul>
-    <li><strong>Share:</strong> write, paste or drop a file and press Share. The other devices have it within a few seconds.</li>
-    <li><strong>Be told:</strong> on every computer with the app, a pop-up by the clock shows who shared what, with a Copy button; on an Android phone, a notification does.</li>
+    <li><strong>Share:</strong> write, paste or drop a file and press Enter. The other devices have it within a moment.</li>
+    <li><strong>Be told:</strong> a pop-up by the clock on computers, a notification on Android phones, each with a Copy button.</li>
     <li><strong>Choose who sees it:</strong> everyone, or only the devices you tick.</li>
-    <li><strong>Keep:</strong> everything shared stays in a history you can search, until you delete it.</li>
+    <li><strong>Keep it tidy:</strong> pin what you need often, archive (swipe left) what you are done with, edit or delete what you shared.</li>
   </ul>
-  <div class="tip"><b>What it is for, and what it is not</b>Text Share is for passing things between devices you own, on a network you trust: at home or in your own office. It has no password and no encryption, so it is not for public or shared Wi-Fi (see section 11).</div>
+  <div class="tip"><b>What it is for, and what it is not</b>Instant Share is for passing things between devices you own, on a network you trust: at home or in your own office. It has no password and no encryption, so it is not for public or shared Wi-Fi (section 12).</div>
 </section>
 
 <section>
   <h2>2. Installing and setting up</h2>
   <table class="wrap">
     <tr><th>File</th><th>What it is</th></tr>
-    <tr><td>Text-Share-1.0.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere, including a USB stick, and double-click it. Use the same file on every computer.</td></tr>
-    <tr><td>Text-Share-1.0.0.apk</td><td>Text Share for Android 10 and newer (section 8). Phones on the same Wi-Fi can also get it straight from the computer that keeps the history.</td></tr>
-    <tr><td>textshare.py</td><td>Text Share as a plain server, for Mac and Linux: <code>python3 textshare.py</code> keeps the history there, and every device uses a browser.</td></tr>
-    <tr><td>Text-Share-Handbook-1.0.0.pdf</td><td>This handbook.</td></tr>
+    <tr><td>Instant-Share-1.1.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere and double-click it. Use the same file on every computer.</td></tr>
+    <tr><td>Instant-Share-1.1.0.apk</td><td>Instant Share for Android 10 and newer (section 9). Phones on the same Wi-Fi can also get it from the computer that keeps the history.</td></tr>
+    <tr><td>instantshare.py</td><td>Instant Share as a plain server, for Mac and Linux: <code>python3 instantshare.py</code>; every device then uses a browser.</td></tr>
   </table>
-  <div class="warn"><b>"Windows protected your PC"</b>The app is not code-signed, so Windows may show this message the first time you run it. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</div>
+  <div class="warn"><b>"Windows protected your PC"</b>The app is not code-signed, so Windows may show this message the first time. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</div>
+  <div class="tip"><b>Coming from Text Share 1.0?</b>Instant Share is its new name. Quit Text Share from its tray menu, then start Instant Share: it takes over the same history, settings and "start with Windows". On the phone, install the new app over the old one: it keeps its setup.</div>
 
   <h3>The first start: one question</h3>
   <figure class="mid">
     <img src="img/setup.png" alt="The setup page">
-    <figcaption>The first start on a laptop. Text Share has already found OFFICE-PC, the computer that keeps the history.</figcaption>
+    <figcaption>The first start on a laptop. Instant Share has already found OFFICE-PC, the computer that keeps the history.</figcaption>
   </figure>
   <ol class="steps">
-    <li><strong>On one computer</strong>, one that stays on while you work, choose <strong>Use this computer</strong>. It keeps the history. Windows asks whether to allow Text Share on networks: allow it on <strong>Private networks</strong>, so the others can reach it.</li>
-    <li><strong>On every other computer</strong>, choose that computer in the list under <em>Connect to the computer that keeps it</em>. If it is not listed, type its name or its address, for example <code>192.168.1.20</code>, and press <strong>Connect</strong>.</li>
-    <li>Leave <strong>Start Text Share when I sign in to Windows</strong> ticked, so it is always ready to show what others share.</li>
+    <li><strong>On one computer</strong>, one that stays on while you work, choose <strong>Use this computer</strong>. Windows asks whether to allow Instant Share on networks: allow it on <strong>Private networks</strong>.</li>
+    <li><strong>On every other computer</strong>, choose that computer in the list, or type its name or address and press <strong>Connect</strong>.</li>
+    <li>Leave <strong>Start Instant Share when I sign in to Windows</strong> ticked, so it is always ready to show what others share.</li>
   </ol>
-  <p>The setup can be changed later: <strong>Change setup</strong> at the bottom of the window, or in the tray icon's menu.</p>
+  <p>To change it later: <strong>Settings</strong> (the gear) &gt; <strong>Change setup</strong>, or the tray icon's menu.</p>
 </section>
 
 <section>
   <h2>3. The window at a glance</h2>
   <figure>
-    <img src="img/main-dark.png" alt="Text Share in its dark appearance">
-    <figcaption>The dark appearance (the default): the editor on the left, the history on the right.</figcaption>
+    <img src="img/main-dark.png" alt="Instant Share in its dark appearance">
+    <figcaption>The dark appearance (the default): the editor on the left, the history on the right, with a pinned item on top.</figcaption>
   </figure>
   <table class="wrap">
     <tr><th>Part</th><th>What it does</th></tr>
-    <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with the number of other devices online. Red: it cannot be reached (section 12).</td></tr>
-    <tr><td>This device</td><td>The name shown next to everything this device shares, and in the other devices' lists. Click it to change it.</td></tr>
-    <tr><td>Sun or moon</td><td>Switches between the dark and the light appearance. The choice is remembered.</td></tr>
-    <tr><td>Write or paste</td><td>The editor. What you type stays until you share it, even if you close the window.</td></tr>
-    <tr><td>File</td><td>Adds a photo or a PDF (section 4).</td></tr>
-    <tr><td>To</td><td>Who should see it: everyone, or the devices you tick (section 5).</td></tr>
-    <tr><td>Share</td><td>Shares what is in the editor, and the file, if any.</td></tr>
-    <tr><td>History</td><td>Everything shared with this device, newest first, with a search box (section 6).</td></tr>
-    <tr><td>Bottom line</td><td>Which computer keeps the history, the address for phones and browsers, the version, <strong>Get the app</strong> (downloads the program) and <strong>Change setup</strong>.</td></tr>
+    <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with the number of other devices online. Red: it cannot be reached (section 13).</td></tr>
+    <tr><td>This device</td><td>The name shown next to everything this device shares. Click it to change it (in Settings).</td></tr>
+    <tr><td>Pin</td><td>Keeps the window on top of the other programs; click again to stop (Windows app).</td></tr>
+    <tr><td>Sun or moon</td><td>Switches between the dark and the light appearance.</td></tr>
+    <tr><td>Gear</td><td>Settings (section 7).</td></tr>
+    <tr><td>Enter sends, Wrap long lines</td><td>Enter shares at once (Shift+Enter starts a new line); long lines fold to fit.</td></tr>
+    <tr><td>File, Clear, Copy</td><td>Add a file; empty the editor; copy what is in it.</td></tr>
+    <tr><td>To, Share</td><td>Who should see it (section 5), and Share.</td></tr>
+    <tr><td>History</td><td>Everything shared with this device: pinned items first, then the newest, with a search box.</td></tr>
   </table>
   <figure>
-    <img src="img/main-light.png" alt="Text Share in its light appearance">
+    <img src="img/main-light.png" alt="Instant Share in its light appearance">
     <figcaption>The same window in the light appearance.</figcaption>
   </figure>
 </section>
 
 <section>
-  <h2>4. Sharing text, photos and PDFs</h2>
+  <h2>4. Sharing text and files</h2>
   <h3>Text</h3>
   <ol class="steps">
     <li>Write or paste in the editor.</li>
-    <li>Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, or the blue <strong>Share</strong> button.</li>
+    <li>Press <kbd>Enter</kbd>, or the blue <strong>Share</strong> button. (<kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line. With <strong>Enter sends</strong> off, it is <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.)</li>
     <li>The editor empties, and the text is at the top of the history on every device that may see it.</li>
   </ol>
-
-  <h3>A photo or a PDF</h3>
+  <h3>A file</h3>
   <figure class="small">
     <img src="img/attach.png" alt="A photo waiting to be shared, with a line of text">
     <figcaption>A photo added, with a line about it, ready to share with LAPTOP-1 only.</figcaption>
   </figure>
-  <p>Add one file to a share in any of three ways:</p>
-  <ul>
-    <li>press <strong>File</strong> and choose it;</li>
-    <li>drag it from File Explorer onto the editor;</li>
-    <li>paste a picture (a screenshot, for example) into the editor with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
-  </ul>
-  <p>It shows under the editor; <strong>✕</strong> takes it off again. Text in the editor goes with it, as a caption. A file can also be shared on its own.</p>
+  <p>Add one file to a share: press <strong>File</strong>, drag it from File Explorer onto the editor, or paste a picture with <kbd>Ctrl</kbd>+<kbd>V</kbd>. Text in the editor goes with it, as a caption; <strong>✕</strong> takes the file off again.</p>
   <table class="wrap">
-    <tr><th>What can be shared</th><th>Up to</th></tr>
-    <tr><td>Photos: PNG, JPEG, GIF and WebP</td><td>1 MB each</td></tr>
-    <tr><td>PDF files</td><td>1 MB each</td></tr>
-    <tr><td>Text</td><td>20 MB in one share</td></tr>
+    <tr><th>What can be shared</th><th>In the history</th></tr>
+    <tr><td>Photos: PNG, JPEG, GIF, WebP, BMP, HEIC</td><td>Shown as pictures (HEIC as a file)</td></tr>
+    <tr><td>PDF</td><td>Opens in the PDF viewer</td></tr>
+    <tr><td>Word, Excel, PowerPoint (also .doc, .xls, .ppt and OpenDocument), RTF, text, CSV</td><td>A file with its kind on it: <strong>Save</strong> it, then open it</td></tr>
+    <tr><td>Audio: MP3, M4A, AAC, WAV, OGG, Opus, FLAC, AMR (voice notes)</td><td>A player, to listen right there</td></tr>
+    <tr><td>Short videos: MP4, MOV, 3GP</td><td>A player</td></tr>
+    <tr><td>ZIP</td><td>A file to save</td></tr>
   </table>
-  <div class="tip"><b>Photos from a phone are often bigger than 1 MB</b>Share a smaller copy: most phones can send or save a photo at a smaller size, and a screenshot of it is usually well under 1 MB.</div>
-  <p>Text Share checks what a file really is from its contents, not its name, and refuses anything else. A renamed program or web page cannot be passed off as a photo.</p>
+  <p>Each file can be up to <strong>5 MB</strong>; text up to 20 MB. Instant Share checks what a file really is from its contents, not its name: programs, scripts and web pages are refused, even renamed.</p>
+  <div class="tip"><b>Photos and videos from a phone are often bigger than 5 MB</b>Share a smaller copy: most phones can send or save a photo at a smaller size; a screenshot of it is usually well under 5 MB.</div>
 </section>
 
 <section>
@@ -203,47 +199,77 @@
   <div class="pair">
     <figure>
       <img src="img/to.png" alt="The list of devices">
-      <figcaption>The devices Text Share knows, with who is online now.</figcaption>
+      <figcaption>The devices Instant Share knows, with who is online now.</figcaption>
     </figure>
     <div>
       <p>The <strong>To</strong> button next to Share says who will see what you share. Click it to choose:</p>
       <ul>
-        <li><strong>Everyone</strong>: every device, now and later. This is the default.</li>
+        <li><strong>Everyone</strong>: every device, now and later (the default).</li>
         <li><strong>Only some devices</strong>: tick them. The others will not see it, in the history or as a pop-up.</li>
       </ul>
-      <p>The list shows every device that has used Text Share in the last 30 days. A green dot means it is <strong>online</strong> now: the app is running there (in its window or in the tray), or a browser has the page open. Devices that are offline can be ticked too; they see the item when they come back.</p>
-      <p>Your choice stays for the next share, and the button shows it, for example <strong>To: LAPTOP-1</strong>. Tick <strong>Everyone</strong> to go back.</p>
-      <p>In the history, an item shared with chosen devices shows them after an arrow, for example <span style="color:#4a6cf5">→ LAPTOP-1</span>, or <span style="color:#4a6cf5">→ you</span>.</p>
+      <p>A green dot means the device is <strong>online</strong>: the app is running there (in its window or in the tray), or a browser has the page open. Offline devices can be ticked too; they see it when they come back.</p>
+      <p>Your choice stays for the next share, and the button shows it, for example <strong>To: LAPTOP-1</strong>. In the history, such an item shows its devices after an arrow: <span style="color:#4a6cf5">→ LAPTOP-1</span>.</p>
     </div>
   </div>
-  <div class="warn"><b>Tidy, not locked</b>Sharing with chosen devices keeps it out of the others' history and pop-ups. It is not a lock: someone on your network who knows how could still read it. Section 11 explains.</div>
+  <div class="warn"><b>Tidy, not locked</b>Sharing with chosen devices keeps it out of the others' history and pop-ups. It is not a lock: someone on your network who knows how could still read it (section 12).</div>
 </section>
 
 <section>
   <h2>6. The history</h2>
   <figure class="mid">
-    <img src="img/history.png" alt="The newest items in the history">
-    <figcaption>Each item shows who shared it, for whom (if not for everyone), when, and how long it is.</figcaption>
+    <img src="img/menu.png" alt="An item's menu">
+    <figcaption>OFFICE-PC's own message, changed after it was shared ("edited 18:00"), with its ⋯ menu open.</figcaption>
   </figure>
   <table class="wrap">
-    <tr><th>Button</th><th>What it does</th></tr>
-    <tr><td>Copy</td><td>Copies the text, ready to paste anywhere. On a photo with no text, Copy copies the photo itself; with text, the button for the photo is <strong>Copy photo</strong>.</td></tr>
-    <tr><td>Save</td><td>Saves the photo or PDF in your Downloads folder and shows it there.</td></tr>
-    <tr><td>Edit</td><td>Puts the text in the editor so you can change it and share it again. The original stays.</td></tr>
-    <tr><td>✕</td><td>Deletes the item for every device. It turns into <strong>Delete?</strong>: click again within three seconds to confirm.</td></tr>
-    <tr><td>Show all</td><td>Under items longer than about eight lines. It opens the whole item; <strong>Show less</strong> folds it again.</td></tr>
+    <tr><th>On each item</th><th>What it does</th></tr>
+    <tr><td>Copy</td><td>Copies the text, ready to paste. On a photo (in the apps), <strong>Copy</strong> or <strong>Copy photo</strong> copies the picture itself.</td></tr>
+    <tr><td>Save</td><td>Saves the file in the folder chosen in Settings (Downloads unless you change it) and shows it there.</td></tr>
+    <tr><td>⋯ &gt; Pin to the top</td><td>Keeps it above everything else, under <strong>Pinned</strong>, on this device. <strong>Unpin</strong> undoes it.</td></tr>
+    <tr><td>⋯ &gt; Archive</td><td>Puts it away on this device: it leaves your history (the others still have it). <strong>Undo</strong> appears for a few seconds.</td></tr>
+    <tr><td>⋯ &gt; Edit</td><td>Only on what <em>this</em> device shared. The text comes back into the editor, under "Editing your message"; change it and press <strong>Save</strong>. Everyone sees the new text in place, marked <em>edited</em> with the time. <strong>Cancel</strong> leaves it as it was.</td></tr>
+    <tr><td>⋯ &gt; Delete for everyone</td><td>Only on what this device shared: it disappears from every device's history (after a question).</td></tr>
   </table>
   <ul>
-    <li><strong>Photos</strong> show as pictures: click one to see it full size, and click again (or press <kbd>Esc</kbd>) to close it. <strong>PDFs</strong> show their name: click it to open the PDF.</li>
+    <li><strong>Swipe left</strong> on a phone or touch screen to archive an item quickly.</li>
+    <li><strong>The archive</strong>: Settings &gt; <strong>Archived messages</strong> &gt; <strong>Show</strong>. Swipe left there (or ⋯ &gt; Back to the history) to bring one back; <strong>Back to the history</strong> at the top returns.</li>
     <li><strong>Search the history</strong> finds items by their text, their file name, or the device that shared them.</li>
-    <li><strong>New items glow</strong> briefly when they arrive.</li>
-    <li><strong>Arabic and other right-to-left text</strong> reads right to left, line by line.</li>
-    <li>The history shows the newest 300 items; search reaches all of them.</li>
+    <li><strong>Photos</strong> open full size with a click; <strong>Show all</strong> opens a long item; new items glow briefly; Arabic and other right-to-left text reads right to left, line by line.</li>
+    <li>The history shows the newest 300 items (and every pinned one); search reaches all of them.</li>
   </ul>
 </section>
 
 <section>
-  <h2>7. Pop-ups by the clock</h2>
+  <h2>7. Settings</h2>
+  <div class="pair">
+    <figure>
+      <img src="img/settings.png" alt="Settings" style="width:82%; margin:0 auto">
+      <figcaption>Settings on the computer that keeps the history.</figcaption>
+    </figure>
+    <div>
+      <p>The gear at the top right opens Settings:</p>
+      <table class="wrap">
+        <tr><th>Part</th><th>What it holds</th></tr>
+        <tr><td>This device</td><td>Its name, shown to the others.</td></tr>
+        <tr><td>Appearance</td><td>Dark or Light.</td></tr>
+        <tr><td>Writing</td><td>Enter sends; Wrap long lines.</td></tr>
+        <tr><td>This computer (Windows)</td><td><strong>Keep the window on top</strong> of the other programs. <strong>Copy what arrives</strong>: text and photos others share go straight to the clipboard, ready to paste, without a click.</td></tr>
+        <tr><td>Saving files</td><td>Where <strong>Save</strong> puts files: <strong>Change…</strong> to choose a folder; <strong>Use Downloads</strong> to go back. (Apps only; browsers save their own way.)</td></tr>
+        <tr><td>History</td><td>Which computer keeps it, and <strong>Change setup</strong>; the archived messages; the address for phones and browsers.</td></tr>
+        <tr><td>Storage</td><td>How much of the history's 2 GB is used, and by what (below). On the computer that keeps it: <strong>Show the history folder</strong>.</td></tr>
+        <tr><td>About</td><td>The version, and <strong>Get the app</strong>.</td></tr>
+      </table>
+    </div>
+  </div>
+  <h3>Storage</h3>
+  <figure class="small">
+    <img src="img/storage.png" alt="Storage">
+    <figcaption>The share of 2 GB used, then what the history holds, by kind.</figcaption>
+  </figure>
+  <p>The history can hold <strong>2 GB</strong> in all. The bar shows what is in it: messages, photos, documents, audio, videos and archives, with the number of items and their size. When it is full, new shares are refused with a message: delete old files (⋯ &gt; Delete, on what you shared) to make room.</p>
+</section>
+
+<section>
+  <h2>8. Pop-ups by the clock</h2>
   <div class="pair">
     <figure>
       <img src="img/toast-text.png" alt="A pop-up for text">
@@ -254,150 +280,142 @@
       <figcaption>A photo shared with you, and one more item (light).</figcaption>
     </figure>
   </div>
-  <p>When another device shares something with this computer, a small pop-up appears above the clock, with a sound, even when the Text Share window is closed. It does not take the keyboard away from what you are doing.</p>
+  <p>When another device shares something with this computer, a small pop-up appears above the clock, with a sound, even when the Instant Share window is closed. It never takes the keyboard away from what you are doing, and it stays out of the taskbar.</p>
   <table class="wrap">
     <tr><th>In the pop-up</th><th>What it does</th></tr>
-    <tr><td>Copy</td><td>Text: copies all of it, however long. Photo: copies the photo, ready to paste into a document, a chat or an e-mail.</td></tr>
-    <tr><td>Save</td><td>Shown for a PDF: saves it in Downloads and shows it there.</td></tr>
-    <tr><td>Open</td><td>Opens the Text Share window. Clicking the preview does the same.</td></tr>
-    <tr><td>✕</td><td>Closes the pop-up. It also goes by itself after about ten seconds, but not while the mouse is over it.</td></tr>
+    <tr><td>Copy</td><td>Text: copies all of it. Photo: copies the picture. With <strong>Copy what arrives</strong> on (Settings), it is copied already and the button says so.</td></tr>
+    <tr><td>Save</td><td>For any other file: saves it in the chosen folder and shows it there.</td></tr>
+    <tr><td>Open</td><td>Opens the Instant Share window; clicking the preview does too.</td></tr>
+    <tr><td>✕</td><td>Closes it. It also goes by itself after about ten seconds, but not while the mouse is over it.</td></tr>
   </table>
-  <p>"<strong>shared with you</strong>" means it was shared with chosen devices, this one among them. "<strong>+2 more</strong>" means more arrived at the same time: they are in the history. No pop-up appears while the Text Share window is in front: the history shows new items itself.</p>
+  <p>No pop-up appears while the Instant Share window is in front: the history shows new items itself.</p>
 </section>
 
 <section>
-  <h2>8. The Android app, and browsers</h2>
+  <h2>9. The Android app, and browsers</h2>
   <div class="pair">
     <figure>
-      <img src="img/android-setup.png" alt="Setting up Text Share on a phone">
-      <figcaption>The first start: OFFICE-PC found on the Wi-Fi.</figcaption>
+      <img src="img/android-app.png" alt="Instant Share on a phone">
+      <figcaption>The history on a phone; the gear opens Settings.</figcaption>
     </figure>
     <figure>
-      <img src="img/android-app.png" alt="Text Share on a phone">
-      <figcaption>The same history as on the computers.</figcaption>
+      <img src="img/android-settings.png" alt="Settings on a phone">
+      <figcaption>Settings on a phone, with where files are saved.</figcaption>
     </figure>
   </div>
   <h3>Installing it</h3>
   <ol class="steps">
-    <li>On the phone, on the same Wi-Fi, open the address shown at the bottom of the Text Share window on a computer (for example <code>http://OFFICE-PC:8765</code>) in the browser, and tap <strong>Get the Android app</strong> at the bottom. Or copy <code>Text-Share-1.0.0.apk</code> to the phone.</li>
-    <li>Open the downloaded file. Android asks to allow installing apps from that source the first time: allow it, then <strong>Install</strong>.</li>
-    <li>Open Text Share and tap the computer that keeps the history. Allow notifications, and allow Text Share to run in the background (Android asks both, once): that is what lets shares arrive at once.</li>
+    <li>On the phone, on the same Wi-Fi, open the address shown in Settings &gt; <strong>Phones and browsers</strong> on a computer (for example <code>http://OFFICE-PC:8765</code>), open Settings there and tap <strong>Get the Android app</strong>. Or copy <code>Instant-Share-1.1.0.apk</code> to the phone.</li>
+    <li>Open the downloaded file and allow installing from that source when Android asks; then <strong>Install</strong>. It installs over Text Share 1.0, keeping its setup.</li>
+    <li>Open it and tap the computer that keeps the history. Allow notifications, and allow it to run in the background (Android asks both, once).</li>
   </ol>
   <h3>Using it</h3>
   <ul>
-    <li>Everything works as on a computer: write, add a photo or a PDF (<strong>File</strong>), choose who sees it (<strong>To</strong>), <strong>Share</strong>.</li>
-    <li><strong>From any other app</strong>: tap <strong>Share</strong> there (on a link, a text, a photo, a PDF) and choose <strong>Text Share</strong>. It lands in the editor, ready to share.</li>
-    <li><strong>Notifications</strong>: when someone shares something with the phone, a notification shows who, a preview (the picture, for a photo), and buttons: <strong>Copy</strong> for text, <strong>Copy</strong> or <strong>Copy photo</strong> for a photo, <strong>Save</strong> (to Downloads) and <strong>Open</strong> for a PDF. They come with the app closed too.</li>
-    <li>A small "Connected to OFFICE-PC" notice stays while Text Share listens; Android requires it. Tap it to hide it for good: shares still arrive.</li>
-    <li>The phone's <strong>Back</strong> button puts Text Share away; it keeps listening.</li>
+    <li>Everything works as on a computer: write, add a file, choose who sees it, share; Copy, Save, pin, archive (swipe left), edit and delete your own.</li>
+    <li><strong>From any other app</strong>: tap <strong>Share</strong> there on a link, a text, a photo, a document or a voice note, and choose <strong>Instant Share</strong>. It lands in the editor, ready to share.</li>
+    <li><strong>Notifications</strong> with Copy (text, photo), Save and Open (files) come with the app closed too. A small "Connected to OFFICE-PC" notice stays while it listens; tap it to hide it for good.</li>
+    <li>Documents open in the phone's own apps (a PDF reader, Word, Excel...). <strong>Save files to</strong> in Settings chooses the folder, with Android's own folder picker.</li>
+    <li><strong>Back</strong> first closes what is open (Settings, a menu, a photo, the archive), then puts Instant Share away. It never returns to the setup.</li>
   </ul>
   <h3>iPhones and other browsers</h3>
-  <p>iPhones, tablets and computers without the app open the same address in their browser, and bookmark it (or add it to the home screen). Everything works except notifications: the page shows new items while it is open. <strong>Save</strong> downloads the file the browser's usual way.</p>
-  <div class="tip"><b>Why there is no iPhone app</b>An iPhone app may only be woken by Apple's internet service, and Text Share never uses the internet. On an iPhone, keep the page open in the browser to see shares as they come.</div>
+  <p>They open the same address in the browser. Everything works except notifications (the page shows new items while it is open); <strong>Save</strong> downloads the browser's usual way.</p>
 </section>
 
 <section>
-  <h2>9. The tray icon and keeping it running</h2>
-  <p>Once set up, Text Share keeps running in the tray, by the clock, when you close its window: the computer that keeps the history goes on serving the others, and every computer goes on showing pop-ups. The first time, a note says so.</p>
+  <h2>10. The tray icon and keeping it running</h2>
+  <p>Once set up, Instant Share keeps running in the tray, by the clock, when you close its window: the computer that keeps the history goes on serving the others, and every computer goes on showing pop-ups.</p>
   <table class="wrap">
     <tr><th>Tray icon</th><th>What it does</th></tr>
-    <tr><td>Click</td><td>Opens the Text Share window.</td></tr>
-    <tr><td>Right-click</td><td>The menu: <strong>Open Text Share</strong>, <strong>Start with Windows</strong> (ticked when it does), <strong>Change setup…</strong> and <strong>Quit Text Share</strong>, which really stops it.</td></tr>
+    <tr><td>Click</td><td>Opens the window.</td></tr>
+    <tr><td>Right-click</td><td><strong>Open Instant Share</strong>, <strong>Start with Windows</strong> (ticked when it does), <strong>Change setup…</strong> and <strong>Quit Instant Share</strong>, which really stops it.</td></tr>
   </table>
-  <p>Double-clicking the program while it is running does not start a second copy: it opens the window of the running one.</p>
-
+  <p>Double-clicking the program while it is running opens the running one. <strong>Keep the window on top</strong> (the pin, or Settings) keeps the window above other programs until you turn it off; it is remembered.</p>
   <h3>Keep the computer that keeps the history awake</h3>
-  <p>A computer that is asleep cannot share. On it, open <strong>Settings &gt; System &gt; Power &amp; battery &gt; Screen, sleep and hibernate</strong> and set sleep to <strong>Never</strong> when plugged in. The screen may still turn off.</p>
-
+  <p>A computer that is asleep cannot share. On it, open <strong>Settings &gt; System &gt; Power &amp; battery &gt; Screen, sleep and hibernate</strong> and set sleep to <strong>Never</strong> when plugged in.</p>
   <h3>A new version</h3>
   <ol class="steps">
-    <li>Quit Text Share from the tray menu.</li>
-    <li>Start the new file. The history and the settings are kept: they are stored apart from the program.</li>
+    <li>Quit Instant Share from the tray menu.</li>
+    <li>Start the new file. The history and the settings are kept; "Start with Windows" moves to the new file by itself.</li>
     <li>On the computer that keeps the history, Windows may ask again to allow it on networks: allow it on Private networks.</li>
   </ol>
-  <p>If Text Share starts with Windows, the new file takes over that job by itself the first time it runs.</p>
-
   <h3>Backing up or moving the history</h3>
-  <p>The whole history, files included, is one file, <code>history.db</code>, in <code>%LOCALAPPDATA%\TextShare</code> on the computer that keeps it (paste that into File Explorer's address bar). To back it up or move it, quit Text Share first, then copy the file. To start afresh, quit Text Share and delete it.</p>
+  <p>The whole history, files included, is one file, <code>history.db</code>, in <code>%LOCALAPPDATA%\InstantShare</code> on the computer that keeps it (Settings &gt; <strong>Show the history folder</strong>). To back it up or move it, quit Instant Share first, then copy the file.</p>
 </section>
 
 <section>
-  <h2>10. Options, shortcuts and files</h2>
+  <h2>11. Shortcuts, options and files</h2>
   <h3>Keyboard shortcuts</h3>
   <table>
     <tr><th>Keys</th><th>What they do</th></tr>
-    <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Share what is in the editor, and its file.</td></tr>
+    <tr><td><kbd>Enter</kbd></td><td>Share (with Enter sends on); <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Share, always.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> in the editor</td><td>Pastes text, or adds a copied picture as the file.</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Closes the device list or a full-size photo.</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Closes what is open: a question, a menu, a photo, the device list, Settings, the archive.</td></tr>
   </table>
-
   <h3>Options</h3>
   <p>For special cases, add these after the program's name in a command window (open the program's folder, type <code>cmd</code> in its address bar and press <kbd>Enter</kbd>):</p>
   <table class="wrap">
     <tr><th>Option</th><th>What it does</th></tr>
-    <tr><td><code>--port 9000</code></td><td>On the computer that keeps the history: use another port than 8765. (If 8765 is taken, Text Share already picks the next free one by itself.)</td></tr>
-    <tr><td><code>--data D:\TextShare</code></td><td>Keeps the history and settings in another folder, for example next to the program on a USB stick.</td></tr>
+    <tr><td><code>--port 9000</code></td><td>On the computer that keeps the history: another port than 8765. (If 8765 is taken, it picks the next free one by itself.)</td></tr>
+    <tr><td><code>--data D:\InstantShare</code></td><td>Keeps the history and settings in another folder, for example next to the program on a USB stick.</td></tr>
     <tr><td><code>--hidden</code></td><td>Starts in the tray, without the window. Windows starts it this way at sign-in.</td></tr>
   </table>
-
   <h3>Where things are saved</h3>
   <table class="wrap">
     <tr><th>What</th><th>Where</th></tr>
-    <tr><td>The history, files included</td><td><code>%LOCALAPPDATA%\TextShare\history.db</code> on the computer that keeps it.</td></tr>
-    <tr><td>Settings (setup, name, appearance)</td><td><code>%LOCALAPPDATA%\TextShare\settings.json</code> on each computer.</td></tr>
-    <tr><td>A log, for troubleshooting</td><td><code>%LOCALAPPDATA%\TextShare\textshare.log</code> on each computer.</td></tr>
-    <tr><td>Saved photos and PDFs</td><td>Your Downloads folder.</td></tr>
-    <tr><td>Start with Windows</td><td>The usual list of programs that start at sign-in (Settings &gt; Apps &gt; Startup).</td></tr>
+    <tr><td>The history, files included</td><td><code>%LOCALAPPDATA%\InstantShare\history.db</code> on the computer that keeps it.</td></tr>
+    <tr><td>Settings</td><td><code>%LOCALAPPDATA%\InstantShare\settings.json</code> on each computer.</td></tr>
+    <tr><td>A log, for troubleshooting</td><td><code>%LOCALAPPDATA%\InstantShare\textshare.log</code> on each computer.</td></tr>
+    <tr><td>Saved files</td><td>The folder chosen in Settings; Downloads unless you change it.</td></tr>
+    <tr><td>Pins and archive</td><td>Kept with the history, for each device.</td></tr>
   </table>
 </section>
 
 <section>
-  <h2>11. Privacy and security</h2>
-  <h3>What Text Share does</h3>
+  <h2>12. Privacy and security</h2>
+  <h3>What Instant Share does</h3>
   <ul>
-    <li><strong>Stays on your network.</strong> It answers only devices on its own local network and refuses anything from outside it. It never reaches the internet, and nothing you share leaves your network.</li>
+    <li><strong>Stays on your network.</strong> It answers only devices on its own local network, never reaches the internet, and nothing you share leaves your network.</li>
     <li><strong>Keeps one copy.</strong> The history is stored on the computer that keeps it, and nowhere else.</li>
     <li><strong>Can't be read by websites.</strong> A website open in someone's browser cannot read or change the history.</li>
-    <li><strong>Checks files.</strong> Only real photos and PDFs, by their contents, up to 1 MB.</li>
+    <li><strong>Checks files.</strong> Only the kinds listed in section 4, by their contents, up to 5 MB. Documents are only ever downloaded, never opened as a page.</li>
+    <li><strong>Edit and Delete belong to the sender.</strong> Only the device that shared an item can change it or delete it; pins and the archive are each device's own.</li>
   </ul>
   <h3>What it does not do</h3>
   <ul>
-    <li><strong>No password.</strong> Anyone on the same network who opens the address can use Text Share, read what is shared with everyone, add to it and delete from it.</li>
-    <li><strong>No encryption.</strong> Text Share talks plain <code>http</code>. Someone watching your own network could see what is shared.</li>
-    <li><strong>"Who should see it" is not a lock.</strong> Items shared with chosen devices are kept out of the others' view, but someone with technical knowledge on your network could still read them.</li>
-    <li><strong>No expiry.</strong> Items stay until someone deletes them.</li>
+    <li><strong>No password.</strong> Anyone on the same network who opens the address can use Instant Share, read what is shared with everyone, and add to it.</li>
+    <li><strong>No encryption.</strong> It talks plain <code>http</code>. Someone watching your own network could see what is shared.</li>
+    <li><strong>"Who should see it" is not a lock,</strong> and "only the sender deletes" holds for the apps and the page, not against someone with technical knowledge on your network.</li>
+    <li><strong>No expiry.</strong> Items stay until their sender deletes them.</li>
   </ul>
-  <div class="warn"><b>Use it only on networks you trust</b>Home, or your own office network, is fine. Do not use it on public Wi-Fi, in a hotel or café, or on a network shared with other companies. If you pass a password or a key through Text Share, delete the item once you have pasted it where it belongs.</div>
+  <div class="warn"><b>Use it only on networks you trust</b>Home, or your own office network, is fine. Not public Wi-Fi, a hotel or a café, or a network shared with other companies. If you pass a password or a key through Instant Share, delete the item once you have pasted it where it belongs.</div>
 </section>
 
 <section>
-  <h2>12. Troubleshooting</h2>
+  <h2>13. Troubleshooting</h2>
   <table class="wrap">
     <tr><th style="width:34%">Problem</th><th>What to do</th></tr>
     <tr><td>Setup finds no computer, or cannot connect</td><td>
       <ul style="margin:0">
-        <li>Check that Text Share runs on the computer that keeps the history, and that both are on the same network.</li>
+        <li>Check that Instant Share runs on the computer that keeps the history, and that both are on the same network.</li>
         <li>On that computer, set the network to <strong>Private</strong>: Settings &gt; Network &amp; internet &gt; Wi-Fi or Ethernet &gt; Network profile type.</li>
-        <li>Type its numbered address instead of its name.</li>
-        <li>A VPN on either computer can hide your own network. Disconnect it and try again.</li>
-        <li>Guest Wi-Fi often stops devices from seeing each other. Use the main network.</li>
-        <li>If Windows never asked to allow Text Share, allow it yourself in an administrator command window on the computer that keeps the history:</li>
+        <li>Type its numbered address instead of its name. A VPN, or a guest Wi-Fi, can hide devices from each other.</li>
+        <li>If Windows never asked to allow it, allow it yourself in an administrator command window on that computer:</li>
       </ul>
-      <pre class="cmd" style="margin-bottom:0">netsh advfirewall firewall add rule name="Text Share" dir=in action=allow protocol=TCP localport=8765 profile=private
-netsh advfirewall firewall add rule name="Text Share search" dir=in action=allow protocol=UDP localport=8765 profile=private</pre>
+      <pre class="cmd" style="margin-bottom:0">netsh advfirewall firewall add rule name="Instant Share" dir=in action=allow protocol=TCP localport=8765 profile=private
+netsh advfirewall firewall add rule name="Instant Share search" dir=in action=allow protocol=UDP localport=8765 profile=private</pre>
     </td></tr>
-    <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Text Share was quit there. Start it again. The window reconnects by itself, and what you typed stays in the editor.</td></tr>
-    <tr><td>No pop-ups</td><td>Text Share must be running on this computer, in its window or in the tray. Check the tray (click the <strong>^</strong> by the clock). Windows' Do not disturb does not stop them; full-screen games and presentations may cover them.</td></tr>
-    <tr><td>No notifications on the phone</td><td>Check that notifications are allowed for Text Share (the phone's Settings &gt; Apps &gt; Text Share &gt; Notifications), and that its battery use is <strong>Unrestricted</strong> (same place &gt; Battery). Some phones also stop apps they think are unused: open Text Share once after restarting the phone. The phone must be on the same Wi-Fi as the computer that keeps the history.</td></tr>
-    <tr><td>The phone can't install the app</td><td>Allow installing unknown apps for the browser or Files app you opened it with, when Android asks. The app needs Android 10 or newer.</td></tr>
-    <tr><td>A device is missing from "Who should see it"</td><td>It appears once Text Share has run on it (or a browser has opened the page) while connected to the same computer. A device unused for 30 days leaves the list.</td></tr>
-    <tr><td>"That file is … Photos and PDFs can be up to 1 MB"</td><td>Share a smaller copy (section 4).</td></tr>
-    <tr><td>The program does not start, or disappears</td><td>Choose <strong>More info</strong> then <strong>Run anyway</strong> on the SmartScreen message. If your antivirus moved the file away, restore it and mark it as allowed.</td></tr>
-    <tr><td>"Open Text Share by the server's IP address or computer name"</td><td>A browser opened the page through a name Text Share does not trust. Use the address shown at the bottom of the Text Share window.</td></tr>
-    <tr><td>Something else</td><td>The log, <code>%LOCALAPPDATA%\TextShare\textshare.log</code>, says what Text Share did. Send it along when asking for help.</td></tr>
+    <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Instant Share was quit there. Start it again; the window reconnects by itself, and what you typed stays.</td></tr>
+    <tr><td>No pop-ups</td><td>Instant Share must be running on this computer, in its window or in the tray (click the <strong>^</strong> by the clock). Full-screen games and presentations may cover them.</td></tr>
+    <tr><td>No notifications on the phone</td><td>Allow notifications for Instant Share (the phone's Settings &gt; Apps &gt; Instant Share &gt; Notifications) and set its battery use to <strong>Unrestricted</strong>. The phone must be on the same Wi-Fi.</td></tr>
+    <tr><td>"The history … is full (2 GB)"</td><td>Delete old files you shared (⋯ &gt; Delete for everyone). Settings &gt; Storage shows what takes the room.</td></tr>
+    <tr><td>"That kind of file can't be shared"</td><td>Only the kinds in section 4 can be shared. A program or script inside a ZIP is fine; on its own it is refused.</td></tr>
+    <tr><td>"Only the device that shared it can …"</td><td>Edit and Delete belong to the sender. To put someone else's item away on your device, archive it.</td></tr>
+    <tr><td>The program does not start, or disappears</td><td>Choose <strong>More info</strong> then <strong>Run anyway</strong> on the SmartScreen message. If your antivirus moved the file, restore it and mark it as allowed.</td></tr>
+    <tr><td>Something else</td><td>The log, <code>%LOCALAPPDATA%\InstantShare\textshare.log</code>, says what Instant Share did. Send it along when asking for help.</td></tr>
   </table>
   <figure class="mid">
-    <img src="img/offline.png" alt="The red dot when Text Share cannot be reached">
+    <img src="img/offline.png" alt="The red dot when Instant Share cannot be reached">
     <figcaption>The top of the window when the computer that keeps the history cannot be reached.</figcaption>
   </figure>
 </section>

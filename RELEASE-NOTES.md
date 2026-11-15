@@ -1,5 +1,70 @@
 # Release notes
 
+## 1.1.0 — 15 November 2026
+
+Text Share is now **Instant Share**, with what its first users asked for.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-1.1.0-portable.exe` | 16.5 MB | `145C56151F48831B6D0D0F284632EFF398A77AC087F98C3D3EB3CC9B68EC4BFA` |
+| `Instant-Share-1.1.0.apk` | 62 KB | `AC170DC5A33EEB4E947DEFE33FD845A98A0E0F85D98BEA3BF8927FCE2390BC54` |
+| `Instant-Share-Handbook-1.1.0.pdf` | 988 KB | `51B4BCC5BF4E0B1B904A26C3AB46F51DE7149A68F988FFC226504CDE852F21A2` |
+| `instantshare.py` | 126 KB | `EE41A9C136561027D0584A11A7BF1256B610DA9CC96D7AA68C89BA6F2AEC5373` |
+
+### New
+
+- **The new name, Instant Share**, everywhere. Coming from Text Share 1.0: quit it, start Instant Share; it takes over
+  the same history, settings and "start with Windows". The Android app installs over the old one, keeping its setup.
+- **More kinds of files, up to 5 MB**: Word, Excel, PowerPoint (also older and OpenDocument formats), RTF, text, CSV,
+  audio and voice notes (MP3, M4A, AAC, WAV, OGG, Opus, FLAC, AMR), short videos (MP4, MOV, 3GP), ZIP, BMP and HEIC
+  photos, besides PNG, JPEG, GIF, WebP and PDF. Audio and video play in the history; documents download (never open
+  as a page); programs and scripts are refused, even renamed.
+- **Edit in place, by the sender only**: the item changes for everyone, marked "edited" with the time.
+  **Delete is the sender's too.**
+- **Pin** an item to the top, and **archive** one (swipe left on phones and touch screens, or the ⋯ menu), each
+  device for itself; Undo; the archive is in Settings.
+- **Settings** (the gear): name, appearance, **Enter sends** (on: Shift+Enter for a new line), wrap, **keep the
+  window on top** (also the pin in the top bar), **copy what arrives** (straight to the clipboard), **where Save puts
+  files** (a folder of your choice, on Windows and Android), the archive, and **storage**: the history's use of its
+  2 GB, by kind, and its folder.
+- **2 GB for the whole history**: when it is full, new shares are refused with a message.
+- **Phones**: a gear instead of the name and appearance buttons, with the page's details in Settings; File, Clear and
+  Copy side by side; the device list as a sheet that fits the screen; the Back button closes what is open, then puts
+  the app away, and never returns to the setup; documents open in the phone's own apps.
+- **Questions in the page's own style** instead of the browser's boxes.
+
+### Fixed
+
+- **The pop-up by the clock was blank** on Windows (shown without being told it was visible, so its page was never
+  drawn), and appeared in the taskbar. It now draws, and stays out of the taskbar and Alt+Tab.
+- **Start with Windows could be taken over** by another copy of the program started with another history folder (a
+  test copy, say). Each copy now changes only its own entry.
+- On phones, the device list ran off the left of the screen.
+- Audio and video could not play (the page's security policy did not allow them yet).
+
+### Tested
+
+- On Windows 11, with the `.exe`: the 24 checks of 1.0 (setup, discovery, tray, pop-ups with Copy, private shares,
+  photos, refusals, appearance, second start), now also the pop-up's own pixels (drawn, not blank) and its staying out
+  of the taskbar; 9 more for the new settings: always on top on and off (the window's real topmost state),
+  remembered; copy what arrives (on the clipboard with no click); the history folder and storage on the computer that
+  keeps it; where Save puts files. The real start-with-Windows entries were left as they were.
+- The server: 53 checks (edit and delete by the sender only, pins and archive per device, Word and voice notes
+  accepted, programs refused even renamed, documents sandboxed downloads, storage, the 2 GB limit, the 1.0 history
+  upgraded in place).
+- The page: 15 checks (Enter sends, edit in place, menus by owner, pin, archive with Undo, storage, the phone layout)
+  and swiping left on a touch screen; the Android app's pages with a stand-in for its Java side (13 checks: save
+  folder, documents to the phone's viewer, Back, settings); the APK built and signed.
+
+### Not tested
+
+- The Android app on a real phone: the folder picker, Back, documents in other apps, the new file types from the
+  Share menu, and installing 1.1 over 1.0.
+- Choosing a folder in Windows' folder dialog (the setting itself was checked).
+- Two separate computers on a real network; Windows 10; Safari on an iPhone; `instantshare.py` on Mac or Linux.
+
 ## 1.0.0 — 15 November 2026
 
 The first release.

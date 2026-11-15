@@ -1,11 +1,11 @@
-"""Makes the Text Share handbook: "Text Share Handbook.pdf" in the project folder and, for the Releases page,
-release/Text-Share-Handbook-<version>.pdf.
+"""Makes the Instant Share handbook: "Instant Share Handbook.pdf" in the project folder and, for the Releases page,
+release/Instant-Share-Handbook-<version>.pdf.
 
     C:\\venvs\\textshare-build\\Scripts\\python.exe handbook\\build_handbook.py              pictures, then the PDF
     C:\\venvs\\textshare-build\\Scripts\\python.exe handbook\\build_handbook.py --no-shots   the PDF only
 
 Needs Microsoft Edge, and Playwright and Pillow in the build environment (py build.py installs them). The pictures
-come from the real pages: Text Share runs inside this script on a spare port with a made-up history and made-up
+come from the real pages: Instant Share runs inside this script on a spare port with a made-up history and made-up
 devices (OFFICE-PC, LAPTOP-1, ...), never this computer's name. The app's own pages (setup, the pop-up) are drawn from
 app.py with a stand-in for the app behind them. A window frame is drawn around the full-window pictures.
 """
@@ -28,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 IMG = HERE / "img"
 sys.path.insert(0, str(ROOT))
-import textshare  # noqa: E402
+import instantshare as textshare  # noqa: E402
 import app  # noqa: E402
 
 PORT = 18799
@@ -91,7 +91,17 @@ def pdf_file():
     return out + b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
 
 
-PHOTO, PDF = site_photo(), pdf_file()
+def xlsx_file():
+    out = io.BytesIO()
+    import zipfile
+    with zipfile.ZipFile(out, "w") as z:
+        z.writestr("[Content_Types].xml", "<Types/>")
+        z.writestr("xl/workbook.xml", "<workbook/>")
+    return out.getvalue()
+
+
+PHOTO, PDF, XLSX = site_photo(), pdf_file(), xlsx_file()
+MP3 = b"ID3\x03\x00\x00\x00\x00\x00\x00" + b"\xff\xfb\x90\x00" + b"\x00" * 2000
 # (minutes ago, from, text, for (None = everyone), file)
 HISTORY = [
     (3 * 1440 + 310, "LAPTOP-2", "Delivery address\nWarehouse 4, Street 18\nIndustrial Area\nCall on arrival: extension 214",
@@ -102,24 +112,32 @@ HISTORY = [
     (41, "PHONE", "", None, ("east side.jpg", "image/jpeg", PHOTO)),
     (26, "OFFICE-PC", "SELECT id, name, created_at\nFROM customers\nWHERE created_at >= '2026-11-01'\n"
                       "ORDER BY created_at DESC;", ["LAPTOP-1"], None),
+    (55, "LAPTOP-2", "Prices for the Al Khuwair job", None,
+     ("Quotation 1147.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", XLSX)),
     (12, "LAPTOP-2", "Please read and sign before Monday.", None, ("Site induction checklist.pdf", "application/pdf", PDF)),
+    (7, "PHONE", "", None, ("voice note.mp3", "audio/mpeg", MP3)),
     (3, "LAPTOP-1", "git pull origin main\nnpm ci\nnpm run build", None, None),
 ]
 
 
 @contextlib.contextmanager
 def demo_server():
-    """Text Share with the made-up history and devices, running inside this script; gone afterwards."""
+    """Instant Share with the made-up history and devices, running inside this script; gone afterwards."""
     with tempfile.TemporaryDirectory() as tmp:
         store = textshare.Store(Path(tmp) / "history.db")
         now = textshare.now_ms()
         for minutes, who, text, to, file in HISTORY:
+            kind = textshare.check_file(file[0], file[2])[2] if file else None
             store.db.execute(
                 "INSERT INTO items (at, device, text, sender, recipients, file_name, file_type, file_size, file_key, "
-                "file) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "file, file_kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (now - minutes * MIN, who, text, DEV[who], json.dumps([DEV[t] for t in to]) if to else None,
                  file[0] if file else None, file[1] if file else None, len(file[2]) if file else None,
-                 "k" + DEV[who][:10] + str(minutes) if file else None, file[2] if file else None))
+                 "k" + DEV[who][:10] + str(minutes) if file else None, file[2] if file else None, kind))
+        # OFFICE-PC changed its own message a little later; it pinned the delivery address
+        store.db.execute("UPDATE items SET edited_at = ? WHERE text LIKE 'SELECT id%'", (now - 20 * MIN,))
+        store.db.execute("INSERT INTO marks (device, item, pinned, archived) SELECT ?, id, ?, 0 FROM items "
+                         "WHERE text LIKE 'Delivery address%'", (DEV[ME], now - 60 * MIN))
         store.db.commit()
         server = textshare.make_server(PORT, store)
         if server is None:
@@ -142,17 +160,23 @@ def online(store, away=("RECEPTION",)):
             store.seen[device_id]["seen"] -= 2 * 60 * MIN
 
 
+OPTIONS = json.dumps({"windows": True, "on_top": False, "auto_copy": True, "host": True,
+                      "folder": "C:\\Users\\you\\AppData\\Local\\InstantShare",
+                      "save_folder": "C:\\Users\\you\\Downloads", "save_chosen": False})
 STUB = """
 window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise.resolve(
-  name === "find" ? { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765, version: "1.0.0" }],
-                      me: "LAPTOP-1", mode: null, host: "" } : { ok: true }) }) };
+  name === "find" ? { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765, version: "1.1.0" }],
+                      me: "LAPTOP-1", mode: null, host: "" }
+  : name === "get_options" ? """ + OPTIONS + """
+  : { ok: true }) }) };
 """
 
 
 ANDROID = """
 window.TextShareAndroid = new Proxy({}, { get: (_, m) => (...a) => {
   const reply = (call, answer) => setTimeout(() => window.textShareDone(call, answer), 100);
-  if (m === "info") return JSON.stringify({ me: "PHONE", host: "", version: "1.0.0", theme: "dark" });
+  if (m === "info") return JSON.stringify({ me: "PHONE", host: "", version: "1.1.0", theme: "dark" });
+  if (m === "getOptions") return JSON.stringify({ android: true, save_folder: "Download", save_chosen: false });
   if (m === "find") return reply(a[0], { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765 }], host: "" });
   if (m === "takeShared") return null;
 } });
@@ -215,7 +239,7 @@ def shots(browser, store):
         pg = page(1400, 860, theme, 1.5, to=["LAPTOP-1"])
         draft(pg)
         pg.screenshot(path=IMG / f"main-{theme}.png")
-        frame(IMG / f"main-{theme}.png", theme, "Text Share · OFFICE-PC", 1.5)
+        frame(IMG / f"main-{theme}.png", theme, "Instant Share · OFFICE-PC", 1.5)
         if theme == "dark":
             # who should see it
             pg.locator("#to").click()
@@ -233,11 +257,34 @@ def shots(browser, store):
             pg.screenshot(path=IMG / "history.png", clip={"x": bar["x"] - 10, "y": bar["y"] - 10,
                                                          "width": bar["width"] + 20,
                                                          "height": third["y"] + third["height"] - bar["y"] + 20})
+            # an item's menu: OFFICE-PC's own message (edited) can be changed and deleted by it
+            own = pg.locator(".item").filter(has_text="SELECT id")
+            own.locator(".more-btn").click()
+            pg.wait_for_timeout(300)
+            card_box, menu_box = own.bounding_box(), pg.locator("#menu").bounding_box()
+            x0 = min(card_box["x"], menu_box["x"]) - 10
+            y0 = card_box["y"] - 10
+            pg.screenshot(path=IMG / "menu.png", clip={
+                "x": x0, "y": y0, "width": max(card_box["x"] + card_box["width"], menu_box["x"] + menu_box["width"]) - x0 + 10,
+                "height": max(card_box["y"] + card_box["height"], menu_box["y"] + menu_box["height"]) - y0 + 10})
+            pg.keyboard.press("Escape")
             # the top when the computer that keeps the history cannot be reached
             pg.route("**/api/items*", lambda route: route.abort())
             pg.wait_for_selector("#status.off", timeout=10000)
             top = pg.locator(".top").bounding_box()
             pg.screenshot(path=IMG / "offline.png", clip={"x": 0, "y": 0, "width": 900, "height": top["height"]})
+        pg.context.close()
+
+    # Settings, whole (a tall window), on the computer that keeps the history
+    for theme in ("dark",):
+        pg = page(1180, 1640, theme, 1.5)
+        pg.locator("#gear").click()
+        pg.wait_for_selector(".hero")
+        pg.wait_for_timeout(500)
+        sheet, last = pg.locator(".sheet").bounding_box(), pg.locator(".sheet .sec").last.bounding_box()
+        pg.screenshot(path=IMG / "settings.png", clip={"x": sheet["x"], "y": sheet["y"], "width": sheet["width"],
+                                                      "height": last["y"] + last["height"] + 12 - sheet["y"]})
+        pg.locator(".sec.viz").screenshot(path=IMG / "storage.png")
         pg.context.close()
 
     # a photo waiting to be shared, with a line about it (a low window, so the editor is short)
@@ -274,6 +321,10 @@ def shots(browser, store):
     pg.wait_for_selector("#status.on")
     pg.wait_for_timeout(500)
     pg.screenshot(path=IMG / "android-app.png")
+    pg.locator("#gear").click()
+    pg.wait_for_selector(".hero")
+    pg.wait_for_timeout(400)
+    pg.screenshot(path=IMG / "android-settings.png")
     ctx.close()
 
     # the app's setup page (on a laptop, finding OFFICE-PC)
@@ -285,7 +336,7 @@ def shots(browser, store):
     pg.wait_for_selector("#found button")
     pg.wait_for_timeout(300)
     pg.screenshot(path=IMG / "setup.png")
-    frame(IMG / "setup.png", "dark", "Text Share", 1.5)
+    frame(IMG / "setup.png", "dark", "Instant Share", 1.5)
     ctx.close()
 
     # the pop-ups by the tray
@@ -311,21 +362,21 @@ def pdf(browser):
     pg = browser.new_page()
     pg.goto((HERE / "handbook.html").as_uri())
     pg.wait_for_load_state("networkidle")
-    out = ROOT / "Text Share Handbook.pdf"
+    out = ROOT / "Instant Share Handbook.pdf"
     pg.pdf(path=out, format="A4", print_background=True,
            margin={"top": "0.6in", "bottom": "0.8in", "left": "0.6in", "right": "0.6in"},
            display_header_footer=True, header_template="<span></span>",
            footer_template='<div style="width:100%;padding:0 15mm;display:flex;justify-content:space-between;'
-                           'font:7.5pt Segoe UI,sans-serif;color:#8b93a5"><span>Text Share Handbook</span>'
+                           'font:7.5pt Segoe UI,sans-serif;color:#8b93a5"><span>Instant Share Handbook</span>'
                            '<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>')
     release = ROOT / "release"
     release.mkdir(exist_ok=True)
-    shutil.copy2(out, release / f"Text-Share-Handbook-{textshare.VERSION}.pdf")
-    print(f"Saved {out} ({out.stat().st_size // 1024} KB) and release/Text-Share-Handbook-{textshare.VERSION}.pdf")
+    shutil.copy2(out, release / f"Instant-Share-Handbook-{textshare.VERSION}.pdf")
+    print(f"Saved {out} ({out.stat().st_size // 1024} KB) and release/Instant-Share-Handbook-{textshare.VERSION}.pdf")
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Make the Text Share handbook (PDF).")
+    ap = argparse.ArgumentParser(description="Make the Instant Share handbook (PDF).")
     ap.add_argument("--no-shots", action="store_true", help="keep the pictures in handbook/img as they are")
     args = ap.parse_args()
     with sync_playwright() as p:

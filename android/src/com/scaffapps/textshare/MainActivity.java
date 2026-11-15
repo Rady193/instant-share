@@ -34,14 +34,16 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 
 /**
- * Text Share for Android: the Text Share page of the computer that keeps the history, full screen, with what a
+ * Instant Share for Android: the Instant Share page of the computer that keeps the history, full screen, with what a
  * page cannot do on its own: hearing of new shares while closed (Listen), copying photos and saving files, sharing
  * from other apps (Android's Share menu), and the setup that finds that computer on the Wi-Fi.
  */
 public class MainActivity extends Activity {
     static final String EXTRA_VIEW_URL = "view_url", EXTRA_VIEW_NAME = "view_name";
-    private static final int FILE_REQUEST = 1, NOTIFY_REQUEST = 2;
-    private static final int FILE_MAX = 1024 * 1024;
+    private static final int FILE_REQUEST = 1, NOTIFY_REQUEST = 2, FOLDER_REQUEST = 3;
+    private static final int FILE_MAX = 5 * 1024 * 1024;
+    private int folderCall = -1;                   // the page's call waiting for the folder picker
+    private boolean clearHistory;                  // after setup, Back never returns to it
     private static final String SETUP = "file:///android_asset/setup.html";
     /** On screen right now: the page shows new items itself, so no notifications for them. */
     static volatile boolean foreground;
@@ -88,6 +90,7 @@ public class MainActivity extends Activity {
     private String theme() { return "light".equals(Net.prefs(this).getString("theme", "dark")) ? "light" : "dark"; }
 
     private void page() {
+        clearHistory = true;
         try {
             web.loadUrl(Net.base(this) + "/?app=1&id=" + Net.deviceId(this) + "&me="
                     + URLEncoder.encode(Net.name(this), "UTF-8").replace("+", "%20") + "&theme=" + theme());
@@ -185,7 +188,7 @@ public class MainActivity extends Activity {
             if (stream != null) s.put("file", readShared(stream, intent.getType()));
             shared = s.toString();
         } catch (Exception e) {
-            Toast.makeText(this, "Text Share could not read what was shared.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Instant Share could not read what was shared.", Toast.LENGTH_LONG).show();
         }
         intent.setAction(Intent.ACTION_MAIN);                  // not taken twice (after turning the phone, say)
         String url = web.getUrl(), base = Net.base(this);
@@ -236,8 +239,31 @@ public class MainActivity extends Activity {
         }, "textshare-view").start();
     }
 
+    private JSONObject options() {
+        try {
+            return new JSONObject().put("android", true).put("save_folder", Files.folderLabel(this))
+                    .put("save_chosen", Files.chosenFolder(this) != null);
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
     @Override
     protected void onActivityResult(int request, int result, Intent data) {
+        if (request == FOLDER_REQUEST) {
+            Uri tree = result == RESULT_OK && data != null ? data.getData() : null;
+            if (tree != null) {
+                try {
+                    getContentResolver().takePersistableUriPermission(tree,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    Net.prefs(this).edit().putString("save_tree", tree.toString()).apply();
+                } catch (SecurityException notKept) {
+                    Toast.makeText(this, "Android did not allow saving in that folder.", Toast.LENGTH_LONG).show();
+                }
+            }
+            if (folderCall >= 0) { answer(folderCall, options()); folderCall = -1; }
+            return;
+        }
         if (request == FILE_REQUEST && fileCallback != null) {
             fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
             fileCallback = null;
@@ -253,8 +279,10 @@ public class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (web.canGoBack()) web.goBack();
-        else moveTaskToBack(true);                             // stays ready, like closing the window on Windows
+        // first whatever is open in the page (settings, a menu, a photo...), then away: never back to the setup
+        web.evaluateJavascript("window.textShareBack ? window.textShareBack() : false", handled -> {
+            if (!"true".equals(handled)) moveTaskToBack(true);   // stays ready, like closing the window on Windows
+        });
     }
 
     // ---------------------------------------------------------------- the page's links
@@ -269,12 +297,17 @@ public class MainActivity extends Activity {
             if (base != null && url.startsWith(base + "/")) {
                 String path = target.getPath() == null ? "" : target.getPath();
                 if (path.startsWith("/files/")) { view(url, target.getLastPathSegment()); return true; }
-                if (!path.startsWith("/download")) return false;   // Text Share's own page
+                if (!path.startsWith("/download")) return false;   // Instant Share's own page
             }
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (ActivityNotFoundException ignored) {}
             return true;
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            if (clearHistory && url != null && !url.startsWith("file:")) { clearHistory = false; view.clearHistory(); }
         }
 
         @Override
@@ -332,7 +365,7 @@ public class MainActivity extends Activity {
             new Thread(() -> {
                 JSONObject h = Net.hello(address, port, 5000);
                 if (h == null) {
-                    answer(call, error("Text Share does not answer at " + address + " (port " + port + "). Check that it is running "
+                    answer(call, error("Instant Share does not answer at " + address + " (port " + port + "). Check that it is running "
                             + "there and that this phone is on the same Wi-Fi."));
                     return;
                 }
@@ -373,6 +406,31 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void openFile(String url, String name) { view(url, name); }
+
+        @JavascriptInterface
+        public String getOptions() { return options().toString(); }
+
+        @JavascriptInterface
+        public void chooseSaveFolder(int call) {
+            runOnUiThread(() -> {
+                folderCall = call;
+                try {
+                    startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), FOLDER_REQUEST);
+                } catch (ActivityNotFoundException e) {
+                    folderCall = -1;
+                    answer(call, options());
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public String resetSaveFolder() {
+            Net.prefs(MainActivity.this).edit().remove("save_tree").apply();
+            return options().toString();
+        }
+
+        @JavascriptInterface
         public void copyImage(int call, String url) {
             new Thread(() -> {
                 try {
@@ -388,7 +446,7 @@ public class MainActivity extends Activity {
         public void saveFile(int call, String url, String name) {
             new Thread(() -> {
                 try {
-                    String saved = Files.saveInDownloads(MainActivity.this, name, Net.get(MainActivity.this, url));
+                    String saved = Files.save(MainActivity.this, name, Net.get(MainActivity.this, url));
                     answer(call, ok().put("name", saved));
                 } catch (Exception e) {
                     answer(call, error("Could not save it: " + e.getMessage()));

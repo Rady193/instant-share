@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Text Share for Android: the page of the computer that keeps the history, full screen, plus notifications with
+<!-- Instant Share for Android: the page of the computer that keeps the history, full screen, plus notifications with
      Copy / Save while the app is closed, and Android's Share menu. Only the local network; no internet, no Google. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.scaffapps.textshare">
 
@@ -35,9 +35,11 @@
             <intent-filter android:label="@string/share_label">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/*" />
                 <data android:mimeType="image/*" />
-                <data android:mimeType="application/pdf" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="application/*" />
             </intent-filter>
         </activity>
 

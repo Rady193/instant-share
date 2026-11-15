@@ -23,19 +23,72 @@ import java.io.OutputStream;
 /**
  * Photos and PDFs from the history: saved in Downloads, copied (a photo, so it can be pasted in another app), or
  * opened in the phone's own viewer. The copy and the viewer get the file from this small provider, which hands out
- * only what Text Share put in its own cache folder ("shared"), read-only, to the app it was given to.
+ * only what Instant Share put in its own cache folder ("shared"), read-only, to the app it was given to.
  */
 public class Files extends ContentProvider {
     static final String AUTHORITY_SUFFIX = ".files";
 
+    private static final String[][] TYPES = {
+        {".pdf", "application/pdf"}, {".png", "image/png"}, {".gif", "image/gif"}, {".webp", "image/webp"},
+        {".jpg", "image/jpeg"}, {".jpeg", "image/jpeg"}, {".bmp", "image/bmp"}, {".heic", "image/heic"},
+        {".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+        {".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+        {".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+        {".doc", "application/msword"}, {".xls", "application/vnd.ms-excel"}, {".ppt", "application/vnd.ms-powerpoint"},
+        {".odt", "application/vnd.oasis.opendocument.text"}, {".ods", "application/vnd.oasis.opendocument.spreadsheet"},
+        {".odp", "application/vnd.oasis.opendocument.presentation"}, {".rtf", "application/rtf"},
+        {".txt", "text/plain"}, {".csv", "text/csv"}, {".md", "text/markdown"},
+        {".mp3", "audio/mpeg"}, {".m4a", "audio/mp4"}, {".aac", "audio/aac"}, {".wav", "audio/wav"},
+        {".ogg", "audio/ogg"}, {".opus", "audio/ogg"}, {".flac", "audio/flac"}, {".amr", "audio/amr"},
+        {".mp4", "video/mp4"}, {".mov", "video/quicktime"}, {".3gp", "video/3gpp"}, {".zip", "application/zip"},
+    };
+
     static String type(String name) {
         String n = name.toLowerCase();
-        if (n.endsWith(".pdf")) return "application/pdf";
-        if (n.endsWith(".png")) return "image/png";
-        if (n.endsWith(".gif")) return "image/gif";
-        if (n.endsWith(".webp")) return "image/webp";
-        if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+        for (String[] t : TYPES) if (n.endsWith(t[0])) return t[1];
         return "application/octet-stream";
+    }
+
+    /** The folder chosen in Settings (Android's folder picker), or null for Downloads. */
+    static Uri chosenFolder(Context c) {
+        String tree = Net.prefs(c).getString("save_tree", null);
+        return tree == null ? null : Uri.parse(tree);
+    }
+
+    /** A short name for where files go, for the settings page. */
+    static String folderLabel(Context c) {
+        Uri tree = chosenFolder(c);
+        if (tree == null) return "Downloads";
+        String id = android.provider.DocumentsContract.getTreeDocumentId(tree);
+        int colon = id.indexOf(':');
+        String path = colon >= 0 ? id.substring(colon + 1) : id;
+        return path.isEmpty() ? "the phone's storage" : path;
+    }
+
+    /** Saves it in the chosen folder, else in Downloads. Returns the name it got. */
+    static String save(Context c, String name, byte[] data) throws Exception {
+        Uri tree = chosenFolder(c);
+        if (tree != null) {
+            try {
+                Uri parent = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree,
+                        android.provider.DocumentsContract.getTreeDocumentId(tree));
+                Uri doc = android.provider.DocumentsContract.createDocument(c.getContentResolver(), parent, type(name), safeName(name));
+                if (doc != null) {
+                    try (OutputStream out = c.getContentResolver().openOutputStream(doc)) {
+                        if (out == null) throw new java.io.IOException("could not write there");
+                        out.write(data);
+                    }
+                    String saved = safeName(name);
+                    try (Cursor q = c.getContentResolver().query(doc, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                        if (q != null && q.moveToFirst()) saved = q.getString(0);
+                    }
+                    return saved;
+                }
+            } catch (Exception folderGone) {
+                // the folder was removed, or its permission withdrawn: Downloads, as before
+            }
+        }
+        return saveInDownloads(c, name, data);
     }
 
     static String safeName(String name) {
@@ -88,7 +141,7 @@ public class Files extends ContentProvider {
 
     static void copyText(Context c, String text) {
         ClipboardManager cb = (ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE);
-        cb.setPrimaryClip(ClipData.newPlainText("Text Share", text));
+        cb.setPrimaryClip(ClipData.newPlainText("Instant Share", text));
     }
 
     /** Opens it in the phone's viewer (a PDF reader, the gallery). */

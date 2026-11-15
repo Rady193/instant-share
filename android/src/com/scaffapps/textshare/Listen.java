@@ -35,7 +35,7 @@ public class Listen extends Service {
     private volatile boolean running;
     private Thread loop;
 
-    /** Start (or keep) listening once Text Share is set up. Safe to call often. */
+    /** Start (or keep) listening once Instant Share is set up. Safe to call often. */
     static void start(Context c) {
         if (Net.base(c) == null) return;
         try {
@@ -163,7 +163,7 @@ public class Listen extends Service {
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm.getNotificationChannel(CHANNEL_ON) == null) {
             NotificationChannel ch = new NotificationChannel(CHANNEL_ON, "Connected", NotificationManager.IMPORTANCE_MIN);
-            ch.setDescription("Shown while Text Share stays connected to hear of new shares. You can hide it; shares still arrive.");
+            ch.setDescription("Shown while Instant Share stays connected to hear of new shares. You can hide it; shares still arrive.");
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
         }
@@ -176,7 +176,7 @@ public class Listen extends Service {
         Notification n = new Notification.Builder(this, CHANNEL_ON)
                 .setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF297AA0).setShowWhen(false)
                 .setOngoing(Build.VERSION.SDK_INT < 33)
-                .setContentTitle(host.isEmpty() ? "Text Share is connected" : "Connected to " + host)
+                .setContentTitle(host.isEmpty() ? "Instant Share is connected" : "Connected to " + host)
                 .setContentText("Tap to hide this notice. Shares still arrive.")
                 .setContentIntent(pi).build();
         if (Build.VERSION.SDK_INT >= 34) startForeground(NOTICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);

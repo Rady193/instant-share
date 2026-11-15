@@ -30,7 +30,7 @@ public class Actions extends BroadcastReceiver {
                 ((NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE))
                         .cancel(intent.getIntExtra(EXTRA_NOTIFICATION, 0));
             } catch (Exception e) {
-                said = "Text Share could not get it: " + e.getMessage();
+                said = "Instant Share could not get it: " + e.getMessage();
             }
             final String text = said;
             new Handler(Looper.getMainLooper()).post(() -> Toast.makeText(c, text, Toast.LENGTH_SHORT).show());
@@ -52,6 +52,6 @@ public class Actions extends BroadcastReceiver {
             Files.copyImage(c, name, data);
             return "Photo copied";
         }
-        return "Saved in Downloads: " + Files.saveInDownloads(c, name, data);
+        return "Saved in " + Files.folderLabel(c) + ": " + Files.save(c, name, data);
     }
 }

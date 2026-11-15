@@ -1,11 +1,11 @@
-"""Packs Text Share into one portable Windows program: release/Text-Share-<version>-portable.exe
+"""Packs Instant Share into one portable Windows program: release/Instant-Share-<version>-portable.exe
 
     py build.py
 
 The first run makes the build environment, C:\\venvs\\textshare-build (outside OneDrive: thousands of small files),
 with the versions below. The program is app.py (its window, tray and pop-ups, drawn by Windows' own Edge WebView2)
-around textshare.py, and carries its own Python, so the computers it runs on need nothing. release/ also gets
-textshare.py itself, for Mac and Linux (python3 textshare.py), and the files' SHA-256 checksums.
+around instantshare.py, and carries its own Python, so the computers it runs on need nothing. release/ also gets
+instantshare.py itself, for Mac and Linux (python3 instantshare.py), and the files' SHA-256 checksums.
 """
 
 import hashlib
@@ -33,7 +33,7 @@ def run(*cmd):
 
 
 def version():
-    m = re.search(r'^VERSION = "([\d.]+)"', (HERE / "textshare.py").read_text(encoding="utf-8"), re.M)
+    m = re.search(r'^VERSION = "([\d.]+)"', (HERE / "instantshare.py").read_text(encoding="utf-8"), re.M)
     return m[1]
 
 
@@ -41,12 +41,12 @@ def version_file(v, exe_name):
     nums = tuple(int(n) for n in (v.split(".") + ["0", "0", "0"])[:4])
     strings = {
         "CompanyName": "SCAFFApps",
-        "FileDescription": "Text Share",
+        "FileDescription": "Instant Share",
         "FileVersion": v,
-        "InternalName": "Text Share",
+        "InternalName": "Instant Share",
         "LegalCopyright": "Copyright \u00a9 2026 SCAFFApps",
         "OriginalFilename": exe_name,
-        "ProductName": "Text Share",
+        "ProductName": "Instant Share",
         "ProductVersion": v,
     }
     table = ",\n        ".join(f"StringStruct({k!r}, {s!r})" for k, s in strings.items())
@@ -90,14 +90,14 @@ print(json.dumps(out))
 
 
 def notices(v, target):
-    """The licences of what the .exe carries besides Text Share: Python (with its Windows build's libraries),
+    """The licences of what the .exe carries besides Instant Share: Python (with its Windows build's libraries),
     PyInstaller's bootloader and the Python packages in BUNDLED. Taken from the build environment, so they match."""
     base = subprocess.check_output([str(PY), "-c", "import sys; print(sys.base_prefix)"], text=True).strip()
     python_license = (Path(base) / "LICENSE.txt").read_text(encoding="utf-8")
     packages = json.loads(subprocess.check_output([str(PY), "-c", LICENCES, *BUNDLED], text=True, encoding="utf-8"))
     rule = "\n\n" + "=" * 78 + "\n\n"
     target.write_text(
-        f"Text Share {v} for Windows (the .exe) carries these third-party components, each under its own licence:\n\n"
+        f"Instant Share {v} for Windows (the .exe) carries these third-party components, each under its own licence:\n\n"
         "1. Python, under the Python Software Foundation License, with the libraries its Windows build includes\n"
         "   (among them OpenSSL, SQLite, libffi and zlib). Their licence texts follow below, as Python publishes them.\n\n"
         "2. The PyInstaller bootloader, which starts the program: GPL 2.0 or later with the PyInstaller bootloader\n"
@@ -112,7 +112,7 @@ def notices(v, target):
 
 
 def android(v, release):
-    """Text Share for Android (android/build.ps1), when the phone-app tools are on this PC; else the build goes on
+    """Instant Share for Android (android/build.ps1), when the phone-app tools are on this PC; else the build goes on
     without it, and says so."""
     tools = Path(os.environ.get("LOCALAPPDATA", "")) / "ScaffERP-android-tools"
     if not (tools / "sdk").is_dir():
@@ -120,16 +120,16 @@ def android(v, release):
         return None
     run(PY, HERE / "android" / "make_setup.py")
     run("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", HERE / "android" / "build.ps1", "-Tools", tools)
-    apk = HERE / "android" / "build" / "Text-Share.apk"
-    shutil.copy2(apk, release / f"Text-Share-{v}.apk")
+    apk = HERE / "android" / "build" / "Instant-Share.apk"
+    shutil.copy2(apk, release / f"Instant-Share-{v}.apk")
     return apk
 
 
 def main():
     if sys.platform != "win32":
-        sys.exit("build.py makes the Windows program; on Mac or Linux just run:  python3 textshare.py")
+        sys.exit("build.py makes the Windows program; on Mac or Linux just run:  python3 instantshare.py")
     v = version()
-    exe_name = f"Text-Share-{v}-portable.exe"
+    exe_name = f"Instant-Share-{v}-portable.exe"
 
     if not PY.exists():
         run(sys.executable, "-m", "venv", VENV)
@@ -151,12 +151,12 @@ def main():
         "--version-file", version_file(v, exe_name),
         "--distpath", release, "--workpath", WORK, "--specpath", WORK,
         HERE / "app.py")
-    shutil.copy2(HERE / "textshare.py", release / "textshare.py")
+    shutil.copy2(HERE / "instantshare.py", release / "instantshare.py")
     notices(v, release / "THIRD-PARTY-NOTICES.txt")
 
-    print(f"\nText Share {v}:")
+    print(f"\nInstant Share {v}:")
     lines = []
-    for name in [exe_name] + ([f"Text-Share-{v}.apk"] if apk else []) + ["textshare.py"]:
+    for name in [exe_name] + ([f"Instant-Share-{v}.apk"] if apk else []) + ["instantshare.py"]:
         data = (release / name).read_bytes()
         digest = hashlib.sha256(data).hexdigest().upper()
         size = f"{len(data) / 1048576:.1f} MB" if len(data) > 1048576 else f"{len(data) / 1024:.0f} KB"

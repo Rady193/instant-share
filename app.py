@@ -1,4 +1,4 @@
-"""Text Share for Windows: its own window, tray icon and pop-ups around the server in textshare.py.
+"""Instant Share for Windows: its own window, tray icon and pop-ups around the server in instantshare.py.
 
 One computer keeps the history: the app runs the server there. The other computers run the same app and connect to
 it; they find it on the network by themselves. On every computer the app waits in the tray when its window is closed,
@@ -35,12 +35,14 @@ from ctypes import wintypes
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
-import textshare as ts
+import instantshare as ts
 
-APP = "Text Share"
-TOAST_TITLE = "Text Share notification"
+APP = "Instant Share"
+TOAST_TITLE = "Instant Share notification"
 RES = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent)) / "build"     # icon.png, icon.ico
-RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+# the programs that start with Windows; automated checks point INSTANTSHARE_RUN_KEY elsewhere so they never touch it
+RUN_KEY = os.environ.get("INSTANTSHARE_RUN_KEY") or r"Software\Microsoft\Windows\CurrentVersion\Run"
+OLD_RUN_NAME = "Text Share"                  # how 1.0 was listed in the programs that start with Windows
 HOST_PORTS = 10                  # when 8765 is taken by another program, the next free one of 8765..8774
 EVERY = 3                        # seconds between the app's questions to the computer that keeps the history
 
@@ -103,7 +105,7 @@ def paint_title_bar(hwnd, theme):
 
 def my_windows():
     """{"main": hwnd, "toast": hwnd} of this program's windows. (The main one takes the page's title, such as
-    "Text Share · OFFICE-PC", so it is told apart from the pop-up by that one's fixed title.)"""
+    "Instant Share · OFFICE-PC", so it is told apart from the pop-up by that one's fixed title.)"""
     found = {}
     pid = os.getpid()
 
@@ -179,8 +181,9 @@ def downloads_folder():
     return Path.home() / "Downloads"
 
 
-def save_in_downloads(name, data):
-    folder = downloads_folder()
+def save_in_downloads(name, data, folder=None):
+    """Saves a file from the history in the chosen folder (Downloads unless another was chosen) and shows it there."""
+    folder = Path(folder) if folder else downloads_folder()
     folder.mkdir(parents=True, exist_ok=True)
     stem, dot, ext = name.rpartition(".")
     if not dot:
@@ -267,7 +270,7 @@ class Tray:
         instance = kernel32.GetModuleHandleW(None)
         wc = self.WNDCLASSW(lpfnWndProc=self._proc, hInstance=instance, lpszClassName=self.CLASS)
         user32.RegisterClassW(ctypes.byref(wc))         # fails harmlessly when already registered
-        self.hwnd = user32.CreateWindowExW(0, self.CLASS, "Text Share tray", 0, 0, 0, 0, 0, None, None, instance, None)
+        self.hwnd = user32.CreateWindowExW(0, self.CLASS, "Instant Share tray", 0, 0, 0, 0, 0, None, None, instance, None)
         self.taskbar_created = user32.RegisterWindowMessageW("TaskbarCreated")     # Explorer restarted: add it again
         size = user32.GetSystemMetrics(49)               # SM_CXSMICON
         self.icon = user32.LoadImageW(None, self.icon_path, 1, size, size, 0x10)   # IMAGE_ICON, LR_LOADFROMFILE
@@ -431,6 +434,35 @@ def autostart_get():
         return None
 
 
+def command_data(command):
+    """The history folder a start-with-Windows command uses (its --data, else the usual one). The 1.0 folder
+    (TextShare) counts as the usual one: it moves to InstantShare."""
+    m = re.search(r'--data "([^"]+)"', command or "")
+    if not m:
+        return ts.default_data_dir().resolve()
+    folder = Path(m[1]).resolve()
+    old_usual = Path(os.environ.get("LOCALAPPDATA", "")) / "TextShare"
+    return ts.default_data_dir().resolve() if folder == old_usual.resolve() else folder
+
+
+def mine(command, data):
+    """Is this start-with-Windows command this copy's (the same history folder)? Another copy's is left alone."""
+    return bool(command) and command_data(command) == data.resolve()
+
+
+def autostart_moved(data):
+    """True when Text Share 1.0 was set to start with this same history; that entry goes (the new one replaces it)."""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_ALL_ACCESS) as key:
+            old = winreg.QueryValueEx(key, OLD_RUN_NAME)[0]
+            if not mine(old, data):
+                return False
+            winreg.DeleteValue(key, OLD_RUN_NAME)
+            return True
+    except OSError:
+        return False
+
+
 def autostart_set(command):
     with winreg.CreateKey(winreg.HKEY_CURRENT_USER, RUN_KEY) as key:
         if command:
@@ -474,6 +506,26 @@ class App:
     def theme(self):
         return "light" if self.settings.get("theme") == "light" else "dark"
 
+    @property
+    def save_folder(self):
+        """Where Save puts files: the folder chosen in Settings, while it exists; else Downloads."""
+        chosen = self.settings.get("save_folder")
+        return Path(chosen) if chosen and Path(chosen).is_dir() else downloads_folder()
+
+    def options(self):
+        return {"windows": True, "on_top": bool(self.settings.get("on_top")), "auto_copy": bool(self.settings.get("auto_copy")),
+                "host": self.mode == "host", "folder": str(self.data), "save_folder": str(self.save_folder),
+                "save_chosen": bool(self.settings.get("save_folder"))}
+
+    def set_option(self, name, value):
+        if name not in ("on_top", "auto_copy"):
+            return self.options()
+        self.settings[name] = bool(value)
+        self.settings.save()
+        if name == "on_top" and self.window:
+            self.window.on_top = bool(value)
+        return self.options()
+
     def run(self):
         import webview
         webview.settings["ALLOW_DOWNLOADS"] = True
@@ -483,6 +535,7 @@ class App:
         hidden = self.args.hidden and self.settings.get("mode") in ("host", "join")
         self.window = webview.create_window(APP, html=self.local_page("starting"), js_api=Api(self), width=1220,
                                             height=820, min_size=(420, 520), hidden=hidden,
+                                            on_top=bool(self.settings.get("on_top")),
                                             background_color=BACKGROUND[self.theme], text_select=True)
         self.window.events.closing += self.on_closing
         self.window.events.closed += self.on_closed
@@ -503,7 +556,8 @@ class App:
         if mode in ("host", "join"):
             self.start_tray()
             command = autostart_get()
-            if command and command != autostart_command(self.data):    # a moved or newer program: it starts now
+            # this copy's own entry follows it when the program moved or was renamed; another copy's is not touched
+            if autostart_moved(self.data) or (mine(command, self.data) and command != autostart_command(self.data)):
                 autostart_set(autostart_command(self.data))
         if mode == "host":
             self.become_host()
@@ -547,7 +601,7 @@ class App:
             self.window.restore()
 
     def on_closing(self):
-        """Closing the window: once set up, Text Share waits in the tray, so the others can go on sharing with
+        """Closing the window: once set up, Instant Share waits in the tray, so the others can go on sharing with
         this computer and its pop-ups still come; Quit in the tray menu ends it."""
         if self.quitting or self.mode is None:
             self.quitting = True
@@ -558,7 +612,7 @@ class App:
         if not self.told_tray and self.tray:
             self.told_tray = True
             try:
-                self.tray.balloon("Text Share is still running here, so it can show what others share. "
+                self.tray.balloon("Instant Share is still running here, so it can show what others share. "
                                  "To stop it, right-click its icon and choose Quit.", APP)
             except Exception:
                 pass
@@ -604,14 +658,14 @@ class App:
             return
 
         def toggle_autostart():
-            autostart_set(None if autostart_get() else autostart_command(self.data))
+            autostart_set(None if mine(autostart_get(), self.data) else autostart_command(self.data))
 
         self.tray = Tray(RES / "icon.ico", APP, [
-            ("Open Text Share", self.show, None),
-            ("Start with Windows", toggle_autostart, lambda: bool(autostart_get())),
+            ("Open Instant Share", self.show, None),
+            ("Start with Windows", toggle_autostart, lambda: mine(autostart_get(), self.data)),
             ("Change setup…", self.open_setup, None),
             None,
-            ("Quit Text Share", self.quit, None)])
+            ("Quit Instant Share", self.quit, None)])
         self.tray.start()
         self.tray_title()
 
@@ -619,7 +673,7 @@ class App:
         if self.tray:
             where = (f"keeping the history on {self.me}" if self.mode == "host"
                      else f"connected to {self.settings.get('host', '')}" if self.mode == "join" else "setting up")
-            self.tray.set_tip(f"Text Share: {where}")
+            self.tray.set_tip(f"Instant Share: {where}")
 
     def stop_tray(self):
         if self.tray:
@@ -657,9 +711,9 @@ class App:
             self.store.close()
             self.store = None
             self.window.load_html(self.local_page("problem", {
-                "title": "Text Share cannot start here",
+                "title": "Instant Share cannot start here",
                 "text": f"Ports {first} to {first + HOST_PORTS - 1} are all used by other programs. "
-                        "Start Text Share with --port and another number, for example --port 9000."}))
+                        "Start Instant Share with --port and another number, for example --port 9000."}))
             return False
         self.server, self.port = server, port
         self.settings["host_port"] = port
@@ -789,6 +843,15 @@ class App:
         except Exception:
             return
         self.place_toast()
+        if self.settings.get("auto_copy") and (newest["size"] or (file and file["type"].startswith("image/"))):
+            def copy_now():
+                answer = self.toast_action("copy")
+                if answer.get("ok"):
+                    try:
+                        self.toast.evaluate_js(f"copied({json.dumps('Copied ✓')})")
+                    except Exception:
+                        pass
+            threading.Thread(target=copy_now, daemon=True, name="auto-copy").start()
         try:
             winsound.PlaySound("SystemNotification", winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
         except RuntimeError:
@@ -803,9 +866,14 @@ class App:
         user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work), 0)          # SPI_GETWORKAREA: above the taskbar
         w, h = box.right - box.left, box.bottom - box.top
         margin = 12
-        # on top of everything (HWND_TOPMOST), shown without taking the focus from what the user is doing
+        # a tool window: never in the taskbar or Alt+Tab
+        user32.SetWindowLongW(hwnd, -20, (user32.GetWindowLongW(hwnd, -20) | 0x80) & ~0x40000)   # TOOLWINDOW, not APPWINDOW
+        # on top of everything (HWND_TOPMOST), in the corner above the taskbar
         user32.SetWindowPos(hwnd, wintypes.HWND(-1), work.right - w - margin, work.bottom - h - margin, 0, 0,
-                            0x0001 | 0x0010 | 0x0040)       # SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW
+                            0x0001 | 0x0010)                # SWP_NOSIZE | SWP_NOACTIVATE
+        # shown the standard way (SW_SHOWNOACTIVATE): the window learns it is visible, so its page is drawn - without
+        # taking the focus from what the user is doing
+        user32.ShowWindow(hwnd, 4)
 
     def hide_toast(self):
         hwnd = my_windows().get("toast")
@@ -827,7 +895,7 @@ class App:
                 if what == "copy" and item["file"]["type"].startswith("image/"):
                     copy_image(data)
                     return {"ok": True, "label": "Copied ✓"}
-                saved = save_in_downloads(item["file"]["name"], data)
+                saved = save_in_downloads(item["file"]["name"], data, self.save_folder)
                 return {"ok": True, "label": "Saved ✓", "name": saved.name}
         except Exception as e:
             log(f"pop-up {what}: {e}")
@@ -836,7 +904,7 @@ class App:
 
 
 def hello(host, port, timeout=2.5):
-    """Text Share's answer at host:port, or None."""
+    """Instant Share's answer at host:port, or None."""
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))      # never through a proxy
     where = f"[{host}]" if ":" in host else host
     request = urllib.request.Request(f"http://{where}:{port}/api/hello", headers={"X-TextShare": "1"})
@@ -849,7 +917,7 @@ def hello(host, port, timeout=2.5):
 
 
 class Api:
-    """What the pages in the app's window may ask of it: its own pages (setup, connecting) and Text Share's page."""
+    """What the pages in the app's window may ask of it: its own pages (setup, connecting) and Instant Share's page."""
 
     def __init__(self, app):
         self._app = app
@@ -880,7 +948,7 @@ class Api:
             return {"error": "Type the name or the address of the computer that keeps the history."}
         answer = hello(host, port, timeout=4)
         if not answer:
-            return {"error": f"Text Share does not answer at {host} (port {port}). Check that it is running there, "
+            return {"error": f"Instant Share does not answer at {host} (port {port}). Check that it is running there, "
                              "on the same network, and that Windows allowed it on Private networks."}
         return self._join(answer["server"], host, port, autostart)
 
@@ -912,6 +980,30 @@ class Api:
     def set_name(self, name):
         self._app.set_name(name)
 
+    def get_options(self):
+        return self._app.options()
+
+    def set_option(self, name, value):
+        return self._app.set_option(str(name), value)
+
+    def open_folder(self):
+        """The folder that holds the history (on the computer that keeps it)."""
+        if self._app.mode == "host":
+            os.startfile(self._app.data)
+
+    def choose_save_folder(self):
+        import webview
+        chosen = self._app.window.create_file_dialog(webview.FileDialog.FOLDER, directory=str(self._app.save_folder))
+        if chosen:
+            self._app.settings["save_folder"] = str(chosen[0] if isinstance(chosen, (list, tuple)) else chosen)
+            self._app.settings.save()
+        return self._app.options()
+
+    def reset_save_folder(self):
+        self._app.settings.pop("save_folder", None)
+        self._app.settings.save()
+        return self._app.options()
+
     def copy_image(self, url):
         try:
             copy_image(self._app.fetch(str(url)))
@@ -922,7 +1014,7 @@ class Api:
     def save_file(self, url, name):
         try:
             name = re.sub(r'[\x00-\x1f<>:"/\\|?*]', "", str(name)).strip(" .") or "file"
-            saved = save_in_downloads(name, self._app.fetch(str(url)))
+            saved = save_in_downloads(name, self._app.fetch(str(url)), self._app.save_folder)
             return {"ok": True, "name": saved.name}
         except Exception as e:
             return {"error": f"Could not save it: {e}"}
@@ -1011,7 +1103,7 @@ input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var
 
 MARK = ('<svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" '
         'fill="#5b2c83"/><path d="M7 12h17l-4-4M25 20H8l4 4" fill="none" stroke="#f0c33c" stroke-width="2.6" '
-        'stroke-linecap="round" stroke-linejoin="round"/></svg>Text Share')
+        'stroke-linecap="round" stroke-linejoin="round"/></svg>Instant Share')
 
 READY = """
 function ready(fn) { if (window.pywebview && window.pywebview.api) fn(); else window.addEventListener("pywebviewready", fn); }
@@ -1021,9 +1113,9 @@ const $ = (s) => document.querySelector(s);
 SETUP = """
 <div class="wrap">
   <div class="brand">{mark}</div>
-  <h1>Set up Text Share on this computer</h1>
+  <h1>Set up Instant Share on this computer</h1>
   <p class="lead">One computer keeps the history and the others connect to it. Phones need nothing: they open the
-  address shown at the bottom of the Text Share page in their browser.</p>
+  address shown at the bottom of the Instant Share page in their browser.</p>
   <div class="cards">
     <section class="card" id="hostCard">
       <h2>Keep the history here<span class="tag" id="hostNow" hidden>NOW</span></h2>
@@ -1033,7 +1125,7 @@ SETUP = """
     </section>
     <section class="card" id="joinCard">
       <h2>Connect to the computer that keeps it<span class="tag" id="joinNow" hidden>NOW</span></h2>
-      <p class="status" id="status"><span class="spin"></span>Looking for Text Share on your network…</p>
+      <p class="status" id="status"><span class="spin"></span>Looking for Instant Share on your network…</p>
       <div class="found" id="found"></div>
       <button class="link" id="again" hidden>Look again</button>
       <label class="small" for="addr">Not listed? Its name or address:</label>
@@ -1042,9 +1134,9 @@ SETUP = """
       <p class="err" id="err"></p>
     </section>
   </div>
-  <label class="chk"><input type="checkbox" id="autostart"> Start Text Share when I sign in to Windows. It waits in
+  <label class="chk"><input type="checkbox" id="autostart"> Start Instant Share when I sign in to Windows. It waits in
     the tray, ready to show what others share.</label>
-  <div class="foot"><span>This computer: <b id="me"></b></span><span>Text Share {version} · SCAFFApps</span>
+  <div class="foot"><span>This computer: <b id="me"></b></span><span>Instant Share {version} · SCAFFApps</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
@@ -1061,11 +1153,11 @@ const auto = () => $("#autostart").checked;
 
 async function find() {
   $("#again").hidden = true; $("#found").textContent = "";
-  $("#status").innerHTML = '<span class="spin"></span>Looking for Text Share on your network…';
+  $("#status").innerHTML = '<span class="spin"></span>Looking for Instant Share on your network…';
   const r = await window.pywebview.api.find();
   const others = r.found.filter((f) => !(f.name.toLowerCase() === r.me.toLowerCase() && r.mode === "host"));
   $("#status").textContent = others.length ? "Found on your network:"
-    : "None found. Is Text Share running on the computer that keeps the history, on this network?";
+    : "None found. Is Instant Share running on the computer that keeps the history, on this network?";
   for (const f of others) {
     const b = document.createElement("button");
     const left = document.createElement("span"), right = document.createElement("small");
@@ -1119,7 +1211,7 @@ ready(() => {
 </script>
 """
 
-TOAST = """<!DOCTYPE html><html lang="en" data-theme="{theme}"><head><meta charset="utf-8"><title>Text Share notification</title>
+TOAST = """<!DOCTYPE html><html lang="en" data-theme="{theme}"><head><meta charset="utf-8"><title>Instant Share notification</title>
 <style>{style}
 body { display: block; min-height: 0; height: 100vh; padding: 0; overflow: hidden; background: var(--surface); user-select: none }
 .toast { display: flex; flex-direction: column; height: 100vh; border: 1px solid var(--line-strong); border-radius: 0; padding: 10px 10px 10px 12px; gap: 8px }
@@ -1142,7 +1234,7 @@ body { display: block; min-height: 0; height: 100vh; padding: 0; overflow: hidde
 <div class="toast">
   <div class="head"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5b2c83"/><path d="M7 12h17l-4-4M25 20H8l4 4" fill="none" stroke="#f0c33c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <b id="who"></b><span id="what">shared</span><button class="x" id="x" title="Close">✕</button></div>
-  <div class="body" id="body" title="Open Text Share"><img id="thumb" alt="" hidden><span class="pdf" id="pdf" hidden>PDF</span><p class="text" id="text" dir="auto"></p></div>
+  <div class="body" id="body" title="Open Instant Share"><img id="thumb" alt="" hidden><span class="pdf" id="pdf" hidden>PDF</span><p class="text" id="text" dir="auto"></p></div>
   <div class="foot"><span class="more" id="more"></span><button class="btn" id="open">Open</button><button class="btn primary" id="act">Copy</button></div>
 </div>
 <script>
@@ -1150,6 +1242,7 @@ const $ = (s) => document.querySelector(s);
 const api = () => window.pywebview.api;
 let timer = 0, hovered = false;
 function setTheme(t) { document.documentElement.dataset.theme = t; }
+function copied(label) { const b = $("#act"); b.textContent = label; b.classList.add("done"); }
 function later() { clearTimeout(timer); timer = setTimeout(() => { if (!hovered) api().dismiss(); }, 9000); }
 function show(d) {
   $("#who").textContent = d.who;
@@ -1199,7 +1292,7 @@ def local_page(kind, info=None, theme="dark"):
             "starting": ("Starting…", "", ""),
             "connecting": (f"Connecting to {name}…", "", ""),
             "unreachable": (f"Can't reach {name}",
-                            f"Text Share must be running on {name}, and both computers must be on the same network. "
+                            f"Instant Share must be running on {name}, and both computers must be on the same network. "
                             "Trying again every few seconds…",
                             '<div class="row"><button class="btn" id="retry">Try again now</button>'
                             '<button class="btn" id="setup">Choose another computer</button></div>'),
@@ -1220,14 +1313,18 @@ def quiet_late_answers():
     default = threading.excepthook
 
     def hook(args):
-        if type(args.exc_value).__name__ == "JavascriptException" and "_returnValuesCallbacks" in str(args.exc_value):
-            return
+        if type(args.exc_value).__name__ == "JavascriptException":
+            tb = args.exc_traceback
+            while tb:
+                if tb.tb_frame.f_code.co_name == "_call" and "webview" in tb.tb_frame.f_code.co_filename:
+                    return                       # an answer to a page that has moved on
+                tb = tb.tb_next
         default(args)
     threading.excepthook = hook
 
 
 def log_to_file(folder):
-    """No console window, so what Text Share would print goes to textshare.log in its folder."""
+    """No console window, so what Instant Share would print goes to textshare.log in its folder."""
     if sys.stdout is not None and sys.stderr is not None:
         return
     path = folder / "textshare.log"
@@ -1252,14 +1349,14 @@ def main():
     instance = Instance(args.data)
     if not instance.first:              # already running: bring it to the front instead
         if not instance.wake_first():
-            message("Text Share is already running on this computer.")
+            message("Instant Share is already running on this computer.")
         return 0
-    log(f"Text Share {ts.VERSION} starting on {socket.gethostname()}")
+    log(f"Instant Share {ts.VERSION} starting on {socket.gethostname()}")
     try:
         App(args, instance).run()
     except Exception:
         traceback.print_exc()
-        message("Text Share could not open its window.\n\nIt needs Microsoft Edge WebView2, which Windows 10 and 11 "
+        message("Instant Share could not open its window.\n\nIt needs Microsoft Edge WebView2, which Windows 10 and 11 "
                 "normally include. Details are in textshare.log in:\n" + str(args.data), error=True)
         return 1
     return 0
