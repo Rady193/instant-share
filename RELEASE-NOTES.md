@@ -1,5 +1,37 @@
 # Release notes
 
+## 1.3.3 — 16 November 2026
+
+"Published by SCAFFApps · www.scaffapps.com" wherever Instant Share names its publisher, and no browser-blue links.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.3.3.exe` | 13.8 MB | `F846A1C7A15A31CC5E9D8E3C1E83840BF8709DB9C9602FA366C82D477074137E` |
+| `Instant-Share-1.3.3.apk` | 70 KB | `A3B4A9FA880F472260DBF6A7EB6554EF48FD8D6F64011A4953F9423F090346D8` |
+| `instantshare.py` | 167 KB | `4CD8A815837578039602853F8D51F3176B98748A430D6D0E4ABA4F0D6C63C4E8` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `85C2B99ABA6B09F31876B24AE64FFEE4373D764563F0C5580F69320341EEF269` |
+
+For 64-bit Windows 10 and 11. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
+
+### Changed
+
+- **"Published by SCAFFApps · www.scaffapps.com"**, with SCAFFApps in bold, at the end of the welcome page, at the foot of the setup page, in the page's footer and in Settings > About (where it said "· SCAFFApps"), as in every SCAFFApps app.
+- **Links in the SCAFFApps colours.** **Get the app** in Settings was in the browser's own blue; links are now gold in the dark appearance and purple in the light one.
+- Nothing else changed. The Android app and `instantshare.py` are 1.3.3 only to keep the versions together (the page they show has the same changes).
+
+### Updating
+
+- **From 1.3.0 to 1.3.2:** Settings > Updates > **Update now**, or **Update** in the SCAFFApps Suite.
+- **Android:** update when convenient.
+- From 1.2 or earlier: run the installer once (see 1.3.0).
+
+### Tested
+
+- The SCAFFApps Suite 1.0.0 updated Instant Share 1.3.2 to 1.3.3 with its own button, against a stand-in for GitHub offering this installer: downloaded, checked against both checksums, Windows' permission, installed in 11 seconds; Windows lists 1.3.3. Microsoft Defender finds nothing in the installer.
+- The new program, isolated: the line on the setup page, in the footer and in Settings > About, SCAFFApps in bold; **Get the app** in gold.
+
 ## 1.3.2 — 16 November 2026
 
 A shorter welcome page, and the program's folder of supporting files is called `resources`.

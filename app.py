@@ -1461,6 +1461,7 @@ input:not([type]) { flex: 1; min-width: 0; height: 32px; padding: 0 10px; backgr
 input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
 .err { color: var(--danger); margin: 10px 0 0; min-height: 1em }
 .foot { margin-top: 22px; color: var(--dim); font-size: 12px; display: flex; gap: 14px; align-items: center }
+.pub { color: var(--text); font-weight: 600 }
 .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-strong); border-top-color: var(--accent);
   border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px }
 @keyframes spin { to { transform: rotate(1turn) } }
@@ -1506,7 +1507,7 @@ SETUP = """
   </div>
   <label class="chk"><input type="checkbox" id="autostart"> Start Instant Share when I sign in to Windows. It waits in
     the tray, ready to show what others share.</label>
-  <div class="foot"><span>This computer: <b id="me"></b></span><span>Instant Share {version} · SCAFFApps</span>
+  <div class="foot"><span>This computer: <b id="me"></b></span><span>Instant Share {version} · Published by <b class="pub">SCAFFApps</b> · www.scaffapps.com</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
@@ -1630,7 +1631,7 @@ REGISTER = """
     <p class="err" id="err"></p>
     <button class="btn primary" id="go" style="width: 100%; height: 38px">Continue</button>
   </div>
-  <p class="lead" style="font-size: 12px; margin: 22px auto 0">Published by SCAFFApps · www.scaffapps.com</p>
+  <p class="lead" style="font-size: 12px; margin: 22px auto 0">Published by <b class="pub">SCAFFApps</b> · www.scaffapps.com</p>
 </div>
 <script>
 {ready}
