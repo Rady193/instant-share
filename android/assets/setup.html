@@ -87,7 +87,21 @@ input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var
       <p class="err" id="err"></p>
     </section>
   </div>
-  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share 1.1.0 · SCAFFApps</span>
+  <div id="pair" hidden>
+    <h1>Join Instant Share on <span id="pairHost"></span></h1>
+    <p class="lead" id="pairWhy" hidden></p>
+    <p class="lead">Each device joins once, with a code. On a device that has joined already (the computer that keeps
+    the history, for example), open Settings (the gear) and choose <b>Add a device</b>. Type the code it shows here:</p>
+    <section class="card">
+      <h2>Pairing code</h2>
+      <div class="row"><input id="code" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off"
+        style="font: 600 22px/1 ui-monospace, monospace; letter-spacing: .2em; text-align: center">
+        <button class="btn primary" id="join">Join</button></div>
+      <p class="err" id="perr"></p>
+      <button class="link" id="other2">Choose another computer</button>
+    </section>
+  </div>
+  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share 1.2.0 · SCAFFApps</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
@@ -122,6 +136,7 @@ async function find() {
       busy(true); $("#err").textContent = "";
       const res = await ask("join", f.name, f.address, f.port);
       if (!res.ok) fail(res);
+      else if (res.pair) pairing(res.host, "");
     });
     $("#found").append(b);
   }
@@ -135,14 +150,42 @@ const go = async () => {
   busy(true); $("#err").textContent = "";
   const res = await ask("connect", $("#addr").value);
   if (!res.ok) { fail(res); $("#addr").focus(); }
+  else if (res.pair) pairing(res.host, "");
 };
+
+/* joining: the code shown on a device that has joined already (the phone checks it without sending it) */
+function pairing(host, why) {
+  busy(false);
+  $("#away").hidden = $("#choose").hidden = true;
+  $("#pair").hidden = false;
+  $("#pairHost").textContent = host || JSON.parse(A.info()).host || "the computer";
+  $("#pairWhy").textContent = why || ""; $("#pairWhy").hidden = !why;
+  $("#perr").textContent = "";
+  setTimeout(() => $("#code").focus(), 50);
+}
+$("#code").addEventListener("input", (e) => {
+  const d = e.target.value.replace(/\D/g, "").slice(0, 6);
+  e.target.value = d.length > 3 ? d.slice(0, 3) + " " + d.slice(3) : d;
+});
+const join = async () => {
+  const c = $("#code").value.replace(/\D/g, "");
+  if (c.length !== 6) { $("#perr").textContent = "The code has 6 digits."; return; }
+  $("#join").disabled = true; $("#join").textContent = "Checking…"; $("#perr").textContent = "";
+  const res = await ask("pair", c);
+  if (!res.ok) { $("#perr").textContent = res.error || "Could not join."; $("#join").disabled = false; $("#join").textContent = "Join"; $("#code").select(); }
+};
+$("#join").addEventListener("click", join);
+$("#code").addEventListener("keydown", (e) => { if (e.key === "Enter") join(); });
+$("#other2").addEventListener("click", () => { $("#pair").hidden = true; choose(); });
 $("#go").addEventListener("click", go);
 $("#addr").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
 $("#back").addEventListener("click", () => A.back());
 $("#retry").addEventListener("click", () => { $("#retry").disabled = true; $("#retry").textContent = "Trying…"; A.retry(); });
 $("#other").addEventListener("click", choose);
 
-if (q.get("unreachable") && info.host) {        // set up, but the computer does not answer: say so, try again by itself
+if (q.get("pair") && info.host) {               // set up, but not joined (yet, or any more)
+  pairing(info.host, q.get("why") || "");
+} else if (q.get("unreachable") && info.host) {        // set up, but the computer does not answer: say so, try again by itself
   $("#awayTitle").textContent = "Can't reach " + info.host;
   $("#awayText").textContent = "Instant Share must be running on " + info.host + ", and this phone must be on the same "
     + "Wi-Fi. Trying again every few seconds…";

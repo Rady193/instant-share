@@ -76,8 +76,8 @@
   <h1>Instant Share</h1>
   <div class="sub">Handbook</div>
   <div class="line"></div>
-  <p>Pass text, photos, documents and voice notes between the computers and Android phones on your own network. Share on one, and the others have it at once, with a pop-up or a notification and a Copy button. Choose who sees it; pin, archive, edit. No internet, no accounts.</p>
-  <div class="meta">Version 1.1.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps</div>
+  <p>Pass text, photos, documents and voice notes between the computers and Android phones on your own network. Share on one, and the others have it at once, with a notification and a Copy button. Choose who sees it; pin, archive, edit. Encrypted, and only for the devices that joined with a code. No accounts; no internet needed.</p>
+  <div class="meta">Version 1.2.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps</div>
 </div>
 
 <section>
@@ -90,7 +90,7 @@
     <li><b>5</b> Who should see it</li>
     <li><b>6</b> The history</li>
     <li><b>7</b> Settings</li>
-    <li><b>8</b> Pop-ups by the clock</li>
+    <li><b>8</b> Notifications on Windows</li>
     <li><b>9</b> The Android app, and browsers</li>
     <li><b>10</b> The tray icon and keeping it running</li>
     <li><b>11</b> Shortcuts, options and files</li>
@@ -108,27 +108,27 @@
       <div class="box">iPhone, tablet<small>any browser</small></div>
     </div>
     <div class="arrow">→</div>
-    <div class="hub"><b>The computer that keeps the history</b><span>Instant Share app · answers only your own network · no internet needed</span></div>
+    <div class="hub"><b>The computer that keeps the history</b><span>Instant Share app · answers only your own network, encrypted, and only devices that joined · no internet needed</span></div>
   </div>
   <ul>
     <li><strong>Share:</strong> write, paste or drop a file and press Enter. The other devices have it within a moment.</li>
-    <li><strong>Be told:</strong> a pop-up by the clock on computers, a notification on Android phones, each with a Copy button.</li>
+    <li><strong>Be told:</strong> a Windows notification on computers, an Android notification on phones, each with a Copy button.</li>
     <li><strong>Choose who sees it:</strong> everyone, or only the devices you tick.</li>
     <li><strong>Keep it tidy:</strong> pin what you need often, archive (swipe left) what you are done with, edit or delete what you shared.</li>
   </ul>
-  <div class="tip"><b>What it is for, and what it is not</b>Instant Share is for passing things between devices you own, on a network you trust: at home or in your own office. It has no password and no encryption, so it is not for public or shared Wi-Fi (section 12).</div>
+  <div class="tip"><b>Only the devices you let in</b>Everything between the devices is encrypted, and only devices that joined with a pairing code can see or share anything (section 2). Someone else on the same Wi-Fi gets nothing. It is still meant for your own devices, at home or in your own office (section 12).</div>
 </section>
 
 <section>
   <h2>2. Installing and setting up</h2>
   <table class="wrap">
     <tr><th>File</th><th>What it is</th></tr>
-    <tr><td>Instant-Share-1.1.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere and double-click it. Use the same file on every computer.</td></tr>
-    <tr><td>Instant-Share-1.1.0.apk</td><td>Instant Share for Android 10 and newer (section 9). Phones on the same Wi-Fi can also get it from the computer that keeps the history.</td></tr>
+    <tr><td>Instant-Share-1.2.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere and double-click it. Use the same file on every computer.</td></tr>
+    <tr><td>Instant-Share-1.2.0.apk</td><td>Instant Share for Android 10 and newer (section 9). Phones on the same Wi-Fi can also get it from the computer that keeps the history.</td></tr>
     <tr><td>instantshare.py</td><td>Instant Share as a plain server, for Mac and Linux: <code>python3 instantshare.py</code>; every device then uses a browser.</td></tr>
   </table>
   <div class="warn"><b>"Windows protected your PC"</b>The app is not code-signed, so Windows may show this message the first time. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</div>
-  <div class="tip"><b>Coming from Text Share 1.0?</b>Instant Share is its new name. Quit Text Share from its tray menu, then start Instant Share: it takes over the same history, settings and "start with Windows". On the phone, install the new app over the old one: it keeps its setup.</div>
+  <div class="tip"><b>Coming from 1.1 (or Text Share 1.0)?</b>Update every device to 1.2: a 1.2 computer no longer talks to older versions. Quit the old one from its tray menu, then start the new file: it keeps the history, settings and "start with Windows". The computer that keeps the history is joined already; each other computer and phone joins it once with a code (below), and keeps its own items. On the phone, install the new app over the old one.</div>
 
   <h3>The first start: one question</h3>
   <figure class="mid">
@@ -141,6 +141,24 @@
     <li>Leave <strong>Start Instant Share when I sign in to Windows</strong> ticked, so it is always ready to show what others share.</li>
   </ol>
   <p>To change it later: <strong>Settings</strong> (the gear) &gt; <strong>Change setup</strong>, or the tray icon's menu.</p>
+
+  <h3>Joining with a code, once</h3>
+  <div class="pair">
+    <figure>
+      <img src="img/pair.png" alt="A laptop joining OFFICE-PC with a pairing code">
+      <figcaption>A laptop joining OFFICE-PC: the code shown there, typed here.</figcaption>
+    </figure>
+    <figure>
+      <img src="img/devices.png" alt="Settings, Devices, with a pairing code">
+      <figcaption>On a device that has joined: Settings &gt; Devices &gt; <strong>Add a device</strong>.</figcaption>
+    </figure>
+  </div>
+  <p>Only devices that have joined can see the history or share. The computer that keeps it is joined from the start. Every other computer, phone or browser joins once:</p>
+  <ol class="steps">
+    <li>On a device that has joined already (the computer that keeps the history, for example), open <strong>Settings</strong> &gt; <strong>Devices</strong> &gt; <strong>Add a device</strong>, or <strong>Add a device…</strong> in the tray menu. A 6-digit code appears, good for 10 minutes and for one device.</li>
+    <li>On the new device, type the code where it asks for it, and press <strong>Join</strong>.</li>
+  </ol>
+  <p>The code itself never travels over the network: both devices check it without sending it, so someone listening learns nothing from it. Five wrong tries and the code stops working; make a new one. <strong>Settings &gt; Devices</strong> also lists every device that has joined, with <strong>Remove</strong> to take one off (a lost phone, a computer sold): it can see nothing more until it joins again with a new code.</p>
 </section>
 
 <section>
@@ -157,7 +175,7 @@
     <tr><td>Sun or moon</td><td>Switches between the dark and the light appearance.</td></tr>
     <tr><td>Gear</td><td>Settings (section 7).</td></tr>
     <tr><td>Enter sends, Wrap long lines</td><td>Enter shares at once (Shift+Enter starts a new line); long lines fold to fit.</td></tr>
-    <tr><td>File, Clear, Copy</td><td>Add a file; empty the editor; copy what is in it.</td></tr>
+    <tr><td>File, Clear</td><td>Add a file; empty the editor.</td></tr>
     <tr><td>To, Share</td><td>Who should see it (section 5), and Share.</td></tr>
     <tr><td>History</td><td>Everything shared with this device: pinned items first, then the newest, with a search box.</td></tr>
   </table>
@@ -205,13 +223,13 @@
       <p>The <strong>To</strong> button next to Share says who will see what you share. Click it to choose:</p>
       <ul>
         <li><strong>Everyone</strong>: every device, now and later (the default).</li>
-        <li><strong>Only some devices</strong>: tick them. The others will not see it, in the history or as a pop-up.</li>
+        <li><strong>Only some devices</strong>: tick them. The others will not see it, in the history or as a notification.</li>
       </ul>
       <p>A green dot means the device is <strong>online</strong>: the app is running there (in its window or in the tray), or a browser has the page open. Offline devices can be ticked too; they see it when they come back.</p>
       <p>Your choice stays for the next share, and the button shows it, for example <strong>To: LAPTOP-1</strong>. In the history, such an item shows its devices after an arrow: <span style="color:#4a6cf5">→ LAPTOP-1</span>.</p>
     </div>
   </div>
-  <div class="warn"><b>Tidy, not locked</b>Sharing with chosen devices keeps it out of the others' history and pop-ups. It is not a lock: someone on your network who knows how could still read it (section 12).</div>
+  <div class="tip"><b>Locked, not only tidy</b>Each device is known by its own key from joining, so a device that was not chosen cannot see the item or open its file, even with its address. Only its sender can edit or delete it (section 12).</div>
 </section>
 
 <section>
@@ -255,8 +273,9 @@
         <tr><td>This computer (Windows)</td><td><strong>Keep the window on top</strong> of the other programs. <strong>Copy what arrives</strong>: text and photos others share go straight to the clipboard, ready to paste, without a click.</td></tr>
         <tr><td>Saving files</td><td>Where <strong>Save</strong> puts files: <strong>Change…</strong> to choose a folder; <strong>Use Downloads</strong> to go back. (Apps only; browsers save their own way.)</td></tr>
         <tr><td>History</td><td>Which computer keeps it, and <strong>Change setup</strong>; the archived messages; the address for phones and browsers.</td></tr>
+        <tr><td>Devices</td><td><strong>Add a device</strong> (a pairing code, section 2), and every device that has joined, with <strong>Remove</strong>.</td></tr>
         <tr><td>Storage</td><td>How much of the history's 2 GB is used, and by what (below). On the computer that keeps it: <strong>Show the history folder</strong>.</td></tr>
-        <tr><td>About</td><td>The version, and <strong>Get the app</strong>.</td></tr>
+        <tr><td>About</td><td>The version, <strong>Get the app</strong>, <strong>Updates</strong> (section 10), and in the apps <strong>Quit Instant Share</strong>, which closes it completely.</td></tr>
       </table>
     </div>
   </div>
@@ -269,26 +288,19 @@
 </section>
 
 <section>
-  <h2>8. Pop-ups by the clock</h2>
-  <div class="pair">
-    <figure>
-      <img src="img/toast-text.png" alt="A pop-up for text">
-      <figcaption>Text shared by LAPTOP-1 (dark appearance).</figcaption>
-    </figure>
-    <figure>
-      <img src="img/toast-photo.png" alt="A pop-up for a photo">
-      <figcaption>A photo shared with you, and one more item (light).</figcaption>
-    </figure>
-  </div>
-  <p>When another device shares something with this computer, a small pop-up appears above the clock, with a sound, even when the Instant Share window is closed. It never takes the keyboard away from what you are doing, and it stays out of the taskbar.</p>
+  <h2>8. Notifications on Windows</h2>
+  <p>When another device shares something with this computer, Windows shows a notification, with a sound, even when the Instant Share window is closed: who shared it, the text or the file's name, and the photo itself for a photo. It stays in Windows' <strong>Notification Centre</strong> (click the date and time by the clock) until you clear it.</p>
   <table class="wrap">
-    <tr><th>In the pop-up</th><th>What it does</th></tr>
-    <tr><td>Copy</td><td>Text: copies all of it. Photo: copies the picture. With <strong>Copy what arrives</strong> on (Settings), it is copied already and the button says so.</td></tr>
-    <tr><td>Save</td><td>For any other file: saves it in the chosen folder and shows it there.</td></tr>
-    <tr><td>Open</td><td>Opens the Instant Share window; clicking the preview does too.</td></tr>
-    <tr><td>✕</td><td>Closes it. It also goes by itself after about ten seconds, but not while the mouse is over it.</td></tr>
+    <tr><th>On the notification</th><th>What it does</th></tr>
+    <tr><td>Copy</td><td>Text: copies all of it. Photo: copies the picture. With <strong>Copy what arrives</strong> on (Settings), it is on the clipboard already.</td></tr>
+    <tr><td>Save</td><td>For any other file: saves it in the folder chosen in Settings; a second notification says where, with <strong>Show in folder</strong>.</td></tr>
+    <tr><td>Open, or a click on it</td><td>Opens the Instant Share window.</td></tr>
   </table>
-  <p>No pop-up appears while the Instant Share window is in front: the history shows new items itself.</p>
+  <ul>
+    <li>No notification appears while the Instant Share window is in front: the history shows new items itself.</li>
+    <li>They follow Windows' own settings: <strong>Do not disturb</strong> keeps them out of sight (they still go to the Notification Centre), and Settings &gt; System &gt; Notifications &gt; <strong>Instant Share</strong> chooses banners, sounds, or none.</li>
+    <li>Their buttons work while Instant Share runs (in the tray is enough). When it quits, its notifications are cleared from the Notification Centre.</li>
+  </ul>
 </section>
 
 <section>
@@ -305,10 +317,14 @@
   </div>
   <h3>Installing it</h3>
   <ol class="steps">
-    <li>On the phone, on the same Wi-Fi, open the address shown in Settings &gt; <strong>Phones and browsers</strong> on a computer (for example <code>http://OFFICE-PC:8765</code>), open Settings there and tap <strong>Get the Android app</strong>. Or copy <code>Instant-Share-1.1.0.apk</code> to the phone.</li>
-    <li>Open the downloaded file and allow installing from that source when Android asks; then <strong>Install</strong>. It installs over Text Share 1.0, keeping its setup.</li>
-    <li>Open it and tap the computer that keeps the history. Allow notifications, and allow it to run in the background (Android asks both, once).</li>
+    <li>Copy <code>Instant-Share-1.2.0.apk</code> to the phone, or download it there from the Releases page. (A phone browser can also get it from the computer that keeps the history: see <strong>iPhones and other browsers</strong> below for opening the page.)</li>
+    <li>Open the downloaded file and allow installing from that source when Android asks; then <strong>Install</strong>. It installs over an older Instant Share, keeping its setup.</li>
+    <li>Open it and tap the computer that keeps the history, then type the pairing code shown on a device that has joined (section 2). Allow notifications, and allow it to run in the background (Android asks both, once).</li>
   </ol>
+  <figure class="small">
+    <img src="img/android-pair.png" alt="The phone asking for the pairing code" style="width:60%; margin:0 auto">
+    <figcaption>The phone, after choosing OFFICE-PC: the code from Settings &gt; Devices there.</figcaption>
+  </figure>
   <h3>Using it</h3>
   <ul>
     <li>Everything works as on a computer: write, add a file, choose who sees it, share; Copy, Save, pin, archive (swipe left), edit and delete your own.</li>
@@ -318,26 +334,30 @@
     <li><strong>Back</strong> first closes what is open (Settings, a menu, a photo, the archive), then puts Instant Share away. It never returns to the setup.</li>
   </ul>
   <h3>iPhones and other browsers</h3>
-  <p>They open the same address in the browser. Everything works except notifications (the page shows new items while it is open); <strong>Save</strong> downloads the browser's usual way.</p>
+  <p>They open the address shown in Settings &gt; <strong>Phones and browsers</strong>, for example <code>https://OFFICE-PC:8765</code>. The first time, the browser warns that the connection's certificate is not from an authority it knows: Instant Share makes its own, on the computer that keeps the history (there is no web address to certify). Continue to the page (on an iPhone: <strong>Show Details</strong> &gt; <strong>visit this website</strong>), then type a pairing code (section 2) and a name for the device. Everything works except notifications (the page shows new items while it is open); <strong>Save</strong> downloads the browser's usual way.</p>
+  <div class="warn"><b>Browsers cannot check the computer's key</b>The apps check, every time, that they talk to the very computer they joined. A browser cannot: it only shows its warning, every time it meets a certificate it does not know. Open the page only on your own network, by the address you were given, and prefer the apps where there is one.</div>
 </section>
 
 <section>
   <h2>10. The tray icon and keeping it running</h2>
-  <p>Once set up, Instant Share keeps running in the tray, by the clock, when you close its window: the computer that keeps the history goes on serving the others, and every computer goes on showing pop-ups.</p>
+  <p>Once set up, Instant Share keeps running in the tray, by the clock, when you close its window: the computer that keeps the history goes on serving the others, and every computer goes on showing notifications.</p>
   <table class="wrap">
     <tr><th>Tray icon</th><th>What it does</th></tr>
     <tr><td>Click</td><td>Opens the window.</td></tr>
-    <tr><td>Right-click</td><td><strong>Open Instant Share</strong>, <strong>Start with Windows</strong> (ticked when it does), <strong>Change setup…</strong> and <strong>Quit Instant Share</strong>, which really stops it.</td></tr>
+    <tr><td>Right-click</td><td><strong>Open Instant Share</strong>, <strong>Add a device…</strong> (a pairing code), <strong>Start with Windows</strong> (ticked when it does), <strong>Change setup…</strong> and <strong>Quit Instant Share</strong>, which really stops it (also in Settings &gt; About).</td></tr>
   </table>
   <p>Double-clicking the program while it is running opens the running one. <strong>Keep the window on top</strong> (the pin, or Settings) keeps the window above other programs until you turn it off; it is remembered.</p>
   <h3>Keep the computer that keeps the history awake</h3>
   <p>A computer that is asleep cannot share. On it, open <strong>Settings &gt; System &gt; Power &amp; battery &gt; Screen, sleep and hibernate</strong> and set sleep to <strong>Never</strong> when plugged in.</p>
   <h3>A new version</h3>
-  <ol class="steps">
-    <li>Quit Instant Share from the tray menu.</li>
-    <li>Start the new file. The history and the settings are kept; "Start with Windows" moves to the new file by itself.</li>
-    <li>On the computer that keeps the history, Windows may ask again to allow it on networks: allow it on Private networks.</li>
-  </ol>
+  <p>New versions are published on the <strong>Releases</strong> page of Instant Share on GitHub. Settings &gt; About &gt; <strong>Updates</strong> says which version this is and whether a newer one is out:</p>
+  <ul>
+    <li><strong>Check now</strong> asks GitHub at once. With <strong>Check for updates once a day</strong> on (the default), the apps ask by themselves once a day and say so in a notification when a new version is out. Only that question goes to the internet; nothing you share does.</li>
+    <li><strong>Update now</strong> on Windows downloads the new program next to this one, checks it against the checksum published with it, then restarts in it: the history, settings and "start with Windows" stay, and the old file is removed.</li>
+    <li>On Android, <strong>Update now</strong> downloads the new app, checks it, and opens Android's installer (allow Instant Share to install apps the first time). It installs over this one, keeping its setup.</li>
+    <li>Update the computer that keeps the history together with the others: devices on different versions may not understand each other.</li>
+  </ul>
+  <p>By hand: quit Instant Share from the tray menu and start the new file instead. On the computer that keeps the history, Windows may ask again to allow it on networks: allow it on Private networks.</p>
   <h3>Backing up or moving the history</h3>
   <p>The whole history, files included, is one file, <code>history.db</code>, in <code>%LOCALAPPDATA%\InstantShare</code> on the computer that keeps it (Settings &gt; <strong>Show the history folder</strong>). To back it up or move it, quit Instant Share first, then copy the file.</p>
 </section>
@@ -366,6 +386,8 @@
     <tr><td>The history, files included</td><td><code>%LOCALAPPDATA%\InstantShare\history.db</code> on the computer that keeps it.</td></tr>
     <tr><td>Settings</td><td><code>%LOCALAPPDATA%\InstantShare\settings.json</code> on each computer.</td></tr>
     <tr><td>A log, for troubleshooting</td><td><code>%LOCALAPPDATA%\InstantShare\textshare.log</code> on each computer.</td></tr>
+    <tr><td>This computer's encryption key and certificate</td><td><code>tls-key.pem</code> and <code>tls-cert.pem</code> in the same folder, on the computer that keeps the history. Keep them with <code>history.db</code> when moving it: with a new key, every device must join again.</td></tr>
+    <tr><td>Joined devices' keys</td><td>Each device keeps its own (in its settings); the computer that keeps the history keeps only a fingerprint of each.</td></tr>
     <tr><td>Saved files</td><td>The folder chosen in Settings; Downloads unless you change it.</td></tr>
     <tr><td>Pins and archive</td><td>Kept with the history, for each device.</td></tr>
   </table>
@@ -373,22 +395,24 @@
 
 <section>
   <h2>12. Privacy and security</h2>
-  <h3>What Instant Share does</h3>
+  <h3>What keeps strangers out</h3>
   <ul>
-    <li><strong>Stays on your network.</strong> It answers only devices on its own local network, never reaches the internet, and nothing you share leaves your network.</li>
-    <li><strong>Keeps one copy.</strong> The history is stored on the computer that keeps it, and nowhere else.</li>
-    <li><strong>Can't be read by websites.</strong> A website open in someone's browser cannot read or change the history.</li>
-    <li><strong>Checks files.</strong> Only the kinds listed in section 4, by their contents, up to 5 MB. Documents are only ever downloaded, never opened as a page.</li>
-    <li><strong>Edit and Delete belong to the sender.</strong> Only the device that shared an item can change it or delete it; pins and the archive are each device's own.</li>
+    <li><strong>Only devices that joined.</strong> A device joins once with a 6-digit pairing code from a device that has joined (section 2), and gets its own secret key. Without one, nothing: not the history, not the list of devices, not a file, not a share. <strong>Remove</strong> (Settings &gt; Devices) takes a device off at once.</li>
+    <li><strong>The code never travels.</strong> Both sides check it without sending it (a method called SPAKE2), so listening to the network reveals nothing about it. Someone pretending to be your computer gets one guess at it, not a million; the code allows five tries and lasts ten minutes.</li>
+    <li><strong>Encrypted.</strong> Everything between the devices goes over <code>https</code> (TLS 1.2 or newer), with a key the computer that keeps the history makes for itself.</li>
+    <li><strong>The apps check whom they talk to.</strong> When an app joins, it remembers the computer's key, and from then on it refuses any other, so a device pretending to be that computer is refused too, with a message.</li>
+    <li><strong>Locks that hold.</strong> Each request carries the device's own key, so "who should see it", "only the sender edits and deletes", pins and the archive are enforced by the computer that keeps the history, not only by the page.</li>
+    <li><strong>Stays on your network.</strong> It answers only devices on its own local network, and nothing you share leaves it. The only thing that reaches the internet is the apps' question to GitHub about a new version (which can be turned off).</li>
+    <li><strong>Can't be read by websites, and checks files.</strong> A website open in a browser cannot reach the history; files are checked by their contents, and documents only ever download.</li>
   </ul>
   <h3>What it does not do</h3>
   <ul>
-    <li><strong>No password.</strong> Anyone on the same network who opens the address can use Instant Share, read what is shared with everyone, and add to it.</li>
-    <li><strong>No encryption.</strong> It talks plain <code>http</code>. Someone watching your own network could see what is shared.</li>
-    <li><strong>"Who should see it" is not a lock,</strong> and "only the sender deletes" holds for the apps and the page, not against someone with technical knowledge on your network.</li>
+    <li><strong>A browser cannot check the computer's key</strong> (section 9): it warns about the certificate every time, so a fake page would look the same. Use the apps where you can.</li>
+    <li><strong>The history file is not encrypted on the disk</strong> of the computer that keeps it: anyone who can sign in to that Windows account can copy it. Protect that computer with a password, and BitLocker if you can.</li>
+    <li><strong>Devices that joined are trusted.</strong> Any of them can add a device or remove one. Remove a device you no longer use.</li>
     <li><strong>No expiry.</strong> Items stay until their sender deletes them.</li>
   </ul>
-  <div class="warn"><b>Use it only on networks you trust</b>Home, or your own office network, is fine. Not public Wi-Fi, a hotel or a café, or a network shared with other companies. If you pass a password or a key through Instant Share, delete the item once you have pasted it where it belongs.</div>
+  <div class="warn"><b>Passwords and keys</b>Instant Share keeps them safe from others on your network, but they stay in the history on the computer that keeps it. Delete such an item once you have pasted it where it belongs.</div>
 </section>
 
 <section>
@@ -405,8 +429,13 @@
       <pre class="cmd" style="margin-bottom:0">netsh advfirewall firewall add rule name="Instant Share" dir=in action=allow protocol=TCP localport=8765 profile=private
 netsh advfirewall firewall add rule name="Instant Share search" dir=in action=allow protocol=UDP localport=8765 profile=private</pre>
     </td></tr>
+    <tr><td>It asks for a pairing code</td><td>This device has not joined yet, or was removed: on a device that has joined, Settings &gt; Devices &gt; <strong>Add a device</strong>, and type the code it shows. "Not right": check the digits, or make a new code (each lasts ten minutes and five tries).</td></tr>
+    <tr><td>"This is not the … this computer joined"</td><td>The computer at that address shows another key than when this device joined. If Instant Share was set up again there (a new key: a reinstalled Windows, a replaced folder), choose <strong>Setup</strong> and join it again. If not, someone may be pretending to be it: do not join.</td></tr>
+    <tr><td>"… runs Instant Share 1.1"</td><td>Update that computer to 1.2 too: 1.2 talks only to 1.2.</td></tr>
+    <tr><td>The browser warns about the connection</td><td>Expected the first time: see section 9, iPhones and other browsers.</td></tr>
     <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Instant Share was quit there. Start it again; the window reconnects by itself, and what you typed stays.</td></tr>
-    <tr><td>No pop-ups</td><td>Instant Share must be running on this computer, in its window or in the tray (click the <strong>^</strong> by the clock). Full-screen games and presentations may cover them.</td></tr>
+    <tr><td>No notifications on Windows</td><td>Instant Share must be running on this computer, in its window or in the tray (click the <strong>^</strong> by the clock). Check that <strong>Do not disturb</strong> is off (Settings &gt; System &gt; Notifications; Windows can turn it on by itself during presentations, games and when duplicating a display), and that <strong>Instant Share</strong> is allowed in the list below it. Missed ones are in the Notification Centre.</td></tr>
+    <tr><td>"Could not ask GitHub"</td><td>Checking for updates needs the internet; sharing does not. Try later, or update by hand (section 10).</td></tr>
     <tr><td>No notifications on the phone</td><td>Allow notifications for Instant Share (the phone's Settings &gt; Apps &gt; Instant Share &gt; Notifications) and set its battery use to <strong>Unrestricted</strong>. The phone must be on the same Wi-Fi.</td></tr>
     <tr><td>"The history … is full (2 GB)"</td><td>Delete old files you shared (⋯ &gt; Delete for everyone). Settings &gt; Storage shows what takes the room.</td></tr>
     <tr><td>"That kind of file can't be shared"</td><td>Only the kinds in section 4 can be shared. A program or script inside a ZIP is fine; on its own it is refused.</td></tr>

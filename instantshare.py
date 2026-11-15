@@ -16,6 +16,9 @@ Copyright (c) 2026 SCAFFApps. All rights reserved. See LICENSE.
 import argparse
 import base64
 import binascii
+import hashlib
+import hmac
+import http.client
 import ipaddress
 import json
 import os
@@ -24,17 +27,19 @@ import secrets
 import socket
 import socketserver
 import sqlite3
+import ssl
 import sys
 import threading
 import time
 import traceback
 import urllib.request
 import webbrowser
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 FROZEN = getattr(sys, "frozen", False)                       # running as the packed .exe
 APP_FILE = Path(sys.executable if FROZEN else __file__).resolve()
 DEFAULT_PORT = 8765
@@ -94,6 +99,9 @@ ONLINE_MS = 15_000               # a device is online when it was heard from in 
 FORGET_MS = 30 * 86_400_000      # devices not heard from for 30 days leave the list
 
 FILE_MAX = 5 * 1024 * 1024       # one file, up to 5 MB
+CODE_MINUTES = 10                # a pairing code is good for 10 minutes,
+CODE_TRIES = 5                   # and 5 tries; then a new one must be made
+COOKIE = "is_key"                # a browser's device key, kept by the browser after pairing
 HISTORY_MAX = 2 * 1024 ** 3      # the whole history (text and files), up to 2 GB
 
 
@@ -189,6 +197,10 @@ class NotYours(Exception):
     pass
 
 
+class NoCode(Exception):
+    """No pairing code is waiting (none made, too old, or its tries used up)."""
+
+
 class Store:
     def __init__(self, path):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -217,6 +229,11 @@ class Store:
             name      TEXT NOT NULL,
             kind      TEXT NOT NULL,                    -- "app" or "browser"
             last_seen INTEGER NOT NULL)""")
+        dev_have = {r[1] for r in self.db.execute("PRAGMA table_info(devices)")}
+        for column, kind in (("key_hash", "TEXT"),        # SHA-256 of the device's secret key (1.2); NULL = not paired
+                             ("paired_at", "INTEGER")):
+            if column not in dev_have:
+                self.db.execute(f"ALTER TABLE devices ADD COLUMN {column} {kind}")
         self.db.execute("""CREATE TABLE IF NOT EXISTS marks (
             device   TEXT NOT NULL,                     -- each device pins and archives for itself only
             item     INTEGER NOT NULL,
@@ -232,6 +249,9 @@ class Store:
         self.closed = False
         self.seen = {r[0]: {"name": r[1], "kind": r[2], "seen": r[3], "saved": r[3]}
                      for r in self.db.execute("SELECT id, name, kind, last_seen FROM devices")}
+        self.keys = {r[0]: r[1] for r in self.db.execute("SELECT key_hash, id FROM devices WHERE key_hash IS NOT NULL")}
+        self.code = None                    # the pairing code now: {code, until, tries}
+        self.pairing = {}                   # a pairing half done: session -> what the device said, the secret
 
     @property
     def rev(self):
@@ -255,14 +275,100 @@ class Store:
 
     def devices(self, me=""):
         now = now_ms()
+        paired = set(self.keys.values())
         out = [{"id": i, "name": d["name"], "kind": d["kind"], "seen": d["seen"], "me": i == me,
                 "online": now - d["seen"] < ONLINE_MS or self.waiting.get(i, 0) > 0}
-               for i, d in list(self.seen.items()) if now - d["seen"] < FORGET_MS]
+               for i, d in list(self.seen.items()) if i in paired and (now - d["seen"] < FORGET_MS or i == me)]
         out.sort(key=lambda d: (not d["online"], d["name"].lower()))
         return {"now": now, "devices": out}
 
     def _names(self):
         return {i: d["name"] for i, d in list(self.seen.items())}
+
+    # ---- who may use the history: the paired devices, each with its own key
+
+    @staticmethod
+    def _hash(key):
+        return hashlib.sha256(("InstantShare device key " + key).encode("utf-8")).hexdigest()
+
+    def device_for(self, key):
+        """The paired device with this key, or ""."""
+        if not key or len(key) > 200:
+            return ""
+        return self.keys.get(self._hash(key), "")
+
+    def is_paired(self, device_id):
+        return device_id in self.keys.values()
+
+    def issue_key(self, device_id=None, name="", kind="app", take_over=False):
+        """A key for a device: (its id, the key). A device from before 1.2 keeps its id (and so its own items) when
+        it pairs; an id paired already is not taken over (a new one is made) unless take_over (the computer that
+        keeps the history, for its own window). The device's earlier key stops working."""
+        if not (device_id and DEVICE_ID.fullmatch(device_id)) or (self.is_paired(device_id) and not take_over):
+            device_id = secrets.token_hex(12)
+        key, now = secrets.token_urlsafe(32), now_ms()
+        name = (name or "").strip()[:60] or "a device"
+        with self.lock:
+            for old in [h for h, d in self.keys.items() if d == device_id]:
+                del self.keys[old]
+            self.keys[self._hash(key)] = device_id
+            self.db.execute("INSERT INTO devices (id, name, kind, last_seen, key_hash, paired_at) VALUES (?, ?, ?, ?, "
+                            "?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, kind = excluded.kind, "
+                            "last_seen = excluded.last_seen, key_hash = excluded.key_hash, "
+                            "paired_at = excluded.paired_at", (device_id, name, kind, now, self._hash(key), now))
+            self.db.commit()
+        self.seen[device_id] = {"name": name, "kind": kind, "seen": now, "saved": now}
+        return device_id, key
+
+    def forget(self, device_id):
+        """Takes a device off: its key stops working at once; it must pair again to come back."""
+        with self.lock:
+            gone = [h for h, d in self.keys.items() if d == device_id]
+            for h in gone:
+                del self.keys[h]
+            self.db.execute("UPDATE devices SET key_hash = NULL WHERE id = ?", (device_id,))
+            self.db.commit()
+        self.changed()
+        return bool(gone)
+
+    def new_code(self, minutes=CODE_MINUTES):
+        """A new pairing code (the one before stops working)."""
+        self.code = {"code": f"{secrets.randbelow(10 ** 6):06d}", "until": now_ms() + minutes * 60_000, "tries": 0}
+        return self.code_info()
+
+    def code_info(self):
+        c = self.code
+        if not c or c["until"] < now_ms() or c["tries"] >= CODE_TRIES:
+            return None
+        return {"code": c["code"], "until": c["until"], "now": now_ms(), "tries_left": CODE_TRIES - c["tries"]}
+
+    def pair_start(self, T, pin, name, kind, old_id):
+        """The first half of pairing (SPAKE2): (session, S, proof that this side knows the code). Each start is one
+        of the code's 5 tries, right or wrong."""
+        with self.lock:
+            c = self.code
+            if not c or c["until"] < now_ms() or c["tries"] >= CODE_TRIES:
+                raise NoCode()
+            c["tries"] += 1
+            code = c["code"]
+        S, secret = spake_server(code, T, pin)
+        now = now_ms()
+        session = secrets.token_urlsafe(16)
+        self.pairing = {k: v for k, v in self.pairing.items() if v["until"] > now}
+        self.pairing[session] = {"secret": secret, "name": name, "kind": kind, "id": old_id, "code": code,
+                                 "until": now + 60_000}
+        return session, S, confirm(secret, "server")
+
+    def pair_finish(self, session, proof):
+        """The second half: when the device proved it has the same secret (so typed the right code), its key."""
+        p = self.pairing.pop(str(session), None)
+        if not p or p["until"] < now_ms() or not hmac.compare_digest(str(proof), confirm(p["secret"], "client")):
+            return None
+        with self.lock:
+            if not self.code or self.code["code"] != p["code"]:
+                return None                 # the code was used by another device meanwhile, or replaced
+            self.code = None                # one code, one device
+        return self.issue_key(p["id"], p["name"], p["kind"])
 
     # ---- items
 
@@ -327,10 +433,11 @@ class Store:
         item["text"], item["big"] = r[-1], False
         return item
 
-    def get_file(self, item_id, key):
+    def get_file(self, item_id, key, me=""):
+        """A file, for a device that may see its item."""
         with self.lock:
-            r = self.db.execute("SELECT file_name, file_type, file FROM items WHERE id = ? AND file_key = ?",
-                                (item_id, key)).fetchone()
+            r = self.db.execute(f"SELECT i.file_name, i.file_type, i.file FROM items i WHERE i.id = ? AND "
+                                f"i.file_key = ? AND {VISIBLE}", [item_id, key] + self._visible(me)).fetchone()
         return r
 
     def changed(self):
@@ -497,6 +604,391 @@ class Store:
             self.db.close()
 
 
+# ---------------------------------------------------------------- keeping strangers out (1.2)
+#
+# Everything between the devices is encrypted (TLS), with a certificate this computer makes for itself the first
+# time (no outside authority is involved: there is no domain name to certify). A device joins with a pairing code
+# shown on a device that has joined already. The code is checked with SPAKE2, so it never crosses the network: a
+# listener learns nothing from it, and a fake "computer" in the middle gets one guess at it, not a million. The
+# apps also bind the pairing to the certificate they saw, and from then on accept only that computer's key
+# ("pinning"). After pairing, each device has its own secret key; the computer that keeps the history keeps only a
+# hash of it, and every request must carry it.
+
+
+def _der_len(n):
+    if n < 0x80:
+        return bytes([n])
+    b = n.to_bytes((n.bit_length() + 7) // 8, "big")
+    return bytes([0x80 | len(b)]) + b
+
+
+def _tlv(tag, body):
+    return bytes([tag]) + _der_len(len(body)) + body
+
+
+def _seq(*parts):
+    return _tlv(0x30, b"".join(parts))
+
+
+def _int(v):
+    return _tlv(0x02, v.to_bytes(v.bit_length() // 8 + 1, "big"))
+
+
+def _oid(dotted):
+    a = [int(x) for x in dotted.split(".")]
+    out = bytes([40 * a[0] + a[1]])
+    for v in a[2:]:
+        enc = [v & 0x7F]
+        v >>= 7
+        while v:
+            enc.append(0x80 | (v & 0x7F))
+            v >>= 7
+        out += bytes(reversed(enc))
+    return _tlv(0x06, out)
+
+
+_NULL = b"\x05\x00"
+_RSA = _seq(_oid("1.2.840.113549.1.1.1"), _NULL)
+_SHA256_RSA = _seq(_oid("1.2.840.113549.1.1.11"), _NULL)
+_SAN = _oid("2.5.29.17")
+_SMALL_PRIMES = [p for p in range(3, 2000, 2) if all(p % d for d in range(3, int(p ** 0.5) + 1, 2))]
+
+
+def _probably_prime(n, rounds=40):
+    for p in _SMALL_PRIMES:
+        if n % p == 0:
+            return n == p
+    d, r = n - 1, 0
+    while d % 2 == 0:
+        d //= 2
+        r += 1
+    for _ in range(rounds):
+        x = pow(secrets.randbelow(n - 3) + 2, d, n)
+        if x in (1, n - 1):
+            continue
+        for _ in range(r - 1):
+            x = pow(x, 2, n)
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+
+def _prime(bits):
+    while True:
+        p = secrets.randbits(bits) | (3 << (bits - 2)) | 1
+        if _probably_prime(p):
+            return p
+
+
+def _rsa_key(bits=2048):
+    """(n, e, d, p, q): a new RSA key, made with Python alone (a second or two)."""
+    e = 65537
+    while True:
+        p, q = _prime(bits // 2), _prime(bits // 2)
+        n, phi = p * q, (p - 1) * (q - 1)
+        if p != q and n.bit_length() == bits and phi % e:
+            return n, e, pow(e, -1, phi), p, q
+
+
+def _pem(label, der):
+    b = base64.b64encode(der).decode("ascii")
+    lines = "\n".join(b[i:i + 64] for i in range(0, len(b), 64))
+    return f"-----BEGIN {label}-----\n{lines}\n-----END {label}-----\n"
+
+
+def _unpem(text):
+    return base64.b64decode("".join(line for line in text.strip().splitlines() if not line.startswith("-----")))
+
+
+def _der_read(b, i):
+    """(tag, start of the value, end of the value) of the DER element at i."""
+    tag, n = b[i], b[i + 1]
+    i += 2
+    if n & 0x80:
+        k = n & 0x7F
+        n = int.from_bytes(b[i:i + k], "big")
+        i += k
+    return tag, i, i + n
+
+
+def _der_children(b, start, end):
+    out, i = [], start
+    while i < end:
+        tag, s, e = _der_read(b, i)
+        out.append((tag, i, s, e))            # tag, where it starts, where its value starts and ends
+        i = e
+    return out
+
+
+def _tbs_fields(cert_der):
+    _, s, _ = _der_read(cert_der, 0)
+    _, ts, te = _der_read(cert_der, s)                       # the "to be signed" part
+    fields = _der_children(cert_der, ts, te)
+    return fields[1:] if fields[0][0] == 0xA0 else fields    # without the [0] version
+
+
+def spki_of(cert_der):
+    """The public-key part of a certificate (its SubjectPublicKeyInfo), as DER."""
+    _, start, _, end = _tbs_fields(cert_der)[5]              # serial, algorithm, issuer, validity, subject, KEY
+    return cert_der[start:end]
+
+
+def pin_of(cert_der):
+    """What the apps remember about the computer that keeps the history: the SHA-256 of its public key."""
+    return hashlib.sha256(spki_of(cert_der)).hexdigest()
+
+
+def _rsa_spki(key):
+    return _seq(_RSA, _tlv(0x03, b"\x00" + _seq(_int(key[0]), _int(key[1]))))
+
+
+def _rsa_private_der(key):
+    n, e, d, p, q = key
+    return _seq(_int(0), _int(n), _int(e), _int(d), _int(p), _int(q), _int(d % (p - 1)), _int(d % (q - 1)),
+                _int(pow(q, -1, p)))
+
+
+def _rsa_from_der(der):
+    _, s, e = _der_read(der, 0)
+    v = [int.from_bytes(der[cs:ce], "big") for _, _, cs, ce in _der_children(der, s, e)]
+    return v[1], v[2], v[3], v[4], v[5]
+
+
+def _name(cn):
+    return _seq(_tlv(0x31, _seq(_oid("2.5.4.3"), _tlv(0x0C, cn.encode("utf-8")))))
+
+
+def _time(t):
+    return _tlv(0x17, t.strftime("%y%m%d%H%M%SZ").encode("ascii"))
+
+
+def _certificate(key, cn, dns_names, ips, days=800):
+    """A self-signed certificate for this computer. 800 days, its names and "for servers", because iPhones refuse
+    certificates without them (even ones the user accepts)."""
+    n, e, d, p, q = key
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    alt = b"".join(_tlv(0x82, name.encode("ascii", "ignore")) for name in dns_names) + \
+        b"".join(_tlv(0x87, ipaddress.ip_address(ip).packed) for ip in ips)
+    extensions = _tlv(0xA3, _seq(
+        _seq(_oid("2.5.29.19"), _tlv(0x04, _seq())),                                        # not an authority
+        _seq(_oid("2.5.29.15"), b"\x01\x01\xff", _tlv(0x04, b"\x03\x02\x05\xa0")),          # signing, key exchange
+        _seq(_oid("2.5.29.37"), _tlv(0x04, _seq(_oid("1.3.6.1.5.5.7.3.1")))),               # for TLS servers
+        _seq(_SAN, _tlv(0x04, _seq(alt)))))                                                 # its names
+    tbs = _seq(_tlv(0xA0, _int(2)), _int(secrets.randbits(120) | 1 << 120), _SHA256_RSA, _name(cn),
+               _seq(_time(now - timedelta(days=1)), _time(now + timedelta(days=days))), _name(cn), _rsa_spki(key),
+               extensions)
+    k = (n.bit_length() + 7) // 8
+    info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(tbs).digest()
+    m = int.from_bytes(b"\x00\x01" + b"\xff" * (k - len(info) - 3) + b"\x00" + info, "big")
+    return _seq(tbs, _SHA256_RSA, _tlv(0x03, b"\x00" + pow(m, d, n).to_bytes(k, "big")))
+
+
+def _cert_facts(der):
+    """(names, IP addresses, valid until) of a certificate made by _certificate."""
+    fields = _tbs_fields(der)
+    _, _, vs, ve = fields[3]
+    _, _, us, ue = _der_children(der, vs, ve)[1]
+    until = datetime.strptime(der[us:ue].decode("ascii"), "%y%m%d%H%M%SZ").replace(tzinfo=timezone.utc)
+    names, ips = set(), set()
+    for tag, _, xs, xe in fields[6:]:
+        if tag != 0xA3:
+            continue
+        _, ls, le = _der_read(der, xs)
+        for _, _, es, ee in _der_children(der, ls, le):
+            parts = _der_children(der, es, ee)
+            if der[parts[0][1]:parts[0][3]] != _SAN:
+                continue
+            _, _, os_, _ = parts[-1]
+            _, as_, ae = _der_read(der, os_)
+            for t, _, cs, ce in _der_children(der, as_, ae):
+                if t == 0x82:
+                    names.add(der[cs:ce].decode("ascii"))
+                elif t == 0x87:
+                    ips.add(str(ipaddress.ip_address(der[cs:ce])))
+    return names, ips, until
+
+
+def tls_files(folder):
+    """This computer's key and certificate: made the first time; the certificate is renewed, with the same key,
+    when its names or addresses changed or it nears its end, so the apps' pin stays good. (cert path, key path)."""
+    key_path, cert_path = folder / "tls-key.pem", folder / "tls-cert.pem"
+    folder.mkdir(parents=True, exist_ok=True)
+    if key_path.exists():
+        key = _rsa_from_der(_unpem(key_path.read_text("ascii")))
+    else:
+        key = _rsa_key()
+        key_path.write_text(_pem("RSA PRIVATE KEY", _rsa_private_der(key)), "ascii")
+    host = socket.gethostname()
+    names = {host, host.lower(), host.lower() + ".local", "localhost"}
+    ips = set(lan_addresses()) | {"127.0.0.1"}
+    fresh = False
+    if cert_path.exists():
+        try:
+            der = _unpem(cert_path.read_text("ascii"))
+            had_names, had_ips, until = _cert_facts(der)
+            fresh = (spki_of(der) == _rsa_spki(key) and had_names >= names and had_ips >= ips
+                     and until - datetime.now(timezone.utc) > timedelta(days=60))
+        except (ValueError, IndexError, UnicodeError):
+            fresh = False
+    if not fresh:
+        cert_path.write_text(_pem("CERTIFICATE", _certificate(key, host, sorted(names), sorted(ips))), "ascii")
+    return cert_path, key_path
+
+
+def server_tls(folder):
+    """(TLS settings for the server, the pin of its key)."""
+    cert, key = tls_files(folder)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.load_cert_chain(cert, key)
+    return ctx, pin_of(_unpem(cert.read_text("ascii")))
+
+
+# ---- SPAKE2 (a pairing code checked without being sent), in the 2048-bit group of RFC 3526
+
+P = int("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DD"
+        "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+        "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F"
+        "83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3B"
+        "E39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9DE2BCBF6955817183995497CEA956AE515D2261898FA0510"
+        "15728E5A8AACAA68FFFFFFFFFFFFFFFF", 16)
+Q = (P - 1) // 2
+G = 4
+
+
+def _to_group(label):
+    stream = b"".join(hashlib.sha256(f"InstantShare SPAKE2 {label} {i}".encode()).digest() for i in range(9))
+    return pow(int.from_bytes(stream, "big") % P, 2, P)
+
+
+SPAKE_M, SPAKE_N = _to_group("M"), _to_group("N")
+
+
+def code_secret(code):
+    digits = re.sub(r"\D", "", str(code))
+    return int.from_bytes(hashlib.sha256(b"InstantShare pairing code " + digits.encode()).digest(), "big") % Q
+
+
+def in_group(v):
+    return 1 < v < P - 1 and pow(v, Q, P) == 1
+
+
+def spake_key(T, S, K, w, pin):
+    """The secret both sides end with. The pin is the computer's key as the joining device saw it ("" in a
+    browser, which cannot tell): a computer in the middle, with a key of its own, makes the two secrets differ."""
+    h = hashlib.sha256(b"InstantShare-SPAKE2-v1")
+    for part in (T.to_bytes(256, "big"), S.to_bytes(256, "big"), K.to_bytes(256, "big"), w.to_bytes(32, "big"),
+                 (pin or "").encode("ascii")):
+        h.update(len(part).to_bytes(4, "big") + part)
+    return h.digest()
+
+
+def confirm(secret, who):
+    return hmac.new(secret, who.encode("ascii"), hashlib.sha256).hexdigest()
+
+
+def spake_client_start(code):
+    w = code_secret(code)
+    x = secrets.randbelow(Q - 1) + 1
+    return {"w": w, "x": x, "T": pow(G, x, P) * pow(SPAKE_M, w, P) % P}
+
+
+def spake_client_finish(state, S, pin):
+    if not in_group(S):
+        raise ValueError("not a proper answer")
+    K = pow(S * pow(SPAKE_N, Q - state["w"], P) % P, state["x"], P)
+    return spake_key(state["T"], S, K, state["w"], pin)
+
+
+def spake_server(code, T, pin):
+    """(S, the shared secret) for a device's T, or ValueError."""
+    if not in_group(T):
+        raise ValueError("not a proper request")
+    w = code_secret(code)
+    y = secrets.randbelow(Q - 1) + 1
+    S = pow(G, y, P) * pow(SPAKE_N, w, P) % P
+    K = pow(T * pow(SPAKE_M, Q - w, P) % P, y, P)
+    return S, spake_key(T, S, K, w, pin)
+
+
+# ---- talking to the computer that keeps the history, from another program (the Windows app)
+
+class WrongComputer(OSError):
+    """The computer answered with another key than the one paired with: not the same computer, or someone in
+    between."""
+
+
+class _Pinned(http.client.HTTPSConnection):
+    def __init__(self, host, port, pin, timeout):
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE          # checked in connect(), against the key remembered from pairing
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        super().__init__(host, port, timeout=timeout, context=ctx)
+        self.pin, self.seen = pin, None
+
+    def connect(self):
+        super().connect()
+        self.seen = pin_of(self.sock.getpeercert(True))
+        if self.pin and not hmac.compare_digest(self.seen, self.pin):
+            self.sock.close()
+            raise WrongComputer("that computer did not show the key it had when this device joined")
+
+
+def call(base, path, pin=None, key=None, method="GET", body=None, headers=None, timeout=10):
+    """(status, content type, bytes, the key the computer showed) of one request to https://host:port. With a pin,
+    only the computer with that key is answered; with a key, as the paired device."""
+    u = urlsplit(base)
+    con = _Pinned(u.hostname, u.port or DEFAULT_PORT, pin, timeout)
+    h = {"X-TextShare": "1", **(headers or {})}
+    if key:
+        h["X-TextShare-Key"] = key
+    data = None
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        h["Content-Type"] = "application/json"
+    try:
+        con.request(method, path, body=data, headers=h)
+        r = con.getresponse()
+        return r.status, r.headers.get_content_type(), r.read(), con.seen
+    finally:
+        con.close()
+
+
+class Refused(OSError):
+    def __init__(self, status, answer):
+        super().__init__(answer.get("error") or f"the computer answered {status}")
+        self.status, self.answer = status, answer
+
+
+def call_json(base, path, **kw):
+    status, ctype, data, _ = call(base, path, **kw)
+    try:
+        answer = json.loads(data) if ctype == "application/json" and data else {}
+    except ValueError:
+        answer = {}
+    if status >= 400:
+        raise Refused(status, answer)
+    return answer
+
+
+def pair(base, code, name, kind="app", old_id=""):
+    """Join the computer at base with a pairing code: {key, id, pin, server}. Raises OSError with a message for the
+    user when the code is wrong, used or too old."""
+    seen = call(base, "/api/hello", timeout=6)[3]               # the key it shows; checked by the pairing itself
+    state = spake_client_start(code)
+    answer = call_json(base, "/api/pair", pin=seen, method="POST", timeout=20, body={
+        "T": format(state["T"], "x"), "name": name, "kind": kind, "id": old_id, "pinned": True})
+    secret = spake_client_finish(state, int(answer["S"], 16), seen)
+    if not hmac.compare_digest(str(answer.get("confirm", "")), confirm(secret, "server")):
+        raise OSError("That code is not right, or no longer valid. Check it, or make a new one, and try again.")
+    done = call_json(base, "/api/pair/finish", pin=seen, method="POST", timeout=20,
+                     body={"session": answer["session"], "confirm": confirm(secret, "client")})
+    return {"key": done["key"], "id": done["id"], "pin": seen, "server": done.get("server", "")}
+
+
 # ---------------------------------------------------------------- who may ask
 
 def client_ok(addr, neighbour_nets):
@@ -552,7 +1044,7 @@ def guarded(handler):
     def run(self):
         try:
             handler(self)
-        except (ConnectionError, TimeoutError):
+        except (ConnectionError, TimeoutError, ssl.SSLError):
             self.close_connection = True
         except Exception:
             traceback.print_exc()
@@ -564,13 +1056,37 @@ def guarded(handler):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "TextShare/" + VERSION
+    server_version = "InstantShare/" + VERSION
     sys_version = ""
     protocol_version = "HTTP/1.1"
     timeout = 120
 
     def log_message(self, *args):    # the window shows what is shared and deleted, not every request
         pass
+
+    def setup(self):
+        super().setup()
+        self.tls = isinstance(self.connection, ssl.SSLSocket)
+        self.me = ""
+
+    def client_ip(self):
+        ip = ipaddress.ip_address(self.client_address[0].split("%")[0])
+        return ip.ipv4_mapped if ip.version == 6 and ip.ipv4_mapped else ip
+
+    def key(self):
+        """The device key the request carries: in a header (the apps) or the browser's cookie."""
+        key = self.headers.get("X-TextShare-Key", "")
+        if not key:
+            for part in self.headers.get("Cookie", "").split(";"):
+                name, _, value = part.strip().partition("=")
+                if name == COOKIE:
+                    key = value
+                    break
+        return key.strip()
+
+    def cookie(self, key):
+        return (f"{COOKIE}={key}; Path=/; HttpOnly; SameSite=Strict; Max-Age=315360000"
+                + ("; Secure" if self.tls else ""))
 
     def reply(self, code, body=b"", ctype="application/json; charset=utf-8", headers=()):
         if isinstance(body, (dict, list)):
@@ -595,8 +1111,9 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.reply(code, message + "\n", "text/plain; charset=utf-8")
 
-    def gate(self, api):
-        """True when the request may go on; otherwise it has been answered."""
+    def gate(self, api, path=""):
+        """True when the request may go on; otherwise it has been answered. Only computers on this network; only
+        encrypted, but for this computer itself; and, but for the page and pairing, only paired devices."""
         problem = None
         if not client_ok(self.client_address[0], self.server.neighbour_nets()):
             problem = "Instant Share only answers computers on its own network."
@@ -607,27 +1124,55 @@ class Handler(BaseHTTPRequestHandler):
         if problem:
             self.close_connection = True
             self.fail(403, problem, api)
-        return problem is None
+            return False
+        if not self.tls and not self.client_ip().is_loopback:
+            self.close_connection = True
+            if api:
+                self.fail(426, "This computer runs Instant Share 1.2, which encrypts everything. Update Instant Share "
+                               "on this device to 1.2.")
+            else:                         # an old bookmark: the same page, encrypted
+                self.reply(301, "Moved to https.\n", "text/plain; charset=utf-8",
+                           [("Location", f"https://{self.headers.get('Host', '')}{self.path}")])
+            return False
+        self.me = self.server.store.device_for(self.key())
+        if path not in OPEN_PATHS and not self.me:
+            self.close_connection = True
+            if api:
+                self.reply(401, {"error": "This device has not joined Instant Share on "
+                                          f"{socket.gethostname()}, or was taken off it.", "unpaired": True})
+            else:
+                self.fail(401, "Join Instant Share first.", False)
+            return False
+        return True
 
     def who(self):
-        """The device asking (its id, made up by itself), noted as online. "" for one that does not say."""
-        device_id = self.headers.get("X-TextShare-Device", "")
-        if not DEVICE_ID.fullmatch(device_id):
+        """The paired device asking (known by its key), noted as online; "" for none."""
+        if not self.me:
             return ""
-        name = unquote(self.headers.get("X-TextShare-Name", "")).strip()[:60] or "a device"
-        kind = "app" if self.headers.get("X-TextShare-Kind") == "app" else "browser"
-        self.server.store.touch(device_id, name, kind)
-        return device_id
+        store = self.server.store
+        before = store.seen.get(self.me, {})
+        name = unquote(self.headers.get("X-TextShare-Name", "")).strip()[:60] or before.get("name") or "a device"
+        kind = self.headers.get("X-TextShare-Kind") or before.get("kind") or "browser"
+        store.touch(self.me, name, "app" if kind == "app" else "browser")
+        return self.me
 
     @guarded
     def do_GET(self):
         url = urlsplit(self.path)
         path, api = url.path, url.path.startswith("/api/")
-        if not self.gate(api):
+        if not self.gate(api, path):
             return
         store = self.server.store
         qs = parse_qs(url.query)
-        if path == "/":
+        if path == "/login":         # the apps open their window here with the device's key: it becomes a cookie
+            key, nxt = qs.get("key", [""])[0], qs.get("next", ["/"])[0]
+            if not nxt.startswith("/") or nxt.startswith("//") or "\\" in nxt:
+                nxt = "/"
+            headers = [("Location", nxt)]
+            if store.device_for(key):
+                headers.append(("Set-Cookie", self.cookie(key)))
+            self.reply(303, "", "text/plain; charset=utf-8", headers)
+        elif path == "/":
             self.reply(200, PAGE, "text/html; charset=utf-8", PAGE_HEADERS)
         elif path == "/download":     # this very program, to run Instant Share on another computer
             ctype = "application/vnd.microsoft.portable-executable" if FROZEN else "text/x-python; charset=utf-8"
@@ -640,7 +1185,7 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, apk.read_bytes(), "application/vnd.android.package-archive",
                        [("Content-Disposition", 'attachment; filename="Instant-Share.apk"')])
         elif m := re.fullmatch(r"/files/(\d+)/([A-Za-z0-9_-]+)(?:/[^/]*)?", path):
-            found = store.get_file(int(m[1]), m[2])
+            found = store.get_file(int(m[1]), m[2], self.who())
             if not found:
                 return self.fail(404, "That file is no longer in the history.", False)
             name, ctype, data = found
@@ -650,6 +1195,12 @@ class Handler(BaseHTTPRequestHandler):
             if not shown:                     # a document never runs as a page here, whatever is inside it
                 headers.append(("Content-Security-Policy", "sandbox; default-src 'none'"))
             self.reply(200, data, ctype if shown else "application/octet-stream", headers)
+        elif path == "/api/hello" and not self.me:       # before pairing: only who this is
+            self.reply(200, {"server": socket.gethostname(), "version": VERSION, "paired": False,
+                             "android": android_app() is not None, "encrypted": self.tls})
+        elif path == "/api/pair/code":
+            self.who()
+            self.reply(200, {"code": store.code_info()})
         elif path == "/api/hello":
             me = self.who()
             ip = ipaddress.ip_address(self.client_address[0])
@@ -658,9 +1209,10 @@ class Handler(BaseHTTPRequestHandler):
             ip = str(ip).split("%")[0]
             name = socket.gethostname() if ipaddress.ip_address(ip).is_loopback else guess_name(ip)
             port = self.server.server_port
-            addresses = [f"http://{h}:{port}/" for h in [socket.gethostname(), *lan_addresses()]]
+            addresses = [f"https://{h}:{port}/" for h in [socket.gethostname(), *lan_addresses()]]
             self.reply(200, {"server": socket.gethostname(), "version": VERSION, "you": ip, "name": name,
-                             "addresses": addresses, "id": me, "android": android_app() is not None})
+                             "addresses": addresses, "id": me, "android": android_app() is not None,
+                             "paired": True, "encrypted": self.tls})
         elif path == "/api/items":
             me = self.who()
             q = qs.get("q", [""])[0].strip()[:200]
@@ -713,11 +1265,19 @@ class Handler(BaseHTTPRequestHandler):
 
     @guarded
     def do_POST(self):
-        if not self.gate(True):
-            return
         path = urlsplit(self.path).path
+        if not self.gate(True, path):
+            return
         if m := re.fullmatch(r"/api/items/(\d+)/mark", path):
             return self.mark(int(m[1]))
+        if path == "/api/pair":
+            return self.pair_start()
+        if path == "/api/pair/finish":
+            return self.pair_finish()
+        if path == "/api/pair/code":
+            me = self.who()
+            log(f"{self.server.store.seen.get(me, {}).get('name', 'a device')} made a pairing code")
+            return self.reply(200, {"code": self.server.store.new_code()})
         if path != "/api/items":
             self.close_connection = True
             return self.fail(404, "Not found.")
@@ -765,6 +1325,42 @@ class Handler(BaseHTTPRequestHandler):
                                                            if to else ""))
         self.reply(200 if duplicate else 201, {"item": item, "duplicate": duplicate})
 
+    def pair_start(self):
+        """A device that has not joined yet tries a pairing code (see Store.pair_start)."""
+        data = self.body()
+        if data is None:
+            return
+        try:
+            T = int(str(data.get("T", "")), 16)
+        except ValueError:
+            return self.fail(400, "That was not a proper request.")
+        name = str(data.get("name") or "").strip()[:60] or guess_name(str(self.client_ip())) or "a device"
+        kind = "app" if data.get("kind") == "app" else "browser"
+        old = data.get("id") if isinstance(data.get("id"), str) and DEVICE_ID.fullmatch(data["id"]) else ""
+        pin = self.server.pin if data.get("pinned") and self.tls else ""     # the key the device says it saw
+        try:
+            session, S, proof = self.server.store.pair_start(T, pin, name, kind, old)
+        except NoCode:
+            return self.fail(403, "There is no pairing code to check against right now. On a device that has joined "
+                                  "already, open Settings, choose Add a device, and type the code it shows.")
+        except ValueError:
+            return self.fail(400, "That was not a proper request.")
+        self.reply(200, {"S": format(S, "x"), "confirm": proof, "session": session})
+
+    def pair_finish(self):
+        data = self.body()
+        if data is None:
+            return
+        got = self.server.store.pair_finish(data.get("session"), data.get("confirm"))
+        if not got:
+            log("a device typed a wrong pairing code")
+            return self.fail(403, "That code is not right, or no longer valid. Check it, or make a new one, and try "
+                                  "again.")
+        device_id, key = got
+        log(f"{self.server.store.seen[device_id]['name']} joined")
+        self.reply(200, {"key": key, "id": device_id, "server": socket.gethostname()},
+                   headers=[("Set-Cookie", self.cookie(key))])
+
     def mark(self, item_id):
         """Pin or archive, for this device only."""
         me = self.who()
@@ -785,7 +1381,7 @@ class Handler(BaseHTTPRequestHandler):
     @guarded
     def do_PUT(self):
         """Its sender changes an item's text, in place."""
-        if not self.gate(True):
+        if not self.gate(True, "PUT"):
             return
         m = re.fullmatch(r"/api/items/(\d+)", urlsplit(self.path).path)
         if not m:
@@ -812,9 +1408,17 @@ class Handler(BaseHTTPRequestHandler):
 
     @guarded
     def do_DELETE(self):
-        if not self.gate(True):
+        if not self.gate(True, "DELETE"):
             return
-        m = re.fullmatch(r"/api/items/(\d+)", urlsplit(self.path).path)
+        path = urlsplit(self.path).path
+        if d := re.fullmatch(r"/api/devices/([A-Za-z0-9_-]{8,64})", path):
+            store, me = self.server.store, self.who()
+            name = store.seen.get(d[1], {}).get("name", "a device")
+            if not store.forget(d[1]):
+                return self.fail(404, "That device is not on the list any more.")
+            log(f"{name} was taken off by {store.seen.get(me, {}).get('name', 'a device')}")
+            return self.reply(200, {"ok": True})
+        m = re.fullmatch(r"/api/items/(\d+)", path)
         if not m:
             return self.fail(404, "Not found.")
         try:
@@ -827,13 +1431,17 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.fail(404, "That is no longer in the history.")
 
+OPEN_PATHS = {"/", "/api/hello", "/api/pair", "/api/pair/finish", "/download", "/download/android", "/login"}
+
+
 class Server(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = os.name != "nt"   # Windows "reuse" lets a second copy share the port; elsewhere it is safe
 
-    def __init__(self, address, family, store):
+    def __init__(self, address, family, store, tls=None):
         self.address_family = family
         self.store = store
+        self.tls, self.pin = tls or (None, "")     # (TLS settings, the pin of this computer's key)
         self._nets, self._nets_at = [], -1e9
         super().__init__(address, Handler)
 
@@ -847,6 +1455,29 @@ class Server(ThreadingHTTPServer):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         socketserver.TCPServer.server_bind(self)
         self.server_name, self.server_port = socket.gethostname(), self.server_address[1]
+
+    def finish_request(self, request, client_address):
+        """One port for both: a connection that starts with a TLS hello is encrypted; plain ones are answered only
+        for this computer itself (and, from others, with the way to the encrypted page)."""
+        conn = request
+        try:
+            request.settimeout(20)
+            first = request.recv(1, socket.MSG_PEEK)
+            if not first:
+                return
+            if first == b"\x16":
+                if not self.tls:
+                    return
+                conn = self.tls.wrap_socket(request, server_side=True)
+            self.RequestHandlerClass(conn, client_address, self)
+        except OSError:                  # gone, or it did not accept this computer's certificate (a browser asking)
+            pass
+        finally:
+            if conn is not request:
+                try:
+                    conn.close()
+                except OSError:
+                    pass
 
     def handle_error(self, request, client_address):
         if not isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
@@ -868,10 +1499,10 @@ class Server(ThreadingHTTPServer):
         return self._nets
 
 
-def make_server(port, store):
+def make_server(port, store, tls=None):
     for family, host in ((socket.AF_INET6, "::"), (socket.AF_INET, "0.0.0.0")):
         try:
-            return Server((host, port), family, store)
+            return Server((host, port), family, store, tls)
         except OSError:
             continue
     return None
@@ -967,7 +1598,7 @@ def running_here(port):
     """True when Instant Share already answers on this port of this computer."""
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))      # never through a proxy
     request = urllib.request.Request(f"http://127.0.0.1:{port}/api/hello", headers={"X-TextShare": "1"})
-    try:
+    try:                             # (plain http is answered for this computer itself)
         with opener.open(request, timeout=3) as r:
             return "version" in json.loads(r.read())
     except (OSError, ValueError):
@@ -999,7 +1630,8 @@ def main(argv=None):
 
     url = f"http://localhost:{args.port}/"
     store = Store(args.data / "history.db")
-    server = make_server(args.port, store)
+    print("  Getting ready (the first time, this computer makes its own encryption key)...", flush=True)
+    server = make_server(args.port, store, server_tls(args.data))
     if server is None:
         store.close()
         if running_here(args.port):
@@ -1016,14 +1648,27 @@ def main(argv=None):
     except OSError:
         beacon = None               # another program has the discovery port: apps must be given the address
     name = socket.gethostname()
-    set_title(f"Instant Share {VERSION}  -  http://{name}:{args.port}/")
+    set_title(f"Instant Share {VERSION}  -  https://{name}:{args.port}/")
     print(f"\n  Instant Share {VERSION} is running on {name}.\n")
     print(f"  On this computer:      {url}")
-    print(f"  From other computers:  http://{name}:{args.port}/")
+    print(f"  From other computers:  https://{name}:{args.port}/")
     for ip in lan_addresses():
-        print(f"                     or  http://{ip}:{args.port}/")
+        print(f"                     or  https://{ip}:{args.port}/")
+    print("  (browsers warn about this computer's own certificate the first time: continue to the page)")
     print(f"\n  History: {store.path}")
     print("  Leave this window open (minimised is fine). Close it, or press Ctrl+C, to stop.\n", flush=True)
+
+    def show_code():
+        c = store.new_code()
+        print(f"  Pairing code for the next device: {c['code'][:3]} {c['code'][3:]}   (for {CODE_MINUTES} minutes; "
+              "press Enter for a new one)", flush=True)
+
+    show_code()
+    if sys.stdin and sys.stdin.isatty():
+        def codes():
+            for _ in sys.stdin:
+                show_code()
+        threading.Thread(target=codes, daemon=True, name="codes").start()
     if not args.no_open:
         threading.Timer(0.4, webbrowser.open, [url]).start()
     try:
@@ -1295,8 +1940,26 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
 #toast.act { pointer-events: auto }
 #toast button { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer }
 
+.pair-back { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; background: var(--bg); overflow: auto }
+.pair { width: min(440px, 100%) }
+.pair h1 { margin: 14px 0 8px; font-size: 22px; font-weight: 600 }
+.pair p { color: var(--dim); margin: 0 0 16px }
+.pair label { display: block; margin: 12px 0 6px; font-size: 12px; color: var(--dim) }
+.pair input { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit }
+.pair input#pairCode { font: 600 24px/1 ui-monospace, Consolas, monospace; letter-spacing: .25em; height: 52px; text-align: center }
+.pair .btn.primary { width: 100%; height: 40px; margin-top: 16px; justify-content: center }
+.pair .err { color: var(--danger); min-height: 20px; margin: 10px 0 0 }
+.codebox { display: flex; align-items: baseline; gap: 12px; padding: 10px 0 6px }
+.codebox b { font: 600 28px/1 ui-monospace, Consolas, monospace; letter-spacing: .18em; color: var(--text) }
+.dev-row .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none }
+.dev-row .dot.on { background: var(--ok) }
+.dev-row .label { flex: 1; min-width: 0 }
+.danger-text { color: var(--danger) }
+
 @media (max-width: 860px) {
   .hide-narrow, footer, #count, .send-grow { display: none !important }
+  #histTitle:not(.arch), #total, .hist-grow { display: none }
+  #search { flex: 1; width: auto; min-width: 0 }
   .break { display: block; flex-basis: 100%; height: 0 }
   .to-wrap { flex: 1; min-width: 0 }
   #to { width: 100%; justify-content: flex-start }
@@ -1338,7 +2001,6 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
 <main>
   <section class="pane" id="compose" aria-label="Editor">
     <div class="bar">
-      <h2>Write or paste</h2><span class="grow"></span>
       <label class="chk"><input id="enterSends" type="checkbox"> Enter sends</label>
       <label class="chk"><input id="wrap" type="checkbox" checked> Wrap long lines</label>
     </div>
@@ -1355,7 +2017,6 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
     <div class="bar">
       <button id="attachBtn" class="btn" type="button" title="Add a file, up to 5 MB"><span data-icon="clip"></span>File</button>
       <button id="clear" class="btn" type="button">Clear</button>
-      <button id="copyEd" class="btn" type="button">Copy</button>
       <input id="fileInput" type="file" hidden>
       <span id="count" class="muted"></span><span class="grow send-grow"></span>
       <span class="break"></span>
@@ -1376,7 +2037,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
     <div class="bar">
       <h2 id="histTitle">History</h2><span id="total" class="muted"></span>
       <button id="archBack" class="btn sm" type="button" hidden>Back to the history</button>
-      <span class="grow"></span>
+      <span class="grow hist-grow"></span>
       <input id="search" type="search" placeholder="Search the history" autocomplete="off">
     </div>
     <div class="scroll">
@@ -1420,6 +2081,11 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
       <div class="line"><span class="label">Save files to<span class="sub" id="savePath"></span></span><button id="saveChange" class="btn sm" type="button">Change…</button></div>
       <div class="line" id="saveResetLine" hidden><span class="label"><span class="sub">Back to the usual Downloads folder</span></span><button id="saveReset" class="btn sm" type="button">Use Downloads</button></div>
     </section>
+    <section class="sec" id="secDevices"><h3>Devices</h3>
+      <div class="line"><span class="label">Add a device<span class="sub">A phone or computer joins with a code shown here, once</span></span><button id="addDevice" class="btn sm" type="button">Add a device</button></div>
+      <div id="codeLine" class="line" hidden><span class="label"><span class="codebox"><b id="codeDigits"></b></span><span class="sub" id="codeLeft"></span></span><button id="codeNew" class="btn sm" type="button">New code</button></div>
+      <div id="devList"></div>
+    </section>
     <section class="sec"><h3>History</h3>
       <div class="line"><span class="label">Kept on <b id="setHost"></b><span class="sub">No internet needed: only this network</span></span><button id="setSetup" class="btn sm" type="button" hidden>Change setup</button></div>
       <div class="line"><span class="label">Archived messages<span class="sub" id="setArchCount"></span></span><button id="setArch" class="btn sm" type="button">Show</button></div>
@@ -1430,9 +2096,27 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
       <div class="line" id="folderLine" hidden><span class="label"><span class="sub" id="folderPath"></span></span><button id="setFolder" class="btn sm" type="button">Show the history folder</button></div>
     </section>
     <section class="sec"><h3>About</h3>
-      <div class="line"><span class="label">Instant Share __VERSION__ · SCAFFApps</span><a class="get-app" href="/download">Get the app</a></div>
+      <div class="line"><span class="label">Instant Share __VERSION__ · SCAFFApps<span class="sub" id="setSecure"></span></span><a class="get-app" href="/download">Get the app</a></div>
+      <div class="line" id="updLine" hidden><span class="label">Updates<span class="sub" id="updSub"></span></span><button id="updBtn" class="btn sm" type="button">Check now</button></div>
+      <label class="line" id="updAutoLine" hidden><span class="label">Check for updates once a day<span class="sub">Asks GitHub whether a newer version is out; nothing else is sent</span></span><input type="checkbox" class="switch" id="setUpdAuto"></label>
+      <div class="line" id="quitLine" hidden><span class="label">Quit Instant Share<span class="sub" id="quitSub">Closes it completely: no more pop-ups until you start it again</span></span><button id="quitApp" class="btn sm" type="button">Quit</button></div>
     </section>
   </div>
+</div>
+
+<div id="pairing" class="pair-back" hidden>
+  <form class="pair" id="pairForm" autocomplete="off">
+    <div class="brand"><svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5b2c83"/><path d="M7 12h17l-4-4M25 20H8l4 4" fill="none" stroke="#f0c33c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Instant Share</div>
+    <h1>Join Instant Share on <span id="pairHost">this network</span></h1>
+    <p id="pairLead">Only devices that have joined can see the history. On a phone or computer that has joined already, open
+    Settings (the gear) and choose <b>Add a device</b>, then type the code it shows.</p>
+    <label for="pairCode">Pairing code</label>
+    <input id="pairCode" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="one-time-code" required>
+    <label for="pairName">This device's name</label>
+    <input id="pairName" maxlength="40" spellcheck="false" required>
+    <button id="pairGo" class="btn primary" type="submit">Join</button>
+    <p class="err" id="pairErr"></p>
+  </form>
 </div>
 
 <div id="dialog" class="dialog-back" hidden>
@@ -1502,6 +2186,11 @@ const androidApp = android && {
   choose_save_folder: () => androidAsk("chooseSaveFolder"),
   reset_save_folder: () => Promise.resolve(JSON.parse(android.resetSaveFolder())),
   open_file: (url, name) => Promise.resolve(android.openFile(url, name)),
+  pair_again: () => Promise.resolve(android.pairAgain && android.pairAgain()),
+  quit: () => Promise.resolve(android.quit && android.quit()),
+  check_update: () => androidAsk("checkUpdate"),
+  update_now: () => androidAsk("updateNow"),
+  set_option: (name, value) => Promise.resolve(JSON.parse(android.setOption(name, !!value))),
 };
 const app = () => (window.pywebview && window.pywebview.api) || androidApp || null;
 
@@ -1531,14 +2220,17 @@ const rows = new Map();           // key -> its row in the history (a card is re
 /* ---------------- talking to the server ---------------- */
 
 async function api(path, opts = {}) {
-  const init = { method: opts.method || "GET", cache: "no-store", headers: {
-    "X-TextShare": "1", "X-TextShare-Device": deviceId, "X-TextShare-Kind": KIND,
-    "X-TextShare-Name": encodeURIComponent(device || "") } };
+  const init = { method: opts.method || "GET", cache: "no-store", credentials: "same-origin", headers: {
+    "X-TextShare": "1", "X-TextShare-Kind": KIND, "X-TextShare-Name": encodeURIComponent(device || "") } };
   if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
   const res = await fetch(path, init);           // throws when the server cannot be reached
   let data = {};
   try { data = await res.json(); } catch {}
-  if (!res.ok) { const e = new Error(data.error || "the server answered " + res.status); e.http = res.status; throw e; }
+  if (!res.ok) {
+    const e = new Error(data.error || "the server answered " + res.status); e.http = res.status;
+    if (data.unpaired && !opts.pairing) needPairing();
+    throw e;
+  }
   return data;
 }
 const unreachable = (e) => !e.http;
@@ -1548,6 +2240,9 @@ async function hello() {
   try {
     const h = await api("/api/hello");
     serverName = h.server;
+    if (!h.paired) { $("#where").textContent = h.server; needPairing(); return; }
+    deviceId = h.id || deviceId;
+    $("#setSecure").textContent = h.encrypted ? "Encrypted · only devices that joined" : "This computer itself · only devices that joined";
     addresses = (h.addresses || []).slice(0, 2).map((u) => u.replace(/\/$/, ""));
     baseTitle = document.title = "Instant Share · " + h.server;
     $("#where").textContent = $("#setHost").textContent = h.server;
@@ -1567,6 +2262,7 @@ async function hello() {
 
 async function poll() {
   clearTimeout(pollTimer);
+  if (pairingShown) return;
   const my = ++pollSeq, q = search.value.trim(), key = view + "|" + q;
   const query = new URLSearchParams();
   if (q) query.set("q", q);
@@ -1599,6 +2295,7 @@ function drawStatus() {
 /* ---------------- devices: who should see it ---------------- */
 
 async function loadDevices() {
+  if (pairingShown) return;
   try {
     const d = await api("/api/devices");
     devices = d.devices;
@@ -1684,7 +2381,7 @@ function take(data) {
   empty.hidden = data.items.length > 0;
   empty.textContent = view === "archived" ? "Nothing archived. Swipe a message left (or use its ⋯ menu) to put it away here."
     : q ? "Nothing in the history matches."
-    : "Nothing shared yet. Write or paste something on the left, or add a file, and press Share.";
+    : "Nothing shared yet. Write or paste something " + (innerWidth <= 860 ? "above" : "on the left") + ", or add a file, and press Share.";
   const limit = $("#limit");
   limit.hidden = data.matches <= data.items.length;
   limit.textContent = `Showing the newest ${data.items.length}. Search to find older ones.`;
@@ -1987,6 +2684,7 @@ $("#lightbox").addEventListener("click", () => { $("#lightbox").hidden = true; }
 function showView(v) {
   view = v;
   $("#histTitle").textContent = v === "archived" ? "Archived" : "History";
+  $("#histTitle").classList.toggle("arch", v === "archived");
   $("#archBack").hidden = v !== "archived";
   for (const [, el] of rows) el.remove();
   rows.clear();
@@ -2132,11 +2830,6 @@ editor.addEventListener("keydown", (e) => {
   }
 });
 shareBtn.addEventListener("click", share);
-$("#copyEd").addEventListener("click", async (e) => {
-  if (!editor.value) return toast("The editor is empty.");
-  if (await copyText(editor.value)) done(e.currentTarget, "Copied ✓");
-  else { editor.select(); toast("The browser blocked the copy: the text is selected, press Ctrl+C.", true); }
-});
 $("#clear").addEventListener("click", async () => {
   if (!editor.value && !attachment) return;
   if (await ask("Clear the editor?", "What you wrote, and the file, if any, go.", "Clear")) {
@@ -2165,11 +2858,12 @@ async function openSettings(focusName) {
   drawThemeSeg();
   applyEnter(); applyWrap();
   loadStorage();
+  loadCode(); drawDeviceList(); loadDevices().then(drawDeviceList);
   try { options = (app() && app().get_options ? await app().get_options() : {}) || {}; } catch { options = {}; }
   drawOptions();
   if (focusName) $("#setName").select();
 }
-function closeSettings() { $("#sheet").hidden = true; }
+function closeSettings() { $("#sheet").hidden = true; clearInterval(codeTimer); }
 function drawOptions() {
   $("#secApp").hidden = !options.windows;
   $("#setTop").checked = !!options.on_top;
@@ -2183,6 +2877,19 @@ function drawOptions() {
   $("#secSave").hidden = options.save_folder === undefined;
   $("#savePath").textContent = options.save_folder || "";
   $("#saveResetLine").hidden = !options.save_chosen;
+  $("#quitLine").hidden = !(app() && app().quit);
+  drawUpdate();
+}
+function drawUpdate() {
+  const can = !!(app() && app().check_update), u = options.update || {};
+  $("#updLine").hidden = $("#updAutoLine").hidden = !can;
+  if (!can) return;
+  $("#setUpdAuto").checked = options.update_check !== false;
+  $("#updSub").textContent = u.error ? u.error
+    : u.available ? `Instant Share ${u.latest} is available (this is ${u.current})`
+    : u.latest ? `Up to date: ${u.current}, checked ${when(u.checked)}` : `This is ${u.current || "__VERSION__"}`;
+  $("#updBtn").textContent = u.available ? (u.can_install ? "Update now" : "Download") : "Check now";
+  $("#updBtn").disabled = false;
 }
 $("#gear").addEventListener("click", () => openSettings(false));
 $("#me").addEventListener("click", () => openSettings(true));
@@ -2220,6 +2927,169 @@ $("#saveReset").addEventListener("click", async () => {
   toast("Files will be saved in Downloads.");
 });
 $("#setFolder").addEventListener("click", () => app() && app().open_folder && app().open_folder());
+$("#setUpdAuto").addEventListener("change", (e) => setOption("update_check", e.target.checked));
+$("#updBtn").addEventListener("click", async () => {
+  const b = $("#updBtn"), u = options.update || {};
+  if (u.available && !u.can_install) { window.open(u.page, "_blank"); return; }
+  if (u.available) {
+    if (!await ask("Update to Instant Share " + u.latest + "?", "It downloads the new version, checks it, then restarts in it. The history and settings stay as they are.", "Update")) return;
+    b.disabled = true; b.textContent = "Downloading…";
+    const r = await app().update_now();
+    if (r && r.error) { toast(r.error, true); drawUpdate(); if (r.page) window.open(r.page, "_blank"); }
+    else toast("Restarting in Instant Share " + u.latest + "…");
+    return;
+  }
+  b.disabled = true; b.textContent = "Checking…";
+  try { options.update = await app().check_update(); } catch {}
+  drawUpdate();
+});
+$("#quitApp").addEventListener("click", async () => {
+  if (await ask("Quit Instant Share?", "It closes completely on this device: no pop-ups or notifications until you start it again.", "Quit")) app().quit();
+});
+
+/* ---------------- devices: who has joined, and adding one with a code ---------------- */
+
+let code = null, codeTimer = 0;
+function drawCode() {
+  const left = code ? Math.round((code.until - (Date.now() + skew)) / 1000) : 0;
+  $("#codeLine").hidden = !code || left <= 0;
+  if (!code || left <= 0) { code = null; clearInterval(codeTimer); return; }
+  $("#codeDigits").textContent = code.code.slice(0, 3) + " " + code.code.slice(3);
+  $("#codeLeft").textContent = `Type it on the new device. Good for ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")} more, for one device.`;
+}
+async function loadCode() {
+  try { code = (await api("/api/pair/code")).code; } catch { code = null; }
+  clearInterval(codeTimer); drawCode();
+  if (code) codeTimer = setInterval(drawCode, 1000);
+}
+async function makeCode() {
+  try { code = (await api("/api/pair/code", { method: "POST" })).code; } catch (e) { return toast("No code: " + problem(e), true); }
+  clearInterval(codeTimer); drawCode(); codeTimer = setInterval(drawCode, 1000);
+}
+$("#addDevice").addEventListener("click", makeCode);
+$("#codeNew").addEventListener("click", makeCode);
+function drawDeviceList() {
+  const box = $("#devList");
+  box.textContent = "";
+  for (const d of devices) {
+    const row = document.createElement("div");
+    row.className = "line dev-row";
+    row.innerHTML = '<i class="dot"></i><span class="label"><span class="nm"></span><span class="sub"></span></span>';
+    row.querySelector(".dot").classList.toggle("on", d.online);
+    row.querySelector(".nm").textContent = d.name + (d.id === deviceId ? " (this device)" : "");
+    row.querySelector(".sub").textContent = (d.online ? "Online now" : "Last seen " + when(d.seen)) + " · " + (d.kind === "app" ? "the app" : "a browser");
+    if (d.id !== deviceId) {
+      const b = document.createElement("button");
+      b.className = "btn sm"; b.type = "button"; b.textContent = "Remove";
+      b.title = "Take this device off: it can no longer see or share anything, until it joins again with a new code";
+      b.addEventListener("click", async () => {
+        if (!await ask("Remove " + d.name + "?", "It can no longer see the history or share anything. To come back, it must join again with a new code.", "Remove")) return;
+        try { await api("/api/devices/" + d.id, { method: "DELETE" }); toast(d.name + " was removed."); }
+        catch (e) { toast("Not removed: " + problem(e), true); }
+        await loadDevices(); drawDeviceList();
+      });
+      row.append(b);
+    }
+    box.append(row);
+  }
+}
+
+/* ---------------- joining: a browser types a pairing code ----------------
+   SPAKE2: the code never crosses the network, so a listener learns nothing from it, and a fake computer gets one
+   guess at it (the computer that keeps the history allows 5 tries per code). */
+
+const SP = { P: BigInt("0x__SPAKE_P__"), M: BigInt("0x__SPAKE_M__"), N: BigInt("0x__SPAKE_N__") };
+SP.Q = (SP.P - 1n) / 2n;
+function modpow(b, e, m) { let r = 1n; b %= m; while (e > 0n) { if (e & 1n) r = r * b % m; b = b * b % m; e >>= 1n; } return r; }
+const K256 = new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,
+  0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,
+  0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,
+  0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,
+  0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+function sha256(data) {
+  const len = data.length, total = Math.ceil((len + 9) / 64) * 64, m = new Uint8Array(total);
+  m.set(data); m[len] = 0x80;
+  const bits = len * 8; new DataView(m.buffer).setUint32(total - 4, bits >>> 0); new DataView(m.buffer).setUint32(total - 8, Math.floor(bits / 2 ** 32));
+  const H = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+  const w = new Uint32Array(64), dv = new DataView(m.buffer), r = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let o = 0; o < total; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = r(w[i-15], 7) ^ r(w[i-15], 18) ^ (w[i-15] >>> 3), s1 = r(w[i-2], 17) ^ r(w[i-2], 19) ^ (w[i-2] >>> 10);
+      w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (r(e, 6) ^ r(e, 11) ^ r(e, 25)) + ((e & f) ^ (~e & g)) + K256[i] + w[i]) >>> 0;
+      const t2 = ((r(a, 2) ^ r(a, 13) ^ r(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    H[0] += a; H[1] += b; H[2] += c; H[3] += d; H[4] += e; H[5] += f; H[6] += g; H[7] += h;
+  }
+  const out = new Uint8Array(32); const ov = new DataView(out.buffer);
+  for (let i = 0; i < 8; i++) ov.setUint32(i * 4, H[i]);
+  return out;
+}
+const utf8 = (t) => new TextEncoder().encode(t);
+const join = (...parts) => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; };
+const hexOf = (b) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+const bigOf = (b) => BigInt("0x" + (hexOf(b) || "0"));
+const bytesOf = (v, n) => { const h = v.toString(16).padStart(n * 2, "0"); return Uint8Array.from(h.match(/../g), (x) => parseInt(x, 16)); };
+function hmac256(key, msg) {
+  const k = new Uint8Array(64); k.set(key.length > 64 ? sha256(key) : key);
+  return sha256(join(k.map((x) => x ^ 0x5c), sha256(join(k.map((x) => x ^ 0x36), msg))));
+}
+function spakeSecret(T, S, K, w, pin) {
+  const parts = [bytesOf(T, 256), bytesOf(S, 256), bytesOf(K, 256), bytesOf(w, 32), utf8(pin)];
+  return sha256(join(utf8("InstantShare-SPAKE2-v1"), ...parts.flatMap((p) => [bytesOf(BigInt(p.length), 4), p])));
+}
+async function joinWithCode(codeText, name) {
+  const digits = codeText.replace(/\D/g, "");
+  const w = bigOf(sha256(utf8("InstantShare pairing code " + digits))) % SP.Q;
+  const rnd = new Uint8Array(288); crypto.getRandomValues(rnd);
+  const x = bigOf(rnd) % (SP.Q - 1n) + 1n;
+  const T = modpow(4n, x, SP.P) * modpow(SP.M, w, SP.P) % SP.P;
+  const old = saved.get("id", "");
+  const a = await api("/api/pair", { method: "POST", pairing: true, body: { T: T.toString(16), name, kind: KIND, id: old, pinned: false } });
+  const S = BigInt("0x" + a.S);
+  if (!(S > 1n && S < SP.P - 1n && modpow(S, SP.Q, SP.P) === 1n)) throw new Error("That was not a proper answer.");
+  const K = modpow(S * modpow(SP.N, SP.Q - w, SP.P) % SP.P, x, SP.P);
+  const secret = spakeSecret(T, S, K, w, "");
+  if (hexOf(hmac256(secret, utf8("server"))) !== a.confirm) throw new Error("That code is not right, or no longer valid. Check it, or make a new one, and try again.");
+  return api("/api/pair/finish", { method: "POST", pairing: true, body: { session: a.session, confirm: hexOf(hmac256(secret, utf8("client"))) } });
+}
+let pairingShown = false;
+function needPairing() {
+  if (pairingShown) return;
+  pairingShown = true;
+  clearTimeout(pollTimer);
+  if (app() && app().pair_again) { app().pair_again(); return; }      // the apps pair in their own setup
+  $("#pairHost").textContent = serverName && serverName !== "the server" ? serverName : location.hostname;
+  $("#pairName").value = device || "";
+  $("#pairing").hidden = false;
+  setTimeout(() => $("#pairCode").focus(), 50);
+}
+$("#pairCode").addEventListener("input", (e) => {
+  const d = e.target.value.replace(/\D/g, "").slice(0, 6);
+  e.target.value = d.length > 3 ? d.slice(0, 3) + " " + d.slice(3) : d;
+});
+$("#pairForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const c = $("#pairCode").value.replace(/\D/g, ""), name = $("#pairName").value.trim().slice(0, 40);
+  if (c.length !== 6) { $("#pairErr").textContent = "The code has 6 digits."; return; }
+  if (!name) { $("#pairErr").textContent = "Give this device a name, so the others know who shares."; return; }
+  $("#pairGo").disabled = true; $("#pairErr").textContent = ""; $("#pairGo").textContent = "Checking…";
+  try {
+    const d = await joinWithCode(c, name);
+    device = name; saved.set("device", device); saved.set("id", d.id);
+    location.reload();                 // now with this device's key (a cookie only this computer's pages can read)
+  } catch (err) {
+    $("#pairErr").textContent = err.message || "Could not join.";
+    $("#pairGo").disabled = false; $("#pairGo").textContent = "Join";
+  }
+});
 $("#setSetup").addEventListener("click", () => { closeSettings(); app().open_setup(); });
 document.querySelectorAll("a.change-setup").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); app().open_setup(); }));
 
@@ -2452,7 +3322,8 @@ inApp();
 </html>
 """
 
-PAGE = PAGE.replace("__VERSION__", VERSION)
+PAGE = (PAGE.replace("__VERSION__", VERSION).replace("__SPAKE_P__", format(P, "x"))
+        .replace("__SPAKE_M__", format(SPAKE_M, "x")).replace("__SPAKE_N__", format(SPAKE_N, "x")))
 
 if __name__ == "__main__":
     sys.exit(run())

@@ -1,5 +1,80 @@
 # Release notes
 
+## 1.2.0 — 15 November 2026
+
+Instant Share now keeps strangers out: everything is encrypted, and only devices that joined with a pairing code get
+in. Notifications are Windows' own, and the apps can update themselves.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-1.2.0-portable.exe` | 16.8 MB | `62A705763AA4D99C616B33665FB8892790563B000AF2708EEE93DE23369B34EC` |
+| `Instant-Share-1.2.0.apk` | 70 KB | `9CC80EE32346193A8081DE34F1C061695770F909537BC9AC4ADBF65670A2BFEA` |
+| `Instant-Share-Handbook-1.2.0.pdf` | 1.1 MB | `EA40BA64668BF13DE332B24CF588F040421A23463E52C62FB9BA8E745512E636` |
+| `instantshare.py` | 170 KB | `1A2ACD516CF7192F80E2FA06543226EDD7F9874D2D3BD8043E70E620AAC0FD4F` |
+
+### Updating from 1.1
+
+Update **every** device: 1.2 talks only to 1.2 (an older app is told to update). Quit 1.1 from its tray menu and start
+the 1.2 file: the history, settings and start-with-Windows stay. The computer that keeps the history is joined
+already; each other computer and phone joins once with a code (below), and keeps its own items. On Android, install
+the new app over the old one.
+
+### New
+
+- **Joining with a pairing code.** Only devices that joined can see the history, the devices, the files or share
+  anything. On a device that has joined, Settings > **Devices** > **Add a device** (or **Add a device…** in the tray
+  menu) shows a 6-digit code, good for 10 minutes, 5 tries and one device; the new device types it once. The code is
+  checked with SPAKE2, so it never crosses the network. Each device gets its own key; the computer that keeps the
+  history stores only a hash of it. Settings > Devices lists the joined devices, with **Remove**.
+- **Encrypted.** Everything between the devices goes over https (TLS 1.2 or newer), with a certificate the computer
+  that keeps the history makes for itself (no extra software). Old `http://` addresses lead to the new ones.
+- **The apps check the computer's key.** The Windows and Android apps bind the pairing to the key they saw and accept
+  only that key afterwards, so a device pretending to be that computer is refused, with a
+  message.
+- **Locks that hold.** "Who should see it", "only the sender edits and deletes", pins and the archive are now enforced
+  by device keys: a device that was not chosen cannot open a file even with its address.
+- **Windows' own notifications** instead of the home-made pop-up: who, a preview (the photo itself for a photo),
+  **Copy** or **Save**, and **Open**. They stay in the Notification Centre and follow Do Not Disturb.
+- **Updates.** Settings > About > **Updates**: **Check now**, a daily check (on by default, can be turned off; the
+  only thing that reaches the internet), and **Update now**, which downloads the new version, checks it against the
+  SHA-256 in its release notes, and restarts in it (Windows) or opens Android's installer.
+- **Quit Instant Share** in Settings (Windows and Android): closes it completely, notifications included, until it is
+  started again.
+- **Phones**: "Enter sends" and "Wrap long lines" side by side, without the "Write or paste" label; the search box
+  across the whole width; no Copy button under the editor (each item keeps its own).
+
+### Fixed
+
+- A page that the Windows app showed right at start-up (the "connecting" or setup page) could be covered by the
+  "Starting…" page that was still loading.
+
+### Tested
+
+- The server, against real encrypted connections: 41 checks (its own certificate, read by OpenSSL; pairing with the
+  right code, a wrong code, a used code, 5 tries; the pairing bound to the key seen; keys, the cookie, Remove; files
+  and lists only for their devices; old http addresses sent to https; 1.1 apps told to update). The 53 checks of 1.1,
+  run again with device keys.
+- A browser (Edge, phone size) joining with a code over https: 20 checks, with the phone layout changes. The Android
+  pages with a stand-in for the Java side: 14 checks (setup and pairing, updates, Quit, removal). The phone's pairing
+  code itself, in Java on a computer against the real server: 5 checks.
+- On Windows 11 with the `.exe`: 17 checks (the computer that keeps the history paired by itself; another computer
+  joining with a code; its window on the computer's own certificate, accepted by its key; a share arriving as a
+  Windows notification, kept in the Notification Centre with Copy and Open; Remove; another key at the same address
+  refused; Quit). Updating with the `.exe` from a stand-in for GitHub: 8 checks (found, downloaded, checked, restarted,
+  the old file removed, start-with-Windows moved, the history kept); a download not matching its checksum changes
+  nothing.
+
+### Not tested
+
+- Pressing **Copy** on a Windows notification (the notification and its buttons were checked; on the test PC Windows
+  put notifications straight into the Notification Centre, and the automated press could not reach it).
+- The Android app on a real phone: joining with a code, the pinned connection, Quit, updating through Android's
+  installer.
+- Safari on an iPhone with the computer's own certificate; two separate computers on a real network; Windows 10;
+  `instantshare.py` on Mac or Linux.
+
 ## 1.1.0 — 15 November 2026
 
 Text Share is now **Instant Share**, with what its first users asked for.

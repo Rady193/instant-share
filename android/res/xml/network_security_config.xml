@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Instant Share talks only to the computer that keeps the history, on the local network, which serves plain http
-     (no certificates on a home or office network). The app never reaches the internet. -->
+<!-- Instant Share talks to the computer that keeps the history over https, with that computer's own certificate,
+     checked against the key the phone saw when it joined (Secure.java). Plain http is allowed only so the setup can
+     recognise an Instant Share from before 1.2 and say to update it; nothing is sent that way. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

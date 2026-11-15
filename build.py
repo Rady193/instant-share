@@ -3,7 +3,7 @@
     py build.py
 
 The first run makes the build environment, C:\\venvs\\textshare-build (outside OneDrive: thousands of small files),
-with the versions below. The program is app.py (its window, tray and pop-ups, drawn by Windows' own Edge WebView2)
+with the versions below. The program is app.py (its window, tray and notifications; the window drawn by Windows' own Edge WebView2)
 around instantshare.py, and carries its own Python, so the computers it runs on need nothing. release/ also gets
 instantshare.py itself, for Mac and Linux (python3 instantshare.py), and the files' SHA-256 checksums.
 """
@@ -18,9 +18,13 @@ import sys
 from pathlib import Path
 
 PYINSTALLER = "6.22.3"
-NEEDS = [f"pyinstaller=={PYINSTALLER}", "pywebview==6.2.1", "pillow", "playwright"]
+NEEDS = [f"pyinstaller=={PYINSTALLER}", "pywebview==6.2.1", "pillow", "playwright",
+         "winrt-runtime", "winrt-Windows.UI.Notifications", "winrt-Windows.Data.Xml.Dom",
+         "winrt-Windows.Foundation", "winrt-Windows.Foundation.Collections", "winrt-Windows.Storage.Streams"]
 BUNDLED = ["pywebview", "bottle", "proxy_tools", "typing_extensions", "pythonnet", "clr_loader", "cffi", "pycparser",
-           "pillow"]                      # what the .exe carries besides Python: their licences go in the notices
+           "pillow", "winrt-runtime", "winrt-Windows.UI.Notifications", "winrt-Windows.Data.Xml.Dom",
+           "winrt-Windows.Foundation", "winrt-Windows.Foundation.Collections", "winrt-Windows.Storage.Streams"]
+# (BUNDLED: what the .exe carries besides Python; their licences go in the notices)
 HERE = Path(__file__).resolve().parent
 VENV = Path(r"C:\venvs\textshare-build")
 WORK = VENV / "work"
@@ -103,7 +107,7 @@ def notices(v, target):
         "2. The PyInstaller bootloader, which starts the program: GPL 2.0 or later with the PyInstaller bootloader\n"
         "   exception, which allows programs made with it to be distributed under any licence.\n"
         "   https://pyinstaller.org/en/stable/license.html\n\n"
-        "3. These Python packages (the window, and copying photos), each with its licence text below:\n"
+        "3. These Python packages (the window, copying photos, Windows notifications), each with its licence:\n"
         + "".join(f"   {p['name']} {p['version']}: {p['licence']}\n" for p in packages)
         + rule + python_license
         + "".join(rule + f"{p['name']} {p['version']} ({p['licence']})\n\n"

@@ -1,9 +1,10 @@
 """Instant Share for Windows: its own window, tray icon and pop-ups around the server in instantshare.py.
 
 One computer keeps the history: the app runs the server there. The other computers run the same app and connect to
-it; they find it on the network by themselves. On every computer the app waits in the tray when its window is closed,
-and when another device shares something with it, a pop-up by the tray shows who, a preview, and a Copy button.
-Phones, and computers without the app, use a browser.
+it; they find it on the network by themselves, and join it once with a pairing code. Everything between them is
+encrypted. On every computer the app waits in the tray when its window is closed, and when another device shares
+something with it, a Windows notification shows who, a preview, and Copy or Save (kept in the Notification Centre).
+Phones use the Android app or a browser.
 
     pythonw app.py              (build.py packs this into the portable .exe)
         --hidden                start in the tray without the window (how Windows starts it at sign-in)
@@ -16,12 +17,14 @@ Copyright (c) 2026 SCAFFApps. All rights reserved. See LICENSE.
 import argparse
 import ctypes
 import hashlib
+import hmac
 import html
 import io
 import json
 import os
 import re
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
@@ -30,7 +33,6 @@ import time
 import traceback
 import urllib.request
 import winreg
-import winsound
 from ctypes import wintypes
 from pathlib import Path
 from urllib.parse import quote, urlsplit
@@ -38,11 +40,15 @@ from urllib.parse import quote, urlsplit
 import instantshare as ts
 
 APP = "Instant Share"
-TOAST_TITLE = "Instant Share notification"
+# how Windows knows Instant Share's notifications (its name and icon in them and in the Notification Centre);
+# automated checks use their own
+AUMID = os.environ.get("INSTANTSHARE_AUMID") or "SCAFFApps.InstantShare"
 RES = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent)) / "build"     # icon.png, icon.ico
 # the programs that start with Windows; automated checks point INSTANTSHARE_RUN_KEY elsewhere so they never touch it
 RUN_KEY = os.environ.get("INSTANTSHARE_RUN_KEY") or r"Software\Microsoft\Windows\CurrentVersion\Run"
 OLD_RUN_NAME = "Text Share"                  # how 1.0 was listed in the programs that start with Windows
+REPO = "Rady193/instant-share"   # where new versions are published (GitHub releases)
+UPDATE_EVERY = 24 * 3600         # the daily check for a new version (when on)
 HOST_PORTS = 10                  # when 8765 is taken by another program, the next free one of 8765..8774
 EVERY = 3                        # seconds between the app's questions to the computer that keeps the history
 
@@ -104,8 +110,7 @@ def paint_title_bar(hwnd, theme):
 
 
 def my_windows():
-    """{"main": hwnd, "toast": hwnd} of this program's windows. (The main one takes the page's title, such as
-    "Instant Share · OFFICE-PC", so it is told apart from the pop-up by that one's fixed title.)"""
+    """{"main": hwnd} of this program's windows (its title is the page's, such as "Instant Share · OFFICE-PC")."""
     found = {}
     pid = os.getpid()
 
@@ -116,9 +121,7 @@ def my_windows():
         if owner.value == pid:
             buf = ctypes.create_unicode_buffer(256)
             user32.GetWindowTextW(hwnd, buf, 256)
-            if buf.value == TOAST_TITLE:
-                found.setdefault("toast", hwnd)
-            elif buf.value.startswith(APP):
+            if buf.value.startswith(APP):
                 found.setdefault("main", hwnd)
         return True
 
@@ -485,7 +488,10 @@ class App:
             self.settings["device_id"] = secrets.token_hex(12)      # who this app is, to the others
             self.settings.save()
         self.me = socket.gethostname()
-        self.window = self.toast = self.tray = self.server = self.beacon = self.store = None
+        self.window = self.tray = self.server = self.beacon = self.store = None
+        self.key = self.pin = None       # this device's key, and the history computer's (checked on every connection)
+        self.notes = None                # Windows notifications
+        self.update, self.release = {}, None     # what the last check for a new version found
         self.mode = None                 # what runs now: "host", "join", or None while the setup page shows
         self.port = None
         self.base = None                 # http://host:port of the computer that keeps the history, once reached
@@ -495,8 +501,6 @@ class App:
         self.attempt = 0                 # each new connection attempt makes the older ones give up
         self.wake = threading.Event()    # "Try again" on the can't-reach page
         self.listening = 0               # each new connection makes the older questioner stop
-        self.toast_item = None
-        self.toast_hidden_at = 0
 
     @property
     def name(self):
@@ -515,10 +519,12 @@ class App:
     def options(self):
         return {"windows": True, "on_top": bool(self.settings.get("on_top")), "auto_copy": bool(self.settings.get("auto_copy")),
                 "host": self.mode == "host", "folder": str(self.data), "save_folder": str(self.save_folder),
-                "save_chosen": bool(self.settings.get("save_folder"))}
+                "save_chosen": bool(self.settings.get("save_folder")),
+                "update_check": self.settings.get("update_check", True),
+                "update": dict(self.update, current=ts.VERSION)}
 
     def set_option(self, name, value):
-        if name not in ("on_top", "auto_copy"):
+        if name not in ("on_top", "auto_copy", "update_check"):
             return self.options()
         self.settings[name] = bool(value)
         self.settings.save()
@@ -532,6 +538,8 @@ class App:
         webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
         if os.environ.get("TEXTSHARE_DEBUG_PORT", "").isdigit():      # for automated checks of the app's windows
             webview.settings["REMOTE_DEBUGGING_PORT"] = int(os.environ["TEXTSHARE_DEBUG_PORT"])
+        pin_window_certificates(self)
+        self.notes = Notifier(self)
         hidden = self.args.hidden and self.settings.get("mode") in ("host", "join")
         self.window = webview.create_window(APP, html=self.local_page("starting"), js_api=Api(self), width=1220,
                                             height=820, min_size=(420, 520), hidden=hidden,
@@ -540,16 +548,22 @@ class App:
         self.window.events.closing += self.on_closing
         self.window.events.closed += self.on_closed
         self.window.events.shown += lambda: self.set_theme(self.theme)
-        self.toast = webview.create_window(TOAST_TITLE, html=toast_page(self.theme), js_api=ToastApi(self),
-                                           width=380, height=176, frameless=True, on_top=True, hidden=True,
-                                           focus=False, resizable=False, shadow=True,
-                                           background_color=BACKGROUND[self.theme])
         webview.start(self.begin, gui="edgechromium", private_mode=False, icon=str(RES / "icon.ico"),
                       storage_path=str(self.data / "webview"))
         self.listening += 1
         self.stop_host()
+        self.notes.close()
 
     def begin(self):
+        try:
+            self._begin()
+        except Exception:                # pywebview would swallow it: written to the log, and said in the window
+            traceback.print_exc()
+            self.window.load_html(self.local_page("problem", {
+                "title": "Instant Share could not start", "text": "Details are in textshare.log in " + str(self.data)}))
+
+    def _begin(self):
+        self.window.events.loaded.wait(15)   # the first page ("Starting…") in place, so the next one is not lost under it
         self.set_theme(self.theme)
         self.instance.listen(self.show)
         mode = self.settings.get("mode")
@@ -559,6 +573,9 @@ class App:
             # this copy's own entry follows it when the program moved or was renamed; another copy's is not touched
             if autostart_moved(self.data) or (mine(command, self.data) and command != autostart_command(self.data)):
                 autostart_set(autostart_command(self.data))
+        threading.Thread(target=self.update_checks, daemon=True, name="updates").start()
+        if self.args.after_update:
+            threading.Thread(target=finish_update, args=(self, Path(self.args.after_update)), daemon=True).start()
         if mode == "host":
             self.become_host()
         elif mode == "join" and self.settings.get("host"):
@@ -575,11 +592,6 @@ class App:
         hwnd = my_windows().get("main")
         if hwnd:
             paint_title_bar(hwnd, self.theme)
-        if self.toast:
-            try:
-                self.toast.evaluate_js(f"setTheme({json.dumps(self.theme)})")
-            except Exception:
-                pass
 
     def set_name(self, name):
         name = str(name).strip()[:40]
@@ -590,10 +602,11 @@ class App:
     def local_page(self, kind, info=None):
         return local_page(kind, info, self.theme)
 
-    def page_url(self, host, port):
+    def page_url(self, host, port, scheme="https"):
+        """The page, opened through /login with this device's key (it becomes a cookie for this window)."""
         where = f"[{host}]" if ":" in host else host
-        return (f"http://{where}:{port}/?app=1&id={self.settings['device_id']}&me={quote(self.name)}"
-                f"&theme={self.theme}")
+        page = f"/?app=1&me={quote(self.name)}&theme={self.theme}"
+        return f"{scheme}://{where}:{port}/login?key={quote(self.key or '')}&next={quote(page, safe='')}"
 
     def show(self):
         if self.window and not self.quitting:
@@ -605,7 +618,6 @@ class App:
         this computer and its pop-ups still come; Quit in the tray menu ends it."""
         if self.quitting or self.mode is None:
             self.quitting = True
-            self.hide_toast()
             self.stop_tray()
             return True
         self.window.hide()
@@ -619,18 +631,12 @@ class App:
         return False
 
     def on_closed(self):
-        """The main window is gone: the pop-up's hidden window goes too, so the program ends."""
         self.quitting = True
-        try:
-            self.toast.destroy()
-        except Exception:
-            pass
 
     def quit(self):
         self.quitting = True
         self.attempt += 1
         self.listening += 1
-        self.hide_toast()
         self.stop_tray()
         self.stop_host()
         self.window.destroy()
@@ -650,6 +656,80 @@ class App:
         else:
             self.open_setup()
 
+    # ---- new versions (GitHub releases)
+
+    def update_checks(self):
+        """Once a day, if allowed: is there a newer version? Said once per version, in a notification."""
+        threading.Event().wait(45)                       # not while starting
+        while not self.quitting:
+            if self.settings.get("update_check", True) and time.time() - self.settings.get("update_checked", 0) > UPDATE_EVERY:
+                self.check_update(tell=True)
+            threading.Event().wait(3600)
+
+    def check_update(self, tell=False):
+        try:
+            rel = latest_release()
+        except Exception as e:
+            self.update = {"error": f"Could not ask GitHub ({e}). Is this computer on the internet?",
+                           "checked": int(time.time() * 1000)}
+            return dict(self.update, current=ts.VERSION)
+        self.release = rel
+        newer = version_tuple(rel["version"]) > version_tuple(ts.VERSION)
+        exe = f"Instant-Share-{rel['version']}-portable.exe"
+        self.update = {"latest": rel["version"], "available": newer, "page": rel["page"],
+                       "checked": int(time.time() * 1000),
+                       "can_install": ts.FROZEN and exe in rel["assets"] and exe in rel["hashes"]}
+        self.settings["update_checked"] = time.time()
+        if newer and tell and self.settings.get("update_told") != rel["version"]:
+            self.settings["update_told"] = rel["version"]
+            self.notes.update_available(rel["version"])
+        self.settings.save()
+        return dict(self.update, current=ts.VERSION)
+
+    def update_now(self):
+        """Download the new version next to this one, check it against the release's SHA-256, start it, and quit:
+        it takes over (the same history and settings, the start with Windows) and removes this file."""
+        if not ts.FROZEN:
+            return {"error": "This copy runs from Python source: get the new version from the Releases page.",
+                    "page": f"https://github.com/{REPO}/releases/latest"}
+        try:
+            rel = self.release or latest_release()
+            v = rel["version"]
+            if version_tuple(v) <= version_tuple(ts.VERSION):
+                return {"error": f"{ts.VERSION} is the newest version already."}
+            name = f"Instant-Share-{v}-portable.exe"
+            url, expected = rel["assets"].get(name), rel["hashes"].get(name)
+            if not url or not expected:
+                return {"error": "That release has no Windows program with a checksum. Get it from the Releases page.",
+                        "page": rel["page"]}
+            old = Path(sys.executable).resolve()
+            new = old.with_name(name)
+            part = old.with_name(name + ".download")
+            digest = hashlib.sha256()
+            request = urllib.request.Request(url, headers={"User-Agent": "InstantShare-update"})
+            with urllib.request.urlopen(request, timeout=60) as r, open(part, "wb") as out:
+                while chunk := r.read(1 << 16):
+                    out.write(chunk)
+                    digest.update(chunk)
+            if digest.hexdigest().lower() != expected.lower():
+                part.unlink(missing_ok=True)
+                return {"error": "The download did not match its published checksum, so nothing was changed. "
+                                 "Try again later."}
+            os.replace(part, new)
+        except OSError as e:
+            return {"error": f"Could not download it: {e}"}
+        log(f"Updating to {v}: {new}")
+        main = my_windows().get("main")
+        command = [str(new), "--after-update", str(old), "--data", str(self.data)]
+        if self.args.port:
+            command += ["--port", str(self.args.port)]
+        if not (main and user32.IsWindowVisible(main)):
+            command.append("--hidden")
+        # a fresh start for the new program (not as a child of this one, whose files go when it ends)
+        subprocess.Popen(command, env=dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT="1"), close_fds=True)
+        threading.Thread(target=self.quit, daemon=True).start()
+        return {"ok": True, "version": v}
+
     # ---- the tray
 
     def start_tray(self):
@@ -662,12 +742,21 @@ class App:
 
         self.tray = Tray(RES / "icon.ico", APP, [
             ("Open Instant Share", self.show, None),
+            ("Add a device…", self.add_device, None),
             ("Start with Windows", toggle_autostart, lambda: mine(autostart_get(), self.data)),
             ("Change setup…", self.open_setup, None),
             None,
             ("Quit Instant Share", self.quit, None)])
         self.tray.start()
         self.tray_title()
+
+    def add_device(self):
+        """The tray's "Add a device…": Settings, with a new pairing code."""
+        self.show()
+        try:
+            self.window.evaluate_js("openSettings(false).then(makeCode)")
+        except Exception:
+            pass
 
     def tray_title(self):
         if self.tray:
@@ -694,17 +783,21 @@ class App:
                     return
                 self.mode = "host"
                 self.start_tray()
-        self.listen(f"http://127.0.0.1:{self.port}")
+        self.listen(f"https://127.0.0.1:{self.port}")
         self.load_host_page()
 
     def load_host_page(self):
-        self.window.load_url(self.page_url("localhost", self.port))
+        self.window.load_url(self.page_url("localhost", self.port, "http"))     # this computer itself: no detour
 
     def start_server(self):
         self.store = ts.Store(self.data / "history.db")
+        tls = ts.server_tls(self.data)
+        self.pin = tls[1]
+        # this computer's own window and notifications: paired by the history itself (a new key each start)
+        self.key = self.store.issue_key(self.settings["device_id"], self.name, "app", take_over=True)[1]
         first = self.args.port or int(self.settings.get("host_port", ts.DEFAULT_PORT))
         for port in range(first, first + HOST_PORTS):
-            server = ts.make_server(port, self.store)
+            server = ts.make_server(port, self.store, tls)
             if server:
                 break
         else:
@@ -753,8 +846,42 @@ class App:
         self.listening += 1
         self.attempt += 1
         self.start_tray()
+        self.key, self.pin = self.settings.get("key"), self.settings.get("pin")
+        if not (self.key and self.pin):
+            return self.ask_code()
         self.window.load_html(self.local_page("connecting", {"name": self.settings["host"]}))
         threading.Thread(target=self.connect, args=(self.attempt,), daemon=True, name="connect").start()
+
+    def ask_code(self, why=""):
+        """The pairing page: this computer joins the one that keeps the history with a code shown there."""
+        self.attempt += 1
+        self.listening += 1
+        self.base = None
+        self.window.load_html(self.local_page("pair", {"name": self.settings.get("host", ""), "why": why}))
+        self.show()
+
+    def pair(self, code):
+        """The code typed on the pairing page: {ok} or {error}."""
+        name = self.settings.get("host", "")
+        port = int(self.settings.get("port", ts.DEFAULT_PORT))
+        last = None
+        for host in dict.fromkeys(filter(None, [self.settings.get("address"), name])):
+            where = f"[{host}]" if ":" in host else host
+            try:
+                got = ts.pair(f"https://{where}:{port}", code, self.name, "app", self.settings["device_id"])
+            except ts.Refused as e:
+                return {"error": str(e)}
+            except OSError as e:
+                last = e
+                if "not right" in str(e):
+                    return {"error": str(e)}
+                continue
+            self.settings.update(key=got["key"], pin=got["pin"], device_id=got["id"])
+            self.settings.save()
+            log(f"Joined Instant Share on {name}")
+            threading.Thread(target=self.join, daemon=True).start()
+            return {"ok": True}
+        return {"error": f"Can't reach {name}: {last}" if last else f"Can't reach {name}."}
 
     def connect(self, attempt):
         shown_problem = False
@@ -762,48 +889,82 @@ class App:
             name = self.settings["host"]
             port = int(self.settings.get("port", ts.DEFAULT_PORT))
             for host in dict.fromkeys(filter(None, [self.settings.get("address"), name])):
-                answer = hello(host, port)
+                try:
+                    answer = hello(host, port, self.pin, self.key)
+                except ts.WrongComputer:
+                    if attempt == self.attempt:
+                        self.window.load_html(self.local_page("problem", {
+                            "title": f"This is not the {name} this computer joined",
+                            "text": f"The computer answering at {host} has another key than {name} had when this "
+                                    "computer joined it. If Instant Share was reinstalled there, or its folder "
+                                    "replaced, join it again (Setup). Otherwise someone may be pretending to be it."}))
+                    return
                 if answer and answer["server"].lower() == name.lower() and attempt == self.attempt:
+                    if not answer.get("paired"):
+                        self.settings.pop("key", None)
+                        self.settings.save()
+                        return self.ask_code(f"{name} no longer knows this computer (it was removed there, or its "
+                                             "history was replaced). Join it again with a new code.")
                     where = f"[{host}]" if ":" in host else host
-                    self.listen(f"http://{where}:{port}")
+                    self.listen(f"https://{where}:{port}")
                     self.window.load_url(self.page_url(host, port))
                     return
-            for found in ts.discover():          # its address may have changed: ask the network by its name
-                if found["name"].lower() == name.lower():
-                    self.settings.update(address=found["address"], port=found["port"])
-                    self.settings.save()
+                old = old_version(host, port)
+                if old and attempt == self.attempt:
+                    self.window.load_html(self.local_page("problem", {
+                        "title": f"{name} runs Instant Share {old}",
+                        "text": f"This computer has Instant Share {ts.VERSION}, which encrypts everything and lets "
+                                f"only devices that joined in. Update Instant Share on {name} to {ts.VERSION} too."}))
+                    self.wake.wait(20)
+                    self.wake.clear()
+                    shown_problem = False
                     break
             else:
-                if attempt != self.attempt:
-                    return
-                if not shown_problem:
-                    shown_problem = True
-                    self.window.load_html(self.local_page("unreachable", {"name": name}))
-                self.wake.wait(5)
-                self.wake.clear()
+                for found in ts.discover():          # its address may have changed: ask the network by its name
+                    if found["name"].lower() == name.lower():
+                        self.settings.update(address=found["address"], port=found["port"])
+                        self.settings.save()
+                        break
+                else:
+                    if attempt != self.attempt:
+                        return
+                    if not shown_problem:
+                        shown_problem = True
+                        self.window.load_html(self.local_page("unreachable", {"name": name}))
+                    self.wake.wait(5)
+                    self.wake.clear()
 
     def choose_join(self, name, address, port):
+        if (self.settings.get("host", "").lower(), int(self.settings.get("port", 0) or 0)) != (name.lower(), port):
+            for k in ("key", "pin"):            # another computer: join it with a code of its own
+                self.settings.pop(k, None)
         self.settings.update(mode="join", host=name, address=address, port=port)
         self.settings.save()
         self.join()
 
-    # ---- what the others share: asked every few seconds, shown in a pop-up
+    # ---- what the others share: one question kept open, shown in Windows notifications
 
     def ask(self, path, base=None, timeout=6):
-        """A question to the computer that keeps the history, as this device."""
-        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-        request = urllib.request.Request((base or self.base) + path, headers={
-            "X-TextShare": "1", "X-TextShare-Device": self.settings["device_id"],
-            "X-TextShare-Name": quote(self.name), "X-TextShare-Kind": "app"})
-        with opener.open(request, timeout=timeout) as r:
-            body = r.read()
-            return json.loads(body) if r.headers.get_content_type() == "application/json" else body
+        """A question to the computer that keeps the history, as this device: encrypted, only to the computer with
+        the key remembered, with this device's own key."""
+        status, ctype, data, _ = ts.call(base or self.base, path, pin=self.pin, key=self.key, timeout=timeout,
+                                         headers={"X-TextShare-Name": quote(self.name), "X-TextShare-Kind": "app"})
+        if status == 401 and self.mode == "join" and not self.quitting:
+            self.settings.pop("key", None)
+            self.settings.save()
+            threading.Thread(target=self.ask_code, args=(f"{self.settings.get('host', '')} no longer knows this "
+                             "computer (it was removed there). Join it again with a new code.",), daemon=True).start()
+        if status >= 400:
+            raise OSError(f"the computer answered {status}")
+        return json.loads(data) if ctype == "application/json" else data
 
     def fetch(self, url):
-        """The bytes of a file in the history; only from the computer that keeps it."""
-        if not self.base or not url.startswith(self.base + "/files/"):
-            raise OSError("not from the computer that keeps the history")
-        return self.ask(url[len(self.base):], timeout=15)
+        """The bytes of a file in the history (the page gives its address; only /files/ is fetched, and only from
+        the computer that keeps the history)."""
+        u = urlsplit(str(url))
+        if not self.base or not u.path.startswith("/files/"):
+            raise OSError("not a file in the history")
+        return self.ask(u.path + (f"?{u.query}" if u.query else ""), timeout=15)
 
     def listen(self, base):
         self.base = base
@@ -833,85 +994,262 @@ class App:
         main = my_windows().get("main")
         if main and user32.GetForegroundWindow() == main:
             return                               # the page is in front: it shows the new items itself
-        newest = items[0]
-        file = dict(newest["file"], url=base + newest["file"]["url"]) if newest.get("file") else None
-        self.toast_item = dict(newest, file=file, base=base)
-        data = {"id": newest["id"], "who": newest["device"], "text": newest["text"], "size": newest["size"],
-                "file": file, "more": len(items) - 1, "to_me": bool(newest.get("to"))}
-        try:
-            self.toast.evaluate_js(f"show({json.dumps(data)})")
-        except Exception:
-            return
-        self.place_toast()
+        newest = dict(items[0], base=base, more=len(items) - 1)
+        photo = None
+        file = newest.get("file")
+        if file and file["type"].startswith("image/") and file["size"] <= 5 * 1024 * 1024:
+            try:
+                photo = self.notes.picture(newest["id"], file["name"], self.ask(file["url"], base, timeout=15))
+            except Exception:
+                photo = None
+        self.notes.show(newest, photo)
         if self.settings.get("auto_copy") and (newest["size"] or (file and file["type"].startswith("image/"))):
-            def copy_now():
-                answer = self.toast_action("copy")
-                if answer.get("ok"):
-                    try:
-                        self.toast.evaluate_js(f"copied({json.dumps('Copied ✓')})")
-                    except Exception:
-                        pass
-            threading.Thread(target=copy_now, daemon=True, name="auto-copy").start()
-        try:
-            winsound.PlaySound("SystemNotification", winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_NODEFAULT)
-        except RuntimeError:
-            pass
+            threading.Thread(target=self.act, args=("copy", newest), daemon=True, name="auto-copy").start()
 
-    def place_toast(self):
-        hwnd = my_windows().get("toast")
-        if not hwnd:
-            return
-        box, work = wintypes.RECT(), wintypes.RECT()
-        user32.GetWindowRect(hwnd, ctypes.byref(box))
-        user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work), 0)          # SPI_GETWORKAREA: above the taskbar
-        w, h = box.right - box.left, box.bottom - box.top
-        margin = 12
-        # a tool window: never in the taskbar or Alt+Tab
-        user32.SetWindowLongW(hwnd, -20, (user32.GetWindowLongW(hwnd, -20) | 0x80) & ~0x40000)   # TOOLWINDOW, not APPWINDOW
-        # on top of everything (HWND_TOPMOST), in the corner above the taskbar
-        user32.SetWindowPos(hwnd, wintypes.HWND(-1), work.right - w - margin, work.bottom - h - margin, 0, 0,
-                            0x0001 | 0x0010)                # SWP_NOSIZE | SWP_NOACTIVATE
-        # shown the standard way (SW_SHOWNOACTIVATE): the window learns it is visible, so its page is drawn - without
-        # taking the focus from what the user is doing
-        user32.ShowWindow(hwnd, 4)
-
-    def hide_toast(self):
-        hwnd = my_windows().get("toast")
-        if hwnd:
-            user32.ShowWindow(hwnd, 0)               # SW_HIDE
-
-    def toast_action(self, what):
-        """Copy (text or photo) or Save (a PDF) the item in the pop-up."""
-        item = self.toast_item
-        if not item:
-            return {"error": "Nothing to copy."}
+    def act(self, what, item):
+        """Copy (text or photo) or Save (a file) an item from a notification."""
         try:
             if what == "copy" and item["size"]:
-                full = self.ask(f"/api/items/{item['id']}", item["base"])
-                copy_text(full["text"])
-                return {"ok": True, "label": "Copied ✓"}
+                copy_text(self.ask(f"/api/items/{item['id']}", item["base"])["text"])
+                return {"ok": True}
             if item.get("file"):
-                data = self.ask(item["file"]["url"][len(item["base"]):], item["base"], timeout=15)
+                data = self.ask(item["file"]["url"], item["base"], timeout=15)
                 if what == "copy" and item["file"]["type"].startswith("image/"):
                     copy_image(data)
-                    return {"ok": True, "label": "Copied ✓"}
+                    return {"ok": True}
                 saved = save_in_downloads(item["file"]["name"], data, self.save_folder)
-                return {"ok": True, "label": "Saved ✓", "name": saved.name}
+                self.notes.saved(saved)
+                return {"ok": True, "name": saved.name}
         except Exception as e:
-            log(f"pop-up {what}: {e}")
-            return {"error": "Could not get it: " + str(e)}
+            log(f"notification {what}: {e}")
+            self.notes.trouble(f"Could not get it from the computer that keeps the history: {e}")
+            return {"error": str(e)}
         return {"error": "Nothing to copy."}
 
 
-def hello(host, port, timeout=2.5):
-    """Instant Share's answer at host:port, or None."""
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))      # never through a proxy
+class Notifier:
+    """Windows' own notifications: who shared, a preview (the photo itself for a photo), and Copy or Save, and
+    Open. Windows keeps them in the Notification Centre and follows Do Not Disturb. Their buttons work while
+    Instant Share runs, so the ones left from an earlier run are cleared when it starts and when it quits."""
+
+    def __init__(self, app):
+        self.app, self.ok, self.items, self.live = app, False, {}, {}
+        self.pictures = app.data / "notifications"
+        try:
+            from winrt.windows.data.xml.dom import XmlDocument
+            from winrt.windows.ui.notifications import (ToastActivatedEventArgs, ToastNotification,
+                                                        ToastNotificationManager)
+            self._xml, self._toast, self._args, self._manager = (XmlDocument, ToastNotification,
+                                                                 ToastActivatedEventArgs, ToastNotificationManager)
+            self.register()
+            self.notifier = ToastNotificationManager.create_toast_notifier(AUMID)
+            self.clear()
+            self.ok = True
+        except Exception as e:                  # Windows without them (very old): the tray's own balloons instead
+            log(f"Windows notifications are not available ({e}); using the tray's")
+        shutil.rmtree(self.pictures, ignore_errors=True)
+
+    def register(self):
+        """Instant Share's name and icon for its notifications (under this Windows account only)."""
+        icon = self.app.data / "icon.png"
+        try:
+            if not icon.exists() or icon.read_bytes() != (RES / "icon.png").read_bytes():
+                icon.write_bytes((RES / "icon.png").read_bytes())
+        except OSError:
+            pass
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, rf"Software\Classes\AppUserModelId\{AUMID}") as k:
+            winreg.SetValueEx(k, "DisplayName", 0, winreg.REG_SZ, APP)
+            winreg.SetValueEx(k, "IconUri", 0, winreg.REG_SZ, str(icon))
+            winreg.SetValueEx(k, "IconBackgroundColor", 0, winreg.REG_SZ, "FF5B2C83")
+
+    def clear(self):
+        try:
+            self._manager.history.clear(AUMID)
+        except Exception:
+            pass
+
+    def close(self):
+        if self.ok:
+            self.clear()
+        shutil.rmtree(self.pictures, ignore_errors=True)
+
+    def picture(self, item_id, name, data):
+        """A photo, as a file the notification can show."""
+        self.pictures.mkdir(parents=True, exist_ok=True)
+        old = sorted(self.pictures.iterdir(), key=lambda f: f.stat().st_mtime)
+        for f in old[:-20]:
+            f.unlink(missing_ok=True)
+        path = self.pictures / f"{item_id}{Path(name).suffix.lower() or '.png'}"
+        path.write_bytes(data)
+        return path
+
+    def _send(self, xml, tag=None, item=None):
+        doc = self._xml()
+        doc.load_xml(xml)
+        toast = self._toast(doc)
+        if tag:
+            toast.tag, toast.group = tag, "items"
+        keep = tag or f"x{id(toast)}"
+        toast.add_activated(self._activated)
+        toast.add_dismissed(lambda t, a: self.live.pop(keep, None))
+        self.live[keep] = toast                           # kept, so its buttons are heard
+        self.notifier.show(toast)
+
+    def show(self, item, photo=None):
+        file = item.get("file")
+        who = item["device"] + (" shared with you" if item.get("to") else " shared")
+        if not self.ok:
+            if self.app.tray:
+                self.app.tray.balloon((item["text"] or (file or {}).get("name", ""))[:200], who)
+            return
+        self.items[str(item["id"])] = item
+        for k in list(self.items)[:-50]:
+            del self.items[k]
+        esc = lambda t: html.escape(str(t), quote=True)                         # noqa: E731
+        text = item["text"][:300] if item["size"] else (file["name"] if file else "")
+        image = f'<image src="{esc(photo.as_uri())}"/>' if photo else ""
+        more = f'<text placement="attribution">+{item["more"]} more</text>' if item.get("more") else ""
+        copyable = item["size"] or (file and file["type"].startswith("image/"))
+        main = "Copy" if copyable else "Save"
+        n = item["id"]
+        self._send(f'''<toast launch="open|{n}" activationType="foreground">
+  <visual><binding template="ToastGeneric"><text hint-maxLines="1">{esc(who)}</text><text>{esc(text)}</text>{image}{more}
+  </binding></visual>
+  <actions><action content="{main}" arguments="{main.lower()}|{n}" activationType="foreground"/>
+    <action content="Open" arguments="open|{n}" activationType="foreground"/></actions>
+</toast>''', str(n), item)
+
+    def update_available(self, version):
+        if self.ok:
+            self._send(f'''<toast launch="settings|" activationType="foreground"><visual><binding template="ToastGeneric">
+  <text>Instant Share {html.escape(version)} is available</text><text>This computer has {ts.VERSION}. Update in a click: the history and settings stay.</text></binding></visual>
+  <actions><action content="Update now" arguments="update|" activationType="foreground"/>
+    <action content="Later" arguments="later|" activationType="foreground"/></actions></toast>''')
+
+    def updated(self):
+        if self.ok:
+            self._send(f'''<toast><visual><binding template="ToastGeneric"><text>Instant Share is up to date</text>
+  <text>Now {ts.VERSION}. The history and settings are as they were.</text></binding></visual><audio silent="true"/></toast>''')
+
+    def saved(self, path):
+        if self.ok:
+            esc = lambda t: html.escape(str(t), quote=True)                     # noqa: E731
+            self._send(f'''<toast launch="folder|{esc(path)}" activationType="foreground"><visual><binding template="ToastGeneric">
+  <text>Saved</text><text>{esc(path.name)} is in {esc(path.parent)}</text></binding></visual>
+  <actions><action content="Show in folder" arguments="folder|{esc(path)}" activationType="foreground"/></actions>
+  <audio silent="true"/></toast>''')
+
+    def trouble(self, message):
+        if self.ok:
+            self._send(f'''<toast><visual><binding template="ToastGeneric"><text>Instant Share</text>
+  <text>{html.escape(message)}</text></binding></visual><audio silent="true"/></toast>''')
+
+    def _activated(self, toast, args):
+        try:
+            what, _, ref = self._args._from(args).arguments.partition("|")
+        except Exception:
+            what, ref = "open", ""
+        if what == "folder":
+            subprocess.Popen(["explorer", "/select,", ref])
+            return
+        if what == "later":
+            return
+        if what == "update":
+            def go():
+                answer = self.app.update_now()
+                if answer.get("error"):
+                    self.trouble(answer["error"])
+            threading.Thread(target=go, daemon=True, name="update").start()
+            return
+        if what == "settings":
+            self.app.show()
+            try:
+                self.app.window.evaluate_js("openSettings(false)")
+            except Exception:
+                pass
+            return
+        item = self.items.get(ref)
+        if what in ("copy", "save") and item:
+            threading.Thread(target=self.app.act, args=(what, item), daemon=True, name="notification").start()
+        else:
+            self.app.show()
+
+
+def pin_window_certificates(app):
+    """The window opens the page of the computer that keeps the history over https, with that computer's own
+    certificate: it is accepted when its key is the one remembered from pairing, and refused otherwise."""
+    import webview
+    from webview.platforms import edgechromium
+
+    def on_certificate_error(self, _, args):
+        action = edgechromium.CoreWebView2ServerCertificateErrorAction
+        try:
+            seen = ts.pin_of(ts._unpem(args.ServerCertificate.ToPemEncoding()))
+            ok = bool(app.pin) and hmac.compare_digest(seen, app.pin)
+        except Exception:
+            ok = False
+        if not ok:
+            log("refused a certificate that is not the paired computer's")
+        args.set_Action(action.AlwaysAllow if ok else action.Cancel)
+
+    edgechromium.EdgeChrome.on_certificate_error = on_certificate_error
+    webview.settings["IGNORE_SSL_ERRORS"] = True            # (handled above: only the paired key gets through)
+
+
+def version_tuple(v):
+    return tuple(int(x) for x in re.findall(r"\d+", str(v))[:3])
+
+
+def latest_release(timeout=15):
+    """The newest Instant Share on GitHub: {version, page, assets: {name: url}, hashes: {name: SHA-256}} (the hashes
+    from the table in the release's notes)."""
+    url = os.environ.get("INSTANTSHARE_UPDATE_URL") or f"https://api.github.com/repos/{REPO}/releases/latest"   # tests
+    request = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json", "User-Agent": "InstantShare-update-check"})
+    with urllib.request.urlopen(request, timeout=timeout) as r:
+        data = json.loads(r.read())
+    hashes = dict(re.findall(r"\|\s*`([^`|]+)`\s*\|[^|\n]*\|\s*`([0-9A-Fa-f]{64})`", data.get("body") or ""))
+    return {"version": str(data["tag_name"]).lstrip("v"), "page": data.get("html_url") or "",
+            "assets": {a["name"]: a["browser_download_url"] for a in data.get("assets", [])}, "hashes": hashes}
+
+
+def finish_update(app, old):
+    """The new version, started by the old one: once that has quit, its file goes, and the user is told."""
+    log(f"Updated to {ts.VERSION} (was {old.name})")
+    me = Path(sys.executable).resolve()
+    if old.resolve() != me and old.suffix.lower() == ".exe" and old.name.lower().startswith(("instant-share", "text-share")):
+        for _ in range(40):
+            try:
+                old.unlink(missing_ok=True)
+                break
+            except OSError:
+                time.sleep(0.5)
+    threading.Event().wait(3)
+    app.notes.updated()
+
+
+def hello(host, port, pin=None, key=None, timeout=2.5):
+    """Instant Share's answer at host:port (encrypted; with a pin, only from the computer with that key), or None.
+    Raises ts.WrongComputer when a pinned computer shows another key."""
     where = f"[{host}]" if ":" in host else host
-    request = urllib.request.Request(f"http://{where}:{port}/api/hello", headers={"X-TextShare": "1"})
     try:
-        with opener.open(request, timeout=timeout) as r:
-            answer = json.loads(r.read())
-            return answer if "server" in answer else None
+        status, ctype, data, _ = ts.call(f"https://{where}:{port}", "/api/hello", pin=pin, key=key, timeout=timeout)
+        answer = json.loads(data) if status == 200 else {}
+        return answer if "server" in answer else None
+    except ts.WrongComputer:
+        raise
+    except (OSError, ValueError):
+        return None
+
+
+def old_version(host, port, timeout=2.5):
+    """The version of an Instant Share from before 1.2 (plain http) at host:port, or None."""
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    where = f"[{host}]" if ":" in host else host
+    try:
+        with opener.open(urllib.request.Request(f"http://{where}:{port}/api/hello", headers={"X-TextShare": "1"}),
+                         timeout=timeout) as r:
+            return str(json.loads(r.read()).get("version") or "1.0")
     except (OSError, ValueError):
         return None
 
@@ -948,12 +1286,18 @@ class Api:
             return {"error": "Type the name or the address of the computer that keeps the history."}
         answer = hello(host, port, timeout=4)
         if not answer:
+            old = old_version(host, port)
+            if old:
+                return {"error": f"{host} runs Instant Share {old}. Update it to {ts.VERSION} there first."}
             return {"error": f"Instant Share does not answer at {host} (port {port}). Check that it is running there, "
                              "on the same network, and that Windows allowed it on Private networks."}
         return self._join(answer["server"], host, port, autostart)
 
     def join_found(self, name, address, port, autostart):
         if not hello(address, int(port)):
+            old = old_version(address, int(port))
+            if old:
+                return {"error": f"{name} runs Instant Share {old}. Update it to {ts.VERSION} there first."}
             return {"error": f"{name} stopped answering. Look again in a moment."}
         return self._join(name, address, int(port), autostart)
 
@@ -967,6 +1311,26 @@ class Api:
 
     def open_setup(self):
         self._app.open_setup()
+
+    def pair_with(self, code):
+        return self._app.pair(str(code))
+
+    def pair_again(self):
+        """The page found this device unknown to the computer that keeps the history."""
+        if self._app.mode == "join":
+            self._app.settings.pop("key", None)
+            self._app.settings.save()
+            self._app.ask_code(f"{self._app.settings.get('host', '')} no longer knows this computer. Join it again "
+                               "with a new code.")
+
+    def quit(self):
+        threading.Thread(target=self._app.quit, daemon=True).start()
+
+    def check_update(self):
+        return self._app.check_update()
+
+    def update_now(self):
+        return self._app.update_now()
 
     def back(self):
         self._app.resume()
@@ -1018,23 +1382,6 @@ class Api:
             return {"ok": True, "name": saved.name}
         except Exception as e:
             return {"error": f"Could not save it: {e}"}
-
-
-class ToastApi:
-    """What the pop-up's buttons ask."""
-
-    def __init__(self, app):
-        self._app = app
-
-    def act(self, what):
-        return self._app.toast_action(str(what))
-
-    def open(self):
-        self._app.hide_toast()
-        self._app.show()
-
-    def dismiss(self):
-        self._app.hide_toast()
 
 
 # ---------------------------------------------------------------- the app's own pages
@@ -1114,12 +1461,12 @@ SETUP = """
 <div class="wrap">
   <div class="brand">{mark}</div>
   <h1>Set up Instant Share on this computer</h1>
-  <p class="lead">One computer keeps the history and the others connect to it. Phones need nothing: they open the
-  address shown at the bottom of the Instant Share page in their browser.</p>
+  <p class="lead">One computer keeps the history and the others connect to it, each joining once with a code shown
+  there. Phones use the Instant Share app for Android, or a browser.</p>
   <div class="cards">
     <section class="card" id="hostCard">
       <h2>Keep the history here<span class="tag" id="hostNow" hidden>NOW</span></h2>
-      <p>Choose this on <b>one</b> computer only, one that stays on while you work. Windows will ask to allow Text
+      <p>Choose this on <b>one</b> computer only, one that stays on while you work. Windows will ask to allow Instant
       Share on networks: allow it on <b>Private networks</b>.</p>
       <button class="btn primary" id="useThis">Use this computer</button>
     </section>
@@ -1211,74 +1558,41 @@ ready(() => {
 </script>
 """
 
-TOAST = """<!DOCTYPE html><html lang="en" data-theme="{theme}"><head><meta charset="utf-8"><title>Instant Share notification</title>
-<style>{style}
-body { display: block; min-height: 0; height: 100vh; padding: 0; overflow: hidden; background: var(--surface); user-select: none }
-.toast { display: flex; flex-direction: column; height: 100vh; border: 1px solid var(--line-strong); border-radius: 0; padding: 10px 10px 10px 12px; gap: 8px }
-.head { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 12px }
-.head svg { flex: none }
-.head b { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
-.head .x { margin-left: auto; width: 26px; height: 26px; padding: 0; background: transparent; border: 0; border-radius: 6px; color: var(--dim) }
-.head .x:hover { background: var(--surface-3); color: var(--text) }
-.body { flex: 1; min-height: 0; display: flex; gap: 10px; cursor: pointer; overflow: hidden }
-.body img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); flex: none }
-.pdf { display: inline-grid; place-items: center; width: 46px; height: 46px; flex: none; border-radius: 6px; background: var(--danger-fill); color: #fff; font-size: 11px; font-weight: 700 }
-.text { flex: 1; min-width: 0; margin: 0; font: 12.5px/1.45 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
-  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden }
-.text.file { font-family: inherit; font-weight: 600 }
-.foot { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--text); font-size: 13px }
-.foot .more { color: var(--dim); font-size: 12px; margin-right: auto }
-.foot .btn { height: 28px }
-.btn.done { color: var(--ok); border-color: var(--ok); background: var(--surface-2) }
-</style></head><body>
-<div class="toast">
-  <div class="head"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5b2c83"/><path d="M7 12h17l-4-4M25 20H8l4 4" fill="none" stroke="#f0c33c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <b id="who"></b><span id="what">shared</span><button class="x" id="x" title="Close">✕</button></div>
-  <div class="body" id="body" title="Open Instant Share"><img id="thumb" alt="" hidden><span class="pdf" id="pdf" hidden>PDF</span><p class="text" id="text" dir="auto"></p></div>
-  <div class="foot"><span class="more" id="more"></span><button class="btn" id="open">Open</button><button class="btn primary" id="act">Copy</button></div>
+PAIR = """
+<div class="center">
+  <div class="brand">{mark}</div>
+  <h1>Join Instant Share on {name}</h1>
+  <p class="lead" id="why"></p>
+  <p class="lead">Each device joins once, with a code. On a device that has joined already ({name} itself, for
+  example), open Settings (the gear) and choose <b>Add a device</b>. Type the code it shows here:</p>
+  <div class="row"><input id="code" inputmode="numeric" maxlength="7" placeholder="000 000" autocomplete="off"
+    style="font: 600 22px/1 Consolas, monospace; letter-spacing: .2em; text-align: center; width: 190px">
+    <button class="btn primary" id="join">Join</button></div>
+  <p class="err" id="err"></p>
+  <div class="row"><button class="btn" id="setup">Choose another computer</button></div>
 </div>
 <script>
-const $ = (s) => document.querySelector(s);
-const api = () => window.pywebview.api;
-let timer = 0, hovered = false;
-function setTheme(t) { document.documentElement.dataset.theme = t; }
-function copied(label) { const b = $("#act"); b.textContent = label; b.classList.add("done"); }
-function later() { clearTimeout(timer); timer = setTimeout(() => { if (!hovered) api().dismiss(); }, 9000); }
-function show(d) {
-  $("#who").textContent = d.who;
-  $("#what").textContent = d.to_me ? "shared with you" : "shared";
-  const image = d.file && d.file.type.startsWith("image/");
-  $("#thumb").hidden = !image;
-  if (image) $("#thumb").src = d.file.url;
-  $("#pdf").hidden = !(d.file && !image);
-  const t = $("#text");
-  t.classList.toggle("file", !d.size && !!d.file);
-  t.textContent = d.size ? d.text : d.file ? d.file.name : "";
-  $("#more").textContent = d.more ? "+" + d.more + " more" : "";
-  const act = $("#act");
-  act.disabled = false; act.classList.remove("done");
-  act.textContent = d.size || image ? "Copy" : "Save";
-  act.title = d.size ? "Copy the text" : image ? "Copy the photo" : "Save it in Downloads";
-  later();
-}
-document.addEventListener("mouseenter", () => { hovered = true; });
-document.addEventListener("mouseleave", () => { hovered = false; later(); });
-$("#x").addEventListener("click", () => api().dismiss());
-$("#open").addEventListener("click", () => api().open());
-$("#body").addEventListener("click", () => api().open());
-$("#act").addEventListener("click", async () => {
-  const b = $("#act");
-  b.disabled = true;
-  const r = await api().act("copy");
-  b.disabled = false;
-  if (r && r.ok) { b.textContent = r.label; b.classList.add("done"); clearTimeout(timer); timer = setTimeout(() => api().dismiss(), 1500); }
-  else { b.textContent = "Try again"; b.title = (r && r.error) || ""; }
+{ready}
+const info = {info};
+$("#why").textContent = info.why || "";
+$("#why").hidden = !info.why;
+const code = $("#code");
+code.addEventListener("input", () => { const d = code.value.replace(/\\D/g, "").slice(0, 6); code.value = d.length > 3 ? d.slice(0, 3) + " " + d.slice(3) : d; });
+ready(() => {
+  code.focus();
+  const go = async () => {
+    const c = code.value.replace(/\\D/g, "");
+    if (c.length !== 6) { $("#err").textContent = "The code has 6 digits."; code.focus(); return; }
+    $("#join").disabled = true; $("#join").textContent = "Checking…"; $("#err").textContent = "";
+    const r = await window.pywebview.api.pair_with(c);
+    if (!r.ok) { $("#err").textContent = r.error || "Could not join."; $("#join").disabled = false; $("#join").textContent = "Join"; code.select(); }
+  };
+  $("#join").addEventListener("click", go);
+  code.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+  $("#setup").addEventListener("click", () => window.pywebview.api.open_setup());
 });
-</script></body></html>"""
-
-
-def toast_page(theme):
-    return TOAST.replace("{theme}", theme).replace("{style}", PAGE_STYLE)
+</script>
+"""
 
 
 def local_page(kind, info=None, theme="dark"):
@@ -1286,6 +1600,9 @@ def local_page(kind, info=None, theme="dark"):
     if kind == "setup":
         body = (SETUP.replace("{mark}", MARK).replace("{version}", ts.VERSION).replace("{ready}", READY)
                 .replace("{info}", json.dumps(info).replace("</", "<\\/")))
+    elif kind == "pair":
+        body = (PAIR.replace("{mark}", MARK).replace("{name}", html.escape(info.get("name", "")))
+                .replace("{ready}", READY).replace("{info}", json.dumps(info).replace("</", "<\\/")))
     else:
         name = html.escape(info.get("name", ""))
         title, text, buttons = {
@@ -1341,12 +1658,19 @@ def main():
     ap.add_argument("--hidden", action="store_true", help="start in the tray, without the window")
     ap.add_argument("--data", type=Path, default=ts.default_data_dir(), help="folder for the history and settings")
     ap.add_argument("--port", type=int, help="port when this computer keeps the history (default 8765)")
+    ap.add_argument("--after-update", help=argparse.SUPPRESS)      # started by the version before, which is quitting
     args = ap.parse_args()
     args.data.mkdir(parents=True, exist_ok=True)
     log_to_file(args.data)
     quiet_late_answers()
 
     instance = Instance(args.data)
+    for _ in range(120 if args.after_update else 0):          # the version before is still quitting: wait for it
+        if instance.first:
+            break
+        kernel32.CloseHandle(instance.mutex)
+        time.sleep(0.5)
+        instance = Instance(args.data)
     if not instance.first:              # already running: bring it to the front instead
         if not instance.wake_first():
             message("Instant Share is already running on this computer.")

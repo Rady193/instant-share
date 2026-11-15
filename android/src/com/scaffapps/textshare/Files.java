@@ -41,6 +41,7 @@ public class Files extends ContentProvider {
         {".mp3", "audio/mpeg"}, {".m4a", "audio/mp4"}, {".aac", "audio/aac"}, {".wav", "audio/wav"},
         {".ogg", "audio/ogg"}, {".opus", "audio/ogg"}, {".flac", "audio/flac"}, {".amr", "audio/amr"},
         {".mp4", "video/mp4"}, {".mov", "video/quicktime"}, {".3gp", "video/3gpp"}, {".zip", "application/zip"},
+        {".apk", "application/vnd.android.package-archive"},                // a new version of Instant Share itself
     };
 
     static String type(String name) {

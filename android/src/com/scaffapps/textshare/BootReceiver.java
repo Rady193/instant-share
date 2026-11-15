@@ -4,7 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-/** After the phone restarts, or Instant Share is updated, it listens again without waiting to be opened. */
+/** After the phone restarts, or Instant Share is updated, it listens again without waiting to be opened (not after
+ *  Quit: then only when the app is opened again). */
 public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {

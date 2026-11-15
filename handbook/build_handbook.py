@@ -11,7 +11,6 @@ app.py with a stand-in for the app behind them. A window frame is drawn around t
 """
 
 import argparse
-import base64
 import contextlib
 import io
 import json
@@ -20,6 +19,7 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
+from urllib.parse import quote
 
 from PIL import Image, ImageDraw, ImageFont
 from playwright.sync_api import sync_playwright
@@ -38,6 +38,7 @@ DEV = {name: (name.lower().replace("-", "") + "0" * 24)[:24] for name in
        ("OFFICE-PC", "LAPTOP-1", "LAPTOP-2", "RECEPTION", "PHONE")}
 KINDS = {"OFFICE-PC": "app", "LAPTOP-1": "app", "LAPTOP-2": "app", "RECEPTION": "browser", "PHONE": "browser"}
 ME = "OFFICE-PC"
+KEYS = {}                        # each made-up device's key (1.2: only joined devices see the history)
 
 LOG = "\n".join(["2026-11-15 07:00:01  INFO   Nightly backup started",
                  "2026-11-15 07:00:01  INFO   Source: D:\\Data\\Projects",
@@ -139,6 +140,8 @@ def demo_server():
         store.db.execute("INSERT INTO marks (device, item, pinned, archived) SELECT ?, id, ?, 0 FROM items "
                          "WHERE text LIKE 'Delivery address%'", (DEV[ME], now - 60 * MIN))
         store.db.commit()
+        for name, device_id in DEV.items():
+            KEYS[name] = store.issue_key(device_id, name, KINDS[name])[1]
         server = textshare.make_server(PORT, store)
         if server is None:
             store.close()
@@ -160,12 +163,14 @@ def online(store, away=("RECEPTION",)):
             store.seen[device_id]["seen"] -= 2 * 60 * MIN
 
 
-OPTIONS = json.dumps({"windows": True, "on_top": False, "auto_copy": True, "host": True,
+OPTIONS = json.dumps({"update_check": True, "update": {"current": textshare.VERSION, "latest": textshare.VERSION,
+                                                        "available": False, "checked": 1}, "windows": True,
+                      "on_top": False, "auto_copy": True, "host": True,
                       "folder": "C:\\Users\\you\\AppData\\Local\\InstantShare",
                       "save_folder": "C:\\Users\\you\\Downloads", "save_chosen": False})
 STUB = """
 window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise.resolve(
-  name === "find" ? { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765, version: "1.1.0" }],
+  name === "find" ? { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765, version: "1.2.0" }],
                       me: "LAPTOP-1", mode: null, host: "" }
   : name === "get_options" ? """ + OPTIONS + """
   : { ok: true }) }) };
@@ -175,8 +180,10 @@ window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise
 ANDROID = """
 window.TextShareAndroid = new Proxy({}, { get: (_, m) => (...a) => {
   const reply = (call, answer) => setTimeout(() => window.textShareDone(call, answer), 100);
-  if (m === "info") return JSON.stringify({ me: "PHONE", host: "", version: "1.1.0", theme: "dark" });
-  if (m === "getOptions") return JSON.stringify({ android: true, save_folder: "Download", save_chosen: false });
+  if (m === "info") return JSON.stringify({ me: "PHONE", host: window.__host || "", version: "1.2.0", theme: "dark" });
+  if (m === "getOptions") return JSON.stringify({ android: true, save_folder: "Download", save_chosen: false, update_check: true,
+                                                  update: { current: "1.2.0", latest: "1.2.0", available: false, checked: 1 } });
+  if (m === "join") { window.__host = "OFFICE-PC"; return reply(a[0], { ok: true, pair: true, host: "OFFICE-PC" }); }
   if (m === "find") return reply(a[0], { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765 }], host: "" });
   if (m === "takeShared") return null;
 } });
@@ -220,10 +227,10 @@ def shots(browser, store):
         ctx.add_init_script(STUB + f"localStorage.setItem('textshare.to', {json.dumps(json.dumps([DEV[t] for t in to]))});")
         ctx.route("**/api/hello", lambda route: route.fulfill(json={     # the made-up name, not this computer's
             "server": "OFFICE-PC", "version": textshare.VERSION, "you": "192.168.1.20", "name": ME, "id": DEV[ME],
-            "addresses": ["http://OFFICE-PC:8765/", "http://192.168.1.20:8765/"]}))
+            "addresses": ["https://OFFICE-PC:8765/", "https://192.168.1.20:8765/"], "paired": True, "encrypted": True}))
         online(store)
         pg = ctx.new_page()
-        pg.goto(f"{URL}?app=1&id={DEV[ME]}&me={ME}&theme={theme}")
+        pg.goto(f"{URL}login?key={KEYS[ME]}&next=" + quote(f"/?app=1&me={ME}&theme={theme}", safe=""))
         pg.wait_for_selector(".item")
         pg.wait_for_selector("#status.on")
         pg.wait_for_function("() => true")
@@ -277,7 +284,7 @@ def shots(browser, store):
 
     # Settings, whole (a tall window), on the computer that keeps the history
     for theme in ("dark",):
-        pg = page(1180, 1640, theme, 1.5)
+        pg = page(1180, 2300, theme, 1.5)
         pg.locator("#gear").click()
         pg.wait_for_selector(".hero")
         pg.wait_for_timeout(500)
@@ -285,7 +292,24 @@ def shots(browser, store):
         pg.screenshot(path=IMG / "settings.png", clip={"x": sheet["x"], "y": sheet["y"], "width": sheet["width"],
                                                       "height": last["y"] + last["height"] + 12 - sheet["y"]})
         pg.locator(".sec.viz").screenshot(path=IMG / "storage.png")
+        # Devices, with a pairing code made for the next one
+        pg.locator("#addDevice").click()
+        pg.wait_for_selector("#codeLine:not([hidden])")
+        pg.wait_for_timeout(400)
+        pg.locator("#secDevices").screenshot(path=IMG / "devices.png")
         pg.context.close()
+
+    # a laptop joining OFFICE-PC: the pairing code
+    ctx = browser.new_context(viewport={"width": 1000, "height": 560}, device_scale_factor=1.5)
+    ctx.add_init_script(STUB)
+    pg = ctx.new_page()
+    pg.set_content(app.local_page("pair", {"name": "OFFICE-PC", "why": ""}, "dark"))
+    pg.locator("#code").fill("482913")
+    pg.mouse.move(0, 0)
+    pg.wait_for_timeout(300)
+    pg.screenshot(path=IMG / "pair.png")
+    frame(IMG / "pair.png", "dark", "Instant Share", 1.5)
+    ctx.close()
 
     # a photo waiting to be shared, with a line about it (a low window, so the editor is short)
     pg = page(1400, 520, "dark", 1.5, to=["LAPTOP-1"])
@@ -308,15 +332,22 @@ def shots(browser, store):
     pg.wait_for_selector("#found button")
     pg.wait_for_timeout(300)
     pg.screenshot(path=IMG / "android-setup.png")
+    pg.locator("#found button").first.click()                 # chosen: it asks for the pairing code
+    pg.wait_for_selector("#pair:not([hidden])")
+    pg.locator("#code").fill("482 913")
+    pg.wait_for_timeout(300)
+    foot = pg.locator(".foot").bounding_box()
+    pg.screenshot(path=IMG / "android-pair.png", clip={"x": 0, "y": 0, "width": 390, "height": foot["y"] + foot["height"] + 26})
     ctx.close()
     ctx = browser.new_context(**phone, locale="en-GB")
     ctx.add_init_script(ANDROID)
     ctx.route("**/api/hello", lambda route: route.fulfill(json={
         "server": "OFFICE-PC", "version": textshare.VERSION, "you": "192.168.1.31", "name": "PHONE", "id": DEV["PHONE"],
-        "addresses": ["http://OFFICE-PC:8765/", "http://192.168.1.20:8765/"], "android": True}))
+        "addresses": ["https://OFFICE-PC:8765/", "https://192.168.1.20:8765/"], "android": True, "paired": True,
+        "encrypted": True}))
     online(store)
     pg = ctx.new_page()
-    pg.goto(f"{URL}?app=1&id={DEV['PHONE']}&me=PHONE&theme=dark")
+    pg.goto(f"{URL}login?key={KEYS['PHONE']}&next=" + quote("/?app=1&me=PHONE&theme=dark", safe=""))
     pg.wait_for_selector(".item")
     pg.wait_for_selector("#status.on")
     pg.wait_for_timeout(500)
@@ -340,21 +371,6 @@ def shots(browser, store):
     ctx.close()
 
     # the pop-ups by the tray
-    photo_url = "data:image/jpeg;base64," + base64.b64encode(PHOTO).decode()
-    for name, theme, data in (
-            ("toast-text", "dark", {"id": 1, "who": "LAPTOP-1", "text": "git pull origin main\nnpm ci\nnpm run build",
-                                    "size": 37, "file": None, "more": 0, "to_me": False}),
-            ("toast-photo", "light", {"id": 2, "who": "PHONE", "text": "", "size": 0, "more": 1, "to_me": True,
-                                      "file": {"name": "east side.jpg", "type": "image/jpeg", "size": len(PHOTO),
-                                               "url": photo_url}})):
-        ctx = browser.new_context(viewport={"width": 380, "height": 176}, device_scale_factor=2)
-        ctx.add_init_script(STUB)
-        pg = ctx.new_page()
-        pg.set_content(app.toast_page(theme))
-        pg.evaluate("d => show(d)", data)
-        pg.wait_for_timeout(400)
-        pg.screenshot(path=IMG / f"{name}.png")
-        ctx.close()
     print("pictures: " + ", ".join(sorted(p.name for p in IMG.glob("*.png"))))
 
 

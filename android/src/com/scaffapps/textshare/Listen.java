@@ -37,9 +37,10 @@ public class Listen extends Service {
 
     /** Start (or keep) listening once Instant Share is set up. Safe to call often. */
     static void start(Context c) {
-        if (Net.base(c) == null) return;
+        if (!Net.paired(c) || Net.prefs(c).getBoolean("stopped", false)) return;     // not joined, or Quit
         try {
             c.startForegroundService(new Intent(c, Listen.class));
+            Update.daily(c);
         } catch (RuntimeException notAllowedNow) {
             // Android refuses from the background unless battery optimisation is off; the app's next start retries
         }
@@ -65,13 +66,14 @@ public class Listen extends Service {
         long backoff = 2000;
         while (running) {
             String base = Net.base(this);
-            if (base == null) { stopSelf(); return; }
+            if (!Net.paired(this) || Net.prefs(this).getBoolean("stopped", false)) { stopSelf(); return; }
             String key = "after@" + base;                          // what was last seen, per computer
             long after = Net.prefs(this).getLong(key, -1);
             HttpURLConnection con = null;
             try {
                 con = Net.open(this, base + "/api/events" + (after < 0 ? "" : "?after=" + after + "&wait=" + WAIT_SECONDS),
                         (WAIT_SECONDS + 20) * 1000);
+                if (con.getResponseCode() == 401) { Net.forgetKey(this); stopSelf(); return; }   // removed there: join again
                 if (con.getResponseCode() != 200) throw new java.io.IOException("answered " + con.getResponseCode());
                 JSONObject answer = new JSONObject(new String(Net.bytes(con.getInputStream()), StandardCharsets.UTF_8));
                 JSONArray items = answer.getJSONArray("items");

@@ -1,13 +1,13 @@
 # Instant Share
 
 Instant Share passes text, photos, documents and voice notes between the computers and Android phones on your own
-network. Share on
-one, and the others have it at once, with a pop-up (or a phone notification) and a Copy button. Choose who sees each share. Everything stays
-in a history you can search, copy from and delete from. It needs no internet and no accounts.
+network. Share on one, and the others have it at once, with a notification and a Copy button. Choose who sees each
+share. Everything stays in a history you can search, copy from and delete from. It is encrypted, only devices that
+joined with a pairing code get in, and it needs no internet and no accounts.
 
-Version 1.1.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
+Version 1.2.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
 
-The **[handbook](Text%20Share%20Handbook.pdf)** explains everything, with pictures.
+The **[handbook](Instant%20Share%20Handbook.pdf)** explains everything, with pictures.
 
 ## Contents
 
@@ -18,6 +18,8 @@ The **[handbook](Text%20Share%20Handbook.pdf)** explains everything, with pictur
 - [Keyboard shortcuts](#keyboard-shortcuts)
 - [Options](#options)
 - [Where things are saved](#where-things-are-saved)
+- [Security](#security)
+- [Updates](#updates)
 - [What it does not do](#what-it-does-not-do)
 - [Building from source](#building-from-source)
 - [Project layout](#project-layout)
@@ -35,7 +37,8 @@ in a browser.
   iPhone      (browser) ──┘
 ```
 
-Once set up, the app waits in the tray when its window is closed, so it can show what others share.
+Every device joins once with a 6-digit pairing code shown on a device that has joined already. Once set up, the app
+waits in the tray when its window is closed, so it can show what others share.
 
 ## Install
 
@@ -43,9 +46,9 @@ Download from the [Releases page](https://github.com/Rady193/instant-share/relea
 
 | File | What it is |
 |---|---|
-| `Instant-Share-1.1.0-portable.exe` | The app for Windows, in one file. Nothing is installed and no administrator permission is needed: copy it anywhere (a USB stick works too) and double-click it. Use the same file on every computer. |
-| `Instant-Share-1.1.0.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** in the Settings of its page, in the phone's browser. |
-| `Instant-Share-Handbook-1.1.0.pdf` | The handbook. |
+| `Instant-Share-1.2.0-portable.exe` | The app for Windows, in one file. Nothing is installed and no administrator permission is needed: copy it anywhere (a USB stick works too) and double-click it. Use the same file on every computer. |
+| `Instant-Share-1.2.0.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
+| `Instant-Share-Handbook-1.2.0.pdf` | The handbook. |
 | `instantshare.py` | Instant Share as a plain server, for Mac and Linux: `python3 instantshare.py` (Python 3.10 or newer, nothing else) keeps the history there, and every device uses a browser. |
 | `THIRD-PARTY-NOTICES.txt` | The licences of the parts the Windows app carries inside it. |
 
@@ -62,10 +65,16 @@ The window is drawn by Microsoft Edge WebView2, which Windows 10 and 11 include.
 1. **On one computer**, one that stays on while you work, start Instant Share and choose **Use this computer**. Windows
    asks whether to allow it on networks: allow it on **Private networks**.
 2. **On every other computer**, start Instant Share and choose the first computer from the list (or type its name or
-   address).
+   address). It asks for a pairing code: on the first computer, open **Settings > Devices > Add a device** (or **Add a
+   device…** in the tray menu) and type the 6-digit code it shows. Each code is good for 10 minutes and one device.
 3. Leave **Start Instant Share when I sign in to Windows** ticked.
-4. Phones: open the address shown at the bottom of the Instant Share window (for example `http://OFFICE-PC:8765`) in the
-   browser, and bookmark it.
+4. Phones: install `Instant-Share-1.2.0.apk`, choose the computer, and type a code the same way. iPhones and other
+   browsers open the address in Settings > Phones and browsers (for example `https://OFFICE-PC:8765`), continue past
+   the browser's certificate warning the first time, and type a code.
+
+Coming from 1.1? Update every device: 1.2 talks only to 1.2. The history, settings and start-with-Windows stay; the
+computer that keeps the history is joined already, and each other device joins once with a code and keeps its own
+items.
 
 If the computers cannot find each other, check that the network is set to **Private** on the computer that keeps the
 history (Settings > Network & internet > Wi-Fi or Ethernet > Network profile type). If Windows never asked to allow
@@ -85,24 +94,29 @@ netsh advfirewall firewall add rule name="Instant Share search" dir=in action=al
   MOV, 3GP) and ZIP. The **File** button, drag and drop, or paste a picture. Each file is checked by its contents:
   programs and scripts are refused, even renamed; documents only ever download, never open as a page.
 - **Choose who sees it**: the **To** button lists the devices, with who is online now. Everyone, or only the devices
-  you tick.
-- **Pop-ups by the clock** when another device shares something with you: who, a preview, and **Copy** (text or
-  photo) or **Save** (other files). With **Copy what arrives** on, it is on the clipboard already. They come even when
-  the window is closed, never take the keyboard, and stay out of the taskbar.
+  you tick: the others cannot see it or open its file.
+- **Join with a code**: Settings > **Devices** > **Add a device** shows a 6-digit pairing code for the next device;
+  the same list shows every device that joined, with **Remove**.
+- **Windows notifications** when another device shares something with you: who, a preview (the photo itself for a
+  photo), and **Copy** (text or photo) or **Save** (other files), and **Open**. They come even when the window is
+  closed, stay in Windows' Notification Centre, and follow Do Not Disturb. With **Copy what arrives** on, it is on the
+  clipboard already.
 - **History**: Copy, Save, and a ⋯ menu to **pin** an item to the top, **archive** it (or swipe left) and, for its
   sender only, **edit** it in place (marked "edited" with the time) or **delete** it for everyone. Pins and the
   archive are each device's own. Search, photos full size, audio and video players.
 - **Settings** (the gear): this device's name, Dark or Light, Enter sends, wrap, **keep the window on top**, **copy
-  what arrives**, the folder **Save** uses, the archive, and **storage**: how much of the history's 2 GB is used, by
-  kind, with the history folder one click away on the computer that keeps it.
-- **Tray icon**: click to open; right-click for Start with Windows, Change setup and Quit.
+  what arrives**, the folder **Save** uses, the devices, the archive, **storage** (how much of the history's 2 GB is
+  used, by kind, with the history folder one click away on the computer that keeps it), **updates**, and **Quit**.
+- **Tray icon**: click to open; right-click for Add a device, Start with Windows, Change setup and Quit.
 - **Finds the other computers by itself**, and follows the computer that keeps the history if its address changes.
 - **Arabic and other right-to-left text** reads right to left, line by line.
 - **Instant Share for Android**: the same history and settings on the phone; notifications with Copy, Save and Open
-  while the app is closed (no Google services, no internet: one connection kept open to the computer that keeps the
+  while the app is closed (no Google services: one encrypted connection kept open to the computer that keeps the
   history); Android's **Share** menu (links, text, photos, documents, voice notes from any app); documents open in the
   phone's own apps; the Back button closes what is open, then puts the app away.
-- **iPhones and other browsers** use the same address, without notifications.
+- **iPhones and other browsers** use the same address (https), without notifications.
+- **Updates**: Settings > About says when a new version is out (a daily check, which can be turned off) and updates in
+  a click.
 
 ## Keyboard shortcuts
 
@@ -115,13 +129,13 @@ netsh advfirewall firewall add rule name="Instant Share search" dir=in action=al
 ## Options
 
 ```
-Instant-Share-1.1.0-portable.exe [--hidden] [--data FOLDER] [--port PORT]
+Instant-Share-1.2.0-portable.exe [--hidden] [--data FOLDER] [--port PORT]
 ```
 
 | Option | Does |
 |---|---|
 | `--port 9000` | On the computer that keeps the history: another port than 8765. (If 8765 is taken, it picks the next free one by itself.) |
-| `--data D:\TextShare` | Keeps the history and settings in another folder, for example next to the program on a USB stick. |
+| `--data D:\InstantShare` | Keeps the history and settings in another folder, for example next to the program on a USB stick. |
 | `--hidden` | Starts in the tray, without the window. Windows starts it this way at sign-in. |
 
 Starting the program while it is already running brings its window to the front.
@@ -133,18 +147,46 @@ Starting the program while it is already running brings its window to the front.
 | The history, files included | `%LOCALAPPDATA%\InstantShare\history.db` on the computer that keeps it. To back it up, quit Instant Share and copy it. |
 | Settings (setup, name, appearance) | `%LOCALAPPDATA%\InstantShare\settings.json` on each computer |
 | A log, for troubleshooting | `%LOCALAPPDATA%\InstantShare\textshare.log` on each computer |
+| The encryption key and certificate | `tls-key.pem` and `tls-cert.pem` in the same folder, on the computer that keeps the history. Keep them with `history.db` when moving it; with a new key, every device must join again. |
+| Joined devices' keys | Each device keeps its own in its settings; the computer that keeps the history keeps only a hash of each. |
 | Saved files | The folder chosen in Settings; Downloads unless you change it |
 | Start with Windows | The usual list of programs that start at sign-in (Settings > Apps > Startup) |
 
+## Security
+
+- **Only devices that joined.** A device joins once with a 6-digit pairing code from a device that has joined, and gets
+  its own secret key; every request must carry it. Without one there is nothing to see: not the history, the devices,
+  a file or a share. **Remove** takes a device off at once.
+- **The code never travels.** It is checked with SPAKE2 (a password-authenticated key exchange): listening reveals
+  nothing about it, and something pretending to be the computer gets one guess, not a million. A code lasts 10 minutes
+  and 5 tries.
+- **Encrypted.** Everything goes over https (TLS 1.2 or newer) with a key the computer that keeps the history makes for
+  itself (RSA 2048, made with Python's standard library).
+- **The apps pin the computer's key.** The Windows and Android apps bind the pairing to the key they saw, and from then
+  on accept only that key, so a computer in the middle is refused.
+- **Locks that hold.** "Who should see it", "only the sender edits and deletes", pins and the archive are enforced by
+  the computer that keeps the history, by each device's key.
+- **Only your own network.** It refuses connections from outside the local network.
+
+## Updates
+
+Settings > About > **Updates** shows this version and whether a newer one is out on the
+[Releases page](https://github.com/Rady193/instant-share/releases/latest). With **Check for updates once a day** on
+(the default), the apps ask GitHub once a day and say so in a notification. **Update now** downloads the new version,
+checks it against the SHA-256 published in the release notes, then:
+
+- **Windows**: restarts in the new program, saved next to the old one (the old file is removed; the history, settings
+  and start-with-Windows stay).
+- **Android**: opens Android's installer (allow Instant Share to install apps, once); the update installs over the app.
+
+Only that question goes to the internet; nothing shared does.
+
 ## What it does not do
 
-- **No password and no encryption.** Anyone on the same network who opens the address can use Instant Share. Use it on
-  networks you trust, such as home or your own office, never on public Wi-Fi. Delete passwords or keys once you have
-  pasted them where they belong.
-- **"Who should see it" and "only the sender edits and deletes" are not locks.** Items shared with chosen devices are kept out of the others' history and
-  pop-ups, but someone with technical knowledge on your network could still read them.
-- **Only your own network.** It refuses connections from outside the local network, and it doesn't reach the internet
-  for anything.
+- **A browser cannot check the computer's key.** It warns about the certificate (made by the computer itself), and a
+  fake page would look the same: prefer the apps.
+- **The history is not encrypted on the disk** of the computer that keeps it. Protect that computer and its Windows
+  account; delete passwords or keys from the history once you have pasted them where they belong.
 - **Files up to 5 MB each, of the kinds listed above, and 2 GB in all.** When the history is full, new shares
   are refused: delete old files to make room.
 - **The computer that keeps the history must be on.** When it sleeps, the others can't share.
@@ -153,7 +195,8 @@ Starting the program while it is already running brings its window to the front.
 
 You need Windows and Python 3.10 or newer (the release is built with Python 3.14).
 
-- Run the app from the source: `pythonw app.py` (needs `pywebview` and `pillow`: `pip install pywebview pillow`).
+- Run the app from the source: `pythonw app.py` (needs `pywebview`, `pillow` and the Windows notification packages:
+  `pip install pywebview pillow winrt-runtime winrt-Windows.UI.Notifications winrt-Windows.Data.Xml.Dom`).
 - Run the plain server: `py instantshare.py`, or double-click `Instant Share.cmd`.
 - Produce the portable app, `instantshare.py` and `THIRD-PARTY-NOTICES.txt` in the `release` folder: `py build.py`.
   The first run makes a build environment in `C:\venvs\textshare-build` with the versions it needs. The build prints
@@ -172,8 +215,8 @@ You need Windows and Python 3.10 or newer (the release is built with Python 3.14
 
 | Path | What it is |
 |---|---|
-| `instantshare.py` | The heart: the server that keeps the history (SQLite), the page every device shows, and finding computers on the network. Python standard library only. |
-| `app.py` | The Windows app around it: the window, the setup, the tray icon, the pop-ups, copying and saving. |
+| `instantshare.py` | The heart: the server that keeps the history (SQLite), the page every device shows, finding computers on the network, and the security (its own certificate, pairing with SPAKE2, device keys). Python standard library only. |
+| `app.py` | The Windows app around it: the window, the setup and pairing, the tray icon, Windows notifications, copying and saving, updates. |
 | `build.py` | Packs the app into the portable `.exe`. |
 | `build/` | The icon (`icon.svg`, and `make_icon.py`, which draws `icon.png` and `icon.ico`). |
 | `android/` | Instant Share for Android: Java sources (`src/`), resources, the setup page (`assets/`, made by `make_setup.py`) and `build.ps1`. |

@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
+import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.PowerManager;
@@ -17,6 +18,7 @@ import android.util.Base64;
 import android.view.View;
 import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
+import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -32,6 +34,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.security.cert.X509Certificate;
 
 /**
  * Instant Share for Android: the Instant Share page of the computer that keeps the history, full screen, with what a
@@ -80,8 +83,10 @@ public class MainActivity extends Activity {
             }
         });
         applyTheme(theme());
+        Net.prefs(this).edit().remove("stopped").apply();      // opened again after Quit: listening again
         take(getIntent());
         if (Net.base(this) == null) setup(false);
+        else if (!Net.paired(this)) pairing("");
         else { page(); Listen.start(this); }
     }
 
@@ -89,14 +94,27 @@ public class MainActivity extends Activity {
 
     private String theme() { return "light".equals(Net.prefs(this).getString("theme", "dark")) ? "light" : "dark"; }
 
-    private void page() {
-        clearHistory = true;
+    private static String enc(String s) {
         try {
-            web.loadUrl(Net.base(this) + "/?app=1&id=" + Net.deviceId(this) + "&me="
-                    + URLEncoder.encode(Net.name(this), "UTF-8").replace("+", "%20") + "&theme=" + theme());
+            return URLEncoder.encode(s == null ? "" : s, "UTF-8").replace("+", "%20");
         } catch (java.io.UnsupportedEncodingException impossible) {
             throw new IllegalStateException(impossible);
         }
+    }
+
+    /** The page of the computer that keeps the history, opened through /login with this phone's key (it becomes a
+     *  cookie for this app's pages only). */
+    private void page() {
+        if (!Net.paired(this)) { pairing(""); return; }
+        clearHistory = true;
+        String next = "/?app=1&me=" + enc(Net.name(this)) + "&theme=" + theme();
+        web.loadUrl(Net.base(this) + "/login?key=" + enc(Net.key(this)) + "&next=" + enc(next));
+    }
+
+    /** The setup page, asking for a pairing code (why: when the computer no longer knows this phone). */
+    private void pairing(String why) {
+        clearHistory = true;
+        web.loadUrl(SETUP + "?theme=" + theme() + "&pair=1&why=" + enc(why));
     }
 
     /** The app's own setup page: find the computer that keeps the history (or say it can't be reached). */
@@ -172,6 +190,13 @@ public class MainActivity extends Activity {
 
     private void take(Intent intent) {
         if (intent == null) return;
+        if (intent.getBooleanExtra(Update.EXTRA_UPDATE, false)) {     // "a new version is available", tapped
+            intent.removeExtra(Update.EXTRA_UPDATE);
+            new Thread(() -> {
+                JSONObject r = Update.install(this);
+                if (r.has("error")) runOnUiThread(() -> Toast.makeText(this, r.optString("error"), Toast.LENGTH_LONG).show());
+            }, "textshare-update").start();
+        }
         String viewUrl = intent.getStringExtra(EXTRA_VIEW_URL);
         if (viewUrl != null) {                                 // "Open" on a notification for a PDF
             ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(intent.getIntExtra(Actions.EXTRA_NOTIFICATION, 0));
@@ -242,7 +267,8 @@ public class MainActivity extends Activity {
     private JSONObject options() {
         try {
             return new JSONObject().put("android", true).put("save_folder", Files.folderLabel(this))
-                    .put("save_chosen", Files.chosenFolder(this) != null);
+                    .put("save_chosen", Files.chosenFolder(this) != null)
+                    .put("update_check", Update.enabled(this)).put("update", Update.state(this));
         } catch (Exception e) {
             return new JSONObject();
         }
@@ -271,7 +297,7 @@ public class MainActivity extends Activity {
     }
 
     @Override
-    protected void onResume() { super.onResume(); foreground = true; }
+    protected void onResume() { super.onResume(); foreground = true; Update.daily(this); }
 
     @Override
     protected void onPause() { foreground = false; super.onPause(); }
@@ -303,6 +329,16 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(Intent.ACTION_VIEW, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (ActivityNotFoundException ignored) {}
             return true;
+        }
+
+        /** The computer's own certificate: accepted when its key is the one this phone joined, refused otherwise. */
+        @Override
+        public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+            try {
+                X509Certificate x = error.getCertificate().getX509Certificate();
+                if (x != null && Secure.same(Secure.pinOf(x), Net.pin(MainActivity.this))) { handler.proceed(); return; }
+            } catch (Exception ignored) {}
+            handler.cancel();
         }
 
         @Override
@@ -369,18 +405,74 @@ public class MainActivity extends Activity {
                             + "there and that this phone is on the same Wi-Fi."));
                     return;
                 }
-                Net.prefs(MainActivity.this).edit().putString("host", h.optString("server", name == null ? address : name))
-                        .putString("address", address).putInt("port", port).apply();
-                answer(call, ok());
-                runOnUiThread(() -> { page(); Listen.restart(MainActivity.this); askOnce(); });
+                String server = h.optString("server", name == null ? address : name);
+                if (h.has("old")) {
+                    answer(call, error(server + " runs Instant Share " + h.optString("old") + ". Update it to " + BuildInfo.VERSION + " there first."));
+                    return;
+                }
+                android.content.SharedPreferences.Editor e = Net.prefs(MainActivity.this).edit();
+                if (!server.equalsIgnoreCase(Net.hostName(MainActivity.this))) e.remove("key").remove("pin");   // another computer: its own code
+                e.putString("host", server).putString("address", address).putInt("port", port).apply();
+                if (Net.paired(MainActivity.this)) {
+                    answer(call, ok());
+                    runOnUiThread(() -> { page(); Listen.restart(MainActivity.this); });
+                } else {
+                    try { answer(call, ok().put("pair", true).put("host", server)); } catch (Exception ignored) {}
+                }
             }, "textshare-join").start();
+        }
+
+        /** The pairing code typed on the setup page. */
+        @JavascriptInterface
+        public void pair(int call, String code) {
+            new Thread(() -> {
+                try {
+                    Net.pair(MainActivity.this, code);
+                    answer(call, ok());
+                    runOnUiThread(() -> { page(); Listen.restart(MainActivity.this); askOnce(); });
+                } catch (Exception e) {
+                    answer(call, error(e.getMessage() == null ? "Could not join." : e.getMessage()));
+                }
+            }, "textshare-pair").start();
+        }
+
+        /** The page found that the computer no longer knows this phone. */
+        @JavascriptInterface
+        public void pairAgain() {
+            Net.forgetKey(MainActivity.this);
+            runOnUiThread(() -> pairing(Net.hostName(MainActivity.this) + " no longer knows this phone (it was removed there). Join it again with a new code."));
+        }
+
+        /** Quit: no connection, no notifications, until the app is opened again. */
+        @JavascriptInterface
+        public void quit() {
+            Net.prefs(MainActivity.this).edit().putBoolean("stopped", true).apply();
+            stopService(new Intent(MainActivity.this, Listen.class));
+            ((NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancelAll();
+            runOnUiThread(MainActivity.this::finishAndRemoveTask);
+        }
+
+        @JavascriptInterface
+        public void checkUpdate(int call) {
+            new Thread(() -> answer(call, Update.check(MainActivity.this, false)), "textshare-update-check").start();
+        }
+
+        @JavascriptInterface
+        public void updateNow(int call) {
+            new Thread(() -> answer(call, Update.install(MainActivity.this)), "textshare-update").start();
+        }
+
+        @JavascriptInterface
+        public String setOption(String name, boolean value) {
+            if ("update_check".equals(name)) Update.setEnabled(MainActivity.this, value);
+            return options().toString();
         }
 
         @JavascriptInterface
         public void retry() { runOnUiThread(MainActivity.this::page); }
 
         @JavascriptInterface
-        public void back() { if (Net.base(MainActivity.this) != null) runOnUiThread(MainActivity.this::page); }
+        public void back() { if (Net.paired(MainActivity.this)) runOnUiThread(MainActivity.this::page); }
 
         @JavascriptInterface
         public void openSetup() { runOnUiThread(() -> setup(false)); }
