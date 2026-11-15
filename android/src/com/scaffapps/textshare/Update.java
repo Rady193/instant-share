@@ -64,22 +64,53 @@ final class Update {
         return out;
     }
 
-    /** Asks GitHub now. With tell, a newer version is announced once in a notification. */
+    static final String RELEASES_SITE = "https://www.scaffapps.com/api/releases/";
+    static final String RELEASES_MIRROR = "https://raw.githubusercontent.com/Rady193/scaffapps-suite/main/releases.json";
+
+    /** GitHub limiting how often it is asked (403, 429). */
+    private static final class Limited extends IOException {
+        Limited() { super("GitHub is limiting how often it can be asked. Try again in an hour."); }
+    }
+
+    private static JSONObject getJson(String url, String accept) throws Exception {
+        HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+        con.setConnectTimeout(10000);
+        con.setReadTimeout(15000);
+        con.setUseCaches(false);
+        con.setRequestProperty("Accept", accept);
+        con.setRequestProperty("User-Agent", "InstantShare-update-check");
+        try {
+            int code = con.getResponseCode();
+            if (code == 403 || code == 429) throw new Limited();
+            if (code != 200) throw new IOException("answered " + code);
+            return new JSONObject(new String(Net.bytes(con.getInputStream()), StandardCharsets.UTF_8));
+        } finally {
+            con.disconnect();
+        }
+    }
+
+    /** GitHub's answer for the newest release, asked first of the SCAFFApps website, then of releases.json in the
+     *  SCAFFApps Suite's repository, and only then of GitHub's API, which answers 60 questions an hour for each
+     *  internet connection (shared by every phone and computer behind it). All three answer in the API's shape. */
+    private static JSONObject latest() throws Exception {
+        String name = REPO.substring(REPO.indexOf('/') + 1);
+        try {
+            JSONObject r = getJson(RELEASES_SITE + name, "application/json");
+            if (r.has("tag_name")) return r;
+        } catch (Exception ignored) { /* the next one */ }
+        try {
+            JSONObject repos = getJson(RELEASES_MIRROR, "application/json").optJSONObject("repos");
+            JSONObject r = repos == null ? null : repos.optJSONObject(name);
+            if (r != null && r.has("tag_name")) return r;
+        } catch (Exception ignored) { /* GitHub's API */ }
+        return getJson("https://api.github.com/repos/" + REPO + "/releases/latest", "application/vnd.github+json");
+    }
+
+    /** Asks for the newest release now. With tell, a newer version is announced once in a notification. */
     static JSONObject check(Context c, boolean tell) {
         JSONObject st = new JSONObject();
         try {
-            HttpURLConnection con = (HttpURLConnection) new URL("https://api.github.com/repos/" + REPO + "/releases/latest").openConnection();
-            con.setConnectTimeout(10000);
-            con.setReadTimeout(15000);
-            con.setRequestProperty("Accept", "application/vnd.github+json");
-            con.setRequestProperty("User-Agent", "InstantShare-update-check");
-            JSONObject rel;
-            try {
-                if (con.getResponseCode() != 200) throw new IOException("GitHub answered " + con.getResponseCode());
-                rel = new JSONObject(new String(Net.bytes(con.getInputStream()), StandardCharsets.UTF_8));
-            } finally {
-                con.disconnect();
-            }
+            JSONObject rel = latest();
             String version = rel.getString("tag_name").replaceFirst("^v", "");
             String apk = "Instant-Share-" + version + ".apk", url = null, sha = null;
             JSONArray assets = rel.optJSONArray("assets");
@@ -101,7 +132,8 @@ final class Update {
             return state(c);
         } catch (Exception e) {
             try {
-                return state(c).put("error", "Could not ask GitHub (" + e.getMessage() + "). Is the phone on the internet?");
+                return state(c).put("error", e instanceof Limited ? e.getMessage()
+                        : "Could not ask GitHub (" + e.getMessage() + "). Is the phone on the internet?");
             } catch (Exception ignored) {
                 return new JSONObject();
             }

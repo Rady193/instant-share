@@ -188,7 +188,8 @@ Starting the program while it is already running brings its window to the front.
 
 Settings > About > **Updates** shows this version and whether a newer one is out on the
 [Releases page](https://github.com/Rady193/instant-share/releases/latest). With **Check for updates once a day** on
-(the default), the apps ask GitHub once a day and say so in a notification. **Update now** downloads the new version,
+(the default), the apps ask once a day (the SCAFFApps website, or GitHub if it does not answer) and say so in a
+notification. **Update now** downloads the new version,
 checks it against the SHA-256 published in the release notes, then:
 
 - **Windows**: the new version's installer is checked the same way and run with Windows' permission: Instant Share

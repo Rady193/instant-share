@@ -31,6 +31,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.error
 import urllib.request
 import winreg
 from ctypes import wintypes
@@ -684,7 +685,8 @@ class App:
         try:
             rel = latest_release()
         except Exception as e:
-            self.update = {"error": f"Could not ask GitHub ({e}). Is this computer on the internet?",
+            self.update = {"error": str(e) if isinstance(e, RuntimeError) else
+                           f"Could not ask GitHub ({e}). Is this computer on the internet?",
                            "checked": int(time.time() * 1000)}
             return dict(self.update, current=ts.VERSION)
         self.release = rel
@@ -1215,14 +1217,47 @@ def version_tuple(v):
     return tuple(int(x) for x in re.findall(r"\d+", str(v))[:3])
 
 
-def latest_release(timeout=15):
-    """The newest Instant Share on GitHub: {version, page, assets: {name: url}, hashes: {name: SHA-256}} (the hashes
-    from the table in the release's notes)."""
-    url = os.environ.get("INSTANTSHARE_UPDATE_URL") or f"https://api.github.com/repos/{REPO}/releases/latest"   # tests
-    request = urllib.request.Request(url, headers={
-        "Accept": "application/vnd.github+json", "User-Agent": "InstantShare-update-check"})
+RELEASES_SITE = "https://www.scaffapps.com/api/releases/"
+RELEASES_MIRROR = "https://raw.githubusercontent.com/Rady193/scaffapps-suite/main/releases.json"
+
+
+def _get_json(url, timeout, accept="application/json"):
+    request = urllib.request.Request(url, headers={"Accept": accept, "User-Agent": "InstantShare-update-check",
+                                                   "Cache-Control": "no-cache"})
     with urllib.request.urlopen(request, timeout=timeout) as r:
-        data = json.loads(r.read())
+        return json.loads(r.read())
+
+
+def _release_data(timeout):
+    """GitHub's answer for the newest release, asked first of the SCAFFApps website, then of releases.json in the
+    SCAFFApps Suite's repository, and only then of GitHub's API, which answers 60 questions an hour for each internet
+    connection (shared by every computer and app behind it). All three answer in the API's shape."""
+    test = os.environ.get("INSTANTSHARE_UPDATE_URL")                                           # tests: asked alone
+    name = REPO.split("/")[1]
+    if not test:
+        for ask in (lambda: _get_json(RELEASES_SITE + name, timeout),
+                    lambda: (_get_json(RELEASES_MIRROR, timeout).get("repos") or {}).get(name)):
+            try:
+                data = ask()
+                if data and data.get("tag_name"):
+                    return data
+            except Exception:
+                pass                                                                           # the next one
+    try:
+        return _get_json(test or f"https://api.github.com/repos/{REPO}/releases/latest", timeout,
+                         "application/vnd.github+json")
+    except urllib.error.HTTPError as e:
+        if e.code in (403, 429):
+            raise RuntimeError("GitHub is limiting how often it can be asked. Try again in an hour.") from None
+        if e.code == 404:
+            raise RuntimeError("No release has been published yet.") from None
+        raise
+
+
+def latest_release(timeout=15):
+    """The newest Instant Share: {version, page, assets: {name: url}, hashes: {name: SHA-256}} (the hashes from the
+    table in the release's notes)."""
+    data = _release_data(timeout)
     hashes = dict(re.findall(r"\|\s*`([^`|]+)`\s*\|[^|\n]*\|\s*`([0-9A-Fa-f]{64})`", data.get("body") or ""))
     return {"version": str(data["tag_name"]).lstrip("v"), "page": data.get("html_url") or "",
             "assets": {a["name"]: a["browser_download_url"] for a in data.get("assets", [])}, "hashes": hashes}
