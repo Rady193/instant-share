@@ -111,7 +111,7 @@ public class Listen extends Service {
         PendingIntent open = PendingIntent.getActivity(c, id, new Intent(c, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = new Notification.Builder(c, CHANNEL_SHARED)
-                .setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF297AA0)
+                .setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF5B2C83)
                 .setContentTitle(title).setContentText(body)
                 .setContentIntent(open).setAutoCancel(true).setShowWhen(true).setWhen(it.optLong("at", System.currentTimeMillis()));
         if (image) {
@@ -176,7 +176,7 @@ public class Listen extends Service {
         PendingIntent pi = PendingIntent.getActivity(this, 0, hide, PendingIntent.FLAG_IMMUTABLE);
         String host = Net.hostName(this);
         Notification n = new Notification.Builder(this, CHANNEL_ON)
-                .setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF297AA0).setShowWhen(false)
+                .setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF5B2C83).setShowWhen(false)
                 .setOngoing(Build.VERSION.SDK_INT < 33)
                 .setContentTitle(host.isEmpty() ? "Instant Share is connected" : "Connected to " + host)
                 .setContentText("Tap to hide this notice. Shares still arrive.")

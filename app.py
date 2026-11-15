@@ -77,8 +77,8 @@ user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
 user32.SystemParametersInfoW.argtypes = [wintypes.UINT, wintypes.UINT, wintypes.LPVOID, wintypes.UINT]
 
 # The window's title bar in the page's appearance, as Multi Screens does (its --surface and --text colours)
-TITLE_BAR = {"dark": ("#191a1b", "#cccccc"), "light": ("#ffffff", "#171a21")}
-BACKGROUND = {"dark": "#121314", "light": "#eef0f4"}
+TITLE_BAR = {"dark": ("#191a1b", "#cccccc"), "light": ("#ffffff", "#17141c")}
+BACKGROUND = {"dark": "#121314", "light": "#fbf6ea"}
 
 
 def message(text, error=False):
@@ -1388,12 +1388,12 @@ class Api:
 
 PAGE_STYLE = """
 :root { --bg: #121314; --surface: #191a1b; --surface-2: #202122; --surface-3: #2a2b2c; --line: #2a2b2c;
-  --line-strong: #333536; --text: #cccccc; --dim: #8c8c8c; --accent: #48a0c7; --accent-strong: #297aa0;
-  --accent-hover: #2b7da3; --accent-soft: rgba(57,148,188,.16); --danger: #f48771; --danger-fill: #c74e39;
+  --line-strong: #333536; --text: #cccccc; --dim: #8c8c8c; --accent: #f0c33c; --accent-strong: #5b2c83;
+  --accent-hover: #45215f; --accent-soft: rgba(91,44,131,.3); --danger: #f48771; --danger-fill: #c74e39;
   --ok: #73c991; color-scheme: dark }
-:root[data-theme="light"] { --bg: #eef0f4; --surface: #ffffff; --surface-2: #f4f5f8; --surface-3: #e7e9ef;
-  --line: #dfe2e9; --line-strong: #c9cdd8; --text: #171a21; --dim: #667085; --accent: #3f63f0;
-  --accent-strong: #4a6cf5; --accent-hover: #3f63f0; --accent-soft: rgba(63,99,240,.1); --danger: #e5484d;
+:root[data-theme="light"] { --bg: #fbf6ea; --surface: #ffffff; --surface-2: #f7f1e4; --surface-3: #eee5d3;
+  --line: #e9dfca; --line-strong: #d6c8a9; --text: #17141c; --dim: #6a6175; --accent: #5b2c83;
+  --accent-strong: #5b2c83; --accent-hover: #45215f; --accent-soft: rgba(91,44,131,.1); --danger: #e5484d;
   --danger-fill: #e5484d; --ok: #1a7f37; color-scheme: light }
 * { box-sizing: border-box }
 [hidden] { display: none !important }

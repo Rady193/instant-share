@@ -1728,8 +1728,8 @@ PAGE = r"""<!DOCTYPE html>
 :root {
   --bg: #121314; --surface: #191a1b; --surface-2: #202122; --surface-3: #2a2b2c;
   --line: #2a2b2c; --line-strong: #333536; --text: #cccccc; --dim: #8c8c8c;
-  --accent: #48a0c7; --accent-strong: #297aa0; --accent-hover: #2b7da3;
-  --accent-soft: rgba(57, 148, 188, .16); --accent-line: rgba(57, 148, 188, .55);
+  --accent: #f0c33c; --accent-strong: #5b2c83; --accent-hover: #45215f;
+  --accent-soft: rgba(91, 44, 131, .3); --accent-line: rgba(240, 195, 60, .5);
   --danger: #f48771; --danger-fill: #c74e39; --ok: #73c991;
   --shadow: 0 12px 36px rgba(0, 0, 0, .55);
   --mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
@@ -1737,12 +1737,12 @@ PAGE = r"""<!DOCTYPE html>
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --bg: #eef0f4; --surface: #ffffff; --surface-2: #f4f5f8; --surface-3: #e7e9ef;
-  --line: #dfe2e9; --line-strong: #c9cdd8; --text: #171a21; --dim: #667085;
-  --accent: #3f63f0; --accent-strong: #4a6cf5; --accent-hover: #3f63f0;
-  --accent-soft: rgba(63, 99, 240, .1); --accent-line: rgba(63, 99, 240, .4);
+  --bg: #fbf6ea; --surface: #ffffff; --surface-2: #f7f1e4; --surface-3: #eee5d3;
+  --line: #e9dfca; --line-strong: #d6c8a9; --text: #17141c; --dim: #6a6175;
+  --accent: #5b2c83; --accent-strong: #5b2c83; --accent-hover: #45215f;
+  --accent-soft: rgba(91, 44, 131, .1); --accent-line: rgba(91, 44, 131, .4);
   --danger: #e5484d; --danger-fill: #e5484d; --ok: #1a7f37;
-  --shadow: 0 12px 30px rgba(20, 28, 50, .2);
+  --shadow: 0 12px 30px rgba(60, 40, 20, .2);
   color-scheme: light;
 }
 * { box-sizing: border-box }
@@ -1759,7 +1759,7 @@ input[type="checkbox"] { accent-color: var(--accent-strong) }
 svg.icon { display: block; width: 18px; height: 18px; flex: none }
 
 .top { display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 14px; background: var(--surface); border-bottom: 1px solid var(--line) }
-:root[data-theme="light"] .top { box-shadow: 0 6px 18px rgba(20, 28, 50, .08) }
+:root[data-theme="light"] .top { box-shadow: 0 6px 18px rgba(60, 40, 20, .08) }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; white-space: nowrap }
 .status { display: flex; align-items: center; gap: 8px; color: var(--dim); min-width: 0 }
 .status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -1842,8 +1842,8 @@ a.btn { color: inherit; text-decoration: none }
 .attach .icon-btn { margin-inline-start: auto; flex: none }
 .att-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
 .badge { display: inline-grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 6px; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: .03em; background: #6b7280 }
-.badge.b-pdf { background: #c74e39 } .badge.b-doc { background: #2b579a } .badge.b-xls { background: #217346 }
-.badge.b-ppt { background: #c43e1c } .badge.b-zip { background: #8a6d3b } .badge.b-media { background: #6250d6 }
+.badge.b-pdf { background: #c74e39 } .badge.b-doc { background: #5b2c83 } .badge.b-xls { background: #217346 }
+.badge.b-ppt { background: #c43e1c } .badge.b-zip { background: #8a6d3b } .badge.b-media { background: #45215f }
 #compose.drop #editor { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
 
 .to-wrap { position: relative }
@@ -1893,7 +1893,7 @@ a.btn { color: inherit; text-decoration: none }
 .lightbox img { max-width: 94vw; max-height: 92vh; border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6) }
 
 .sheet-back { position: fixed; inset: 0; z-index: 40; display: flex; justify-content: flex-end; background: rgba(0, 0, 0, .45) }
-:root[data-theme="light"] .sheet-back { background: rgba(20, 28, 50, .22) }
+:root[data-theme="light"] .sheet-back { background: rgba(60, 40, 20, .22) }
 .sheet { width: min(460px, 100%); height: 100%; overflow-y: auto; background: var(--bg); border-left: 1px solid var(--line-strong); box-shadow: var(--shadow); animation: sheet-in .18s ease-out }
 @keyframes sheet-in { from { transform: translateX(24px); opacity: 0 } }
 .sheet-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line) }
@@ -1909,7 +1909,7 @@ a.btn { color: inherit; text-decoration: none }
 .seg { display: inline-flex; padding: 2px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px }
 .seg button { height: 28px; padding: 0 14px; background: none; border: 0; border-radius: 6px; color: var(--dim); cursor: pointer }
 .seg button.on { background: var(--surface-3); color: var(--text) }
-:root[data-theme="light"] .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(20, 28, 50, .18) }
+:root[data-theme="light"] .seg button.on { background: #fff; box-shadow: 0 1px 3px rgba(60, 40, 20, .18) }
 input.switch { appearance: none; flex: none; position: relative; width: 38px; height: 22px; margin: 0; border-radius: 99px; background: var(--surface-3); border: 1px solid var(--line-strong); cursor: pointer; transition: background .15s }
 input.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--dim); transition: transform .15s, background .15s }
 input.switch:checked { background: var(--accent-strong); border-color: transparent }
@@ -1917,8 +1917,8 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
 :root[data-theme="light"] input.switch::after { background: #fff; box-shadow: 0 0 0 1px var(--line-strong) }
 
 /* storage: the share of 2 GB used (a meter), then what it is made of (a segmented bar and its legend) */
-.viz { --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500; --c5: #d55181; --c6: #008300 }
-:root[data-theme="light"] .viz { --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300 }
+.viz { --c1: #f0c33c; --c2: #d95926; --c3: #199e70; --c4: #fff8e6; --c5: #d55181; --c6: #008300 }
+:root[data-theme="light"] .viz { --c1: #5b2c83; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300 }
 .hero { font-size: 48px; font-weight: 600; letter-spacing: -.02em; line-height: 1.05 }
 .hero small { margin-inline-start: 6px; font-size: 15px; font-weight: 400; color: var(--dim); letter-spacing: 0 }
 .meter { height: 8px; margin: 10px 0 4px; border-radius: 99px; background: var(--accent-soft); overflow: hidden }
@@ -1931,7 +1931,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
 .legend .size { text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums }
 
 .dialog-back { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .5) }
-:root[data-theme="light"] .dialog-back { background: rgba(20, 28, 50, .3) }
+:root[data-theme="light"] .dialog-back { background: rgba(60, 40, 20, .3) }
 .dialog { width: min(400px, 100%); padding: 18px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow); animation: pop-in .14s ease-out }
 .dialog h3 { margin: 0 0 6px; font-size: 15px; font-weight: 600 }
 .dialog p { margin: 0 0 16px; color: var(--dim) }

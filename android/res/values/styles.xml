@@ -8,7 +8,7 @@
     <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:colorPrimary">@color/surface</item>
         <item name="android:colorPrimaryDark">@color/surface</item>
-        <item name="android:colorAccent">#297AA0</item>
+        <item name="android:colorAccent">#5B2C83</item>
         <item name="android:statusBarColor">@color/surface</item>
         <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowBackground">@color/bg</item>

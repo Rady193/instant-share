@@ -159,7 +159,7 @@ final class Update {
         }
         PendingIntent open = PendingIntent.getActivity(c, 7, new Intent(c, MainActivity.class).putExtra(EXTRA_UPDATE, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        Notification n = new Notification.Builder(c, CHANNEL).setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF297AA0)
+        Notification n = new Notification.Builder(c, CHANNEL).setSmallIcon(R.drawable.ic_stat_share).setColor(0xFF5B2C83)
                 .setContentTitle("Instant Share " + version + " is available")
                 .setContentText("This phone has " + BuildInfo.VERSION + ". Tap to update; the setup stays.")
                 .setContentIntent(open).setAutoCancel(true).build();
