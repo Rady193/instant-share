@@ -2,9 +2,10 @@
 ;   makensis /DVERSION=1.3.0 /DPROGRAM=<the packed Instant Share.exe> /DOUTFILE=<...Setup.exe> build\installer.nsi
 ;
 ; Installs for everyone in "C:\Program Files\SCAFFApps\Instant Share", like every SCAFFApps app, with shortcuts in the
-; Start menu's SCAFFApps folder and on the desktop, and an entry in Windows' list of installed programs. It keeps a
-; copy of itself there, which "Get the app" hands to other computers on the network. The history, settings and keys
-; stay in %LOCALAPPDATA%\InstantShare and are not touched, by installing or by uninstalling.
+; Start menu's SCAFFApps folder and on the desktop, and an entry in Windows' list of installed programs. The history,
+; settings and keys stay in %LOCALAPPDATA%\InstantShare and are not touched, by installing or by uninstalling.
+; It does not copy itself into the program's folder: with that, Microsoft Defender's machine-learning check took the
+; installer for a trojan (Bearfoos.B!ml, 16 Nov 2026); "Get the app" sends people to the Releases page instead.
 ;   /S      no pages (the SCAFFApps Suite and Instant Share's own updates use this)
 ;   /run    open Instant Share when done (as the user, not as administrator)
 
@@ -90,8 +91,7 @@ Section "Install"
   !insertmacro CloseInstantShare
   SetOutPath "$INSTDIR"
   File "/oname=${EXE}" "${PROGRAM}"
-  Delete "$INSTDIR\Instant-Share-Setup-*.exe"
-  CopyFiles /SILENT "$EXEPATH" "$INSTDIR\Instant-Share-Setup-${VERSION}.exe"
+  Delete "$INSTDIR\Instant-Share-Setup-*.exe"         ; a copy an early 1.3.0 test build left there
   WriteUninstaller "$INSTDIR\${UNINSTALLER}"
 
   CreateDirectory "$SMPROGRAMS\SCAFFApps"

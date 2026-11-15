@@ -46,7 +46,7 @@ Download from the [Releases page](https://github.com/Rady193/instant-share/relea
 
 | File | What it is |
 |---|---|
-| `Instant-Share-Setup-1.3.0.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; the computer that keeps the history also hands it out: **Get the app** on its page. The SCAFFApps Suite installs it too. |
+| `Instant-Share-Setup-1.3.0.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; **Get the app** on Instant Share's page leads to it. The SCAFFApps Suite installs it too. |
 | `Instant-Share-1.3.0.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
 | `Instant-Share-Handbook-1.3.0.pdf` | The handbook. |
 | `instantshare.py` | Instant Share as a plain server, for Mac and Linux: `python3 instantshare.py` (Python 3.10 or newer, nothing else) keeps the history there, and every device uses a browser. |
@@ -154,7 +154,7 @@ Starting the program while it is already running brings its window to the front.
 
 | What | Where |
 |---|---|
-| The program | `C:\Program Files\SCAFFApps\Instant Share`, with a copy of its installer, which **Get the app** hands out |
+| The program | `C:\Program Files\SCAFFApps\Instant Share` |
 | Your registration (name and e-mail, shared by every SCAFFApps app) | `%APPDATA%\SCAFFApps\registration.json` |
 | The history, files included | `%LOCALAPPDATA%\InstantShare\history.db` on the computer that keeps it. To back it up, quit Instant Share and copy it. |
 | Settings (setup, name, appearance) | `%LOCALAPPDATA%\InstantShare\settings.json` on each computer |

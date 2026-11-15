@@ -44,15 +44,16 @@ FROZEN = getattr(sys, "frozen", False)                       # running as the pa
 APP_FILE = Path(sys.executable if FROZEN else __file__).resolve()
 
 
+RELEASES = "https://github.com/Rady193/instant-share/releases/latest"
+
+
 def app_to_hand_out():
-    """What "Get the app" hands to another computer: the installer, which an installed copy keeps beside itself
-    (Instant Share is installed, not copied: the installer puts itself there as Instant-Share-Setup-<version>.exe),
-    else this program itself (instantshare.py when run from source)."""
-    if FROZEN:
-        setups = sorted(APP_FILE.parent.glob("Instant-Share-Setup-*.exe"))
-        if setups:
-            return setups[-1]
-    return APP_FILE
+    """What "Get the app" hands to another computer. Instant Share for Windows is installed, not copied, so the
+    Windows app sends people to the Releases page for the installer (None here); run from source, it hands out
+    instantshare.py itself."""
+    return None if FROZEN else APP_FILE
+
+
 DEFAULT_PORT = 8765
 MAX_BODY = 30 * 1024 * 1024      # biggest share accepted, in bytes (20 MB of text, or a 5 MB file with some)
 LIST_LIMIT = 300                 # the history shows the newest this many (search reaches older ones)
@@ -1185,10 +1186,12 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(303, "", "text/plain; charset=utf-8", headers)
         elif path == "/":
             self.reply(200, PAGE, "text/html; charset=utf-8", PAGE_HEADERS)
-        elif path == "/download":     # Instant Share's installer (or this program), for another computer
+        elif path == "/download":     # Instant Share for another computer: its installer's page, or this program
             give = app_to_hand_out()
-            ctype = "application/vnd.microsoft.portable-executable" if FROZEN else "text/x-python; charset=utf-8"
-            self.reply(200, give.read_bytes(), ctype, [("Content-Disposition", f'attachment; filename="{give.name}"')])
+            if give is None:
+                return self.reply(302, "", "text/plain; charset=utf-8", [("Location", RELEASES)])
+            self.reply(200, give.read_bytes(), "text/x-python; charset=utf-8",
+                       [("Content-Disposition", f'attachment; filename="{give.name}"')])
         elif path == "/download/android":   # the phone app, for phones on the same network
             apk = android_app()
             if not apk:
