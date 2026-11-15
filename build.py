@@ -1,4 +1,4 @@
-"""Packs Instant Share into one portable Windows program: release/Instant-Share-<version>-portable.exe
+"""Packs Instant Share into its Windows installer: release/Instant-Share-Setup-<version>.exe
 
     py build.py
 
@@ -28,6 +28,9 @@ BUNDLED = ["pywebview", "bottle", "proxy_tools", "typing_extensions", "pythonnet
 HERE = Path(__file__).resolve().parent
 VENV = Path(r"C:\venvs\textshare-build")
 WORK = VENV / "work"
+# the installer maker (NSIS), the one electron-builder keeps for the other SCAFFApps apps, unless MAKENSIS says otherwise
+MAKENSIS = Path(os.environ.get("MAKENSIS") or Path(os.environ.get("LOCALAPPDATA", "")) / "electron-builder" / "Cache"
+                / "nsis" / "nsis-3.0.4.1" / "Bin" / "makensis.exe")
 PY = VENV / "Scripts" / "python.exe"
 
 
@@ -133,7 +136,11 @@ def main():
     if sys.platform != "win32":
         sys.exit("build.py makes the Windows program; on Mac or Linux just run:  python3 instantshare.py")
     v = version()
-    exe_name = f"Instant-Share-{v}-portable.exe"
+    exe_name = "Instant Share.exe"                             # the program, as installed
+    setup_name = f"Instant-Share-Setup-{v}.exe"
+    if not MAKENSIS.exists():
+        sys.exit(f"No installer maker at {MAKENSIS}: build Multi Screens or Smart Snap once (electron-builder fetches "
+                 "NSIS), or set MAKENSIS to makensis.exe")
 
     if not PY.exists():
         run(sys.executable, "-m", "venv", VENV)
@@ -153,14 +160,16 @@ def main():
         "--exclude-module", "numpy", "--exclude-module", "PIL._avif", "--exclude-module", "PIL.AvifImagePlugin",   # not used; numpy alone is 24 MB
         *(["--add-data", f"{apk};android"] if apk else []),
         "--version-file", version_file(v, exe_name),
-        "--distpath", release, "--workpath", WORK, "--specpath", WORK,
+        "--distpath", WORK / "program", "--workpath", WORK, "--specpath", WORK,
         HERE / "app.py")
+    run(MAKENSIS, "/V2", f"/DVERSION={v}", f"/DPROGRAM={WORK / 'program' / exe_name}", f"/DOUTFILE={release / setup_name}",
+        HERE / "build" / "installer.nsi")
     shutil.copy2(HERE / "instantshare.py", release / "instantshare.py")
     notices(v, release / "THIRD-PARTY-NOTICES.txt")
 
     print(f"\nInstant Share {v}:")
     lines = []
-    for name in [exe_name] + ([f"Instant-Share-{v}.apk"] if apk else []) + ["instantshare.py"]:
+    for name in [setup_name] + ([f"Instant-Share-{v}.apk"] if apk else []) + ["instantshare.py"]:
         data = (release / name).read_bytes()
         digest = hashlib.sha256(data).hexdigest().upper()
         size = f"{len(data) / 1048576:.1f} MB" if len(data) > 1048576 else f"{len(data) / 1024:.0f} KB"

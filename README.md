@@ -3,9 +3,9 @@
 Instant Share passes text, photos, documents and voice notes between the computers and Android phones on your own
 network. Share on one, and the others have it at once, with a notification and a Copy button. Choose who sees each
 share. Everything stays in a history you can search, copy from and delete from. It is encrypted, only devices that
-joined with a pairing code get in, and it needs no internet and no accounts.
+joined with a pairing code get in. Sharing needs no internet: nothing shared ever leaves your network.
 
-Version 1.2.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
+Version 1.3.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
 
 The **[handbook](Instant%20Share%20Handbook.pdf)** explains everything, with pictures.
 
@@ -46,9 +46,9 @@ Download from the [Releases page](https://github.com/Rady193/instant-share/relea
 
 | File | What it is |
 |---|---|
-| `Instant-Share-1.2.0-portable.exe` | The app for Windows, in one file. Nothing is installed and no administrator permission is needed: copy it anywhere (a USB stick works too) and double-click it. Use the same file on every computer. |
-| `Instant-Share-1.2.0.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
-| `Instant-Share-Handbook-1.2.0.pdf` | The handbook. |
+| `Instant-Share-Setup-1.3.0.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; the computer that keeps the history also hands it out: **Get the app** on its page. The SCAFFApps Suite installs it too. |
+| `Instant-Share-1.3.0.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
+| `Instant-Share-Handbook-1.3.0.pdf` | The handbook. |
 | `instantshare.py` | Instant Share as a plain server, for Mac and Linux: `python3 instantshare.py` (Python 3.10 or newer, nothing else) keeps the history there, and every device uses a browser. |
 | `THIRD-PARTY-NOTICES.txt` | The licences of the parts the Windows app carries inside it. |
 
@@ -60,6 +60,16 @@ code-signing certificate and sign the file.
 
 The window is drawn by Microsoft Edge WebView2, which Windows 10 and 11 include. Nothing else is needed.
 
+**Coming from 1.2 or earlier** (one portable file): run the installer. It closes the old copy; then open Instant Share
+from the Start menu. The history, settings and pairing stay (they are in `%LOCALAPPDATA%\InstantShare`), start with
+Windows moves to the installed program, and the old file can be deleted.
+
+### The first start
+
+The first SCAFFApps app to start on a Windows account asks for your **name** and **e-mail address**, once; the other
+SCAFFApps apps on that account (the SCAFFApps Suite, Multi Screens, Smart Snap) use the same details and do not ask.
+Both are required. What is sent is under [Security](#security).
+
 ## Quick start
 
 1. **On one computer**, one that stays on while you work, start Instant Share and choose **Use this computer**. Windows
@@ -68,7 +78,7 @@ The window is drawn by Microsoft Edge WebView2, which Windows 10 and 11 include.
    address). It asks for a pairing code: on the first computer, open **Settings > Devices > Add a device** (or **Add a
    device…** in the tray menu) and type the 6-digit code it shows. Each code is good for 10 minutes and one device.
 3. Leave **Start Instant Share when I sign in to Windows** ticked.
-4. Phones: install `Instant-Share-1.2.0.apk`, choose the computer, and type a code the same way. iPhones and other
+4. Phones: install `Instant-Share-1.3.0.apk`, choose the computer, and type a code the same way. iPhones and other
    browsers open the address in Settings > Phones and browsers (for example `https://OFFICE-PC:8765`), continue past
    the browser's certificate warning the first time, and type a code.
 
@@ -129,13 +139,13 @@ netsh advfirewall firewall add rule name="Instant Share search" dir=in action=al
 ## Options
 
 ```
-Instant-Share-1.2.0-portable.exe [--hidden] [--data FOLDER] [--port PORT]
+"Instant Share.exe" [--hidden] [--data FOLDER] [--port PORT]
 ```
 
 | Option | Does |
 |---|---|
 | `--port 9000` | On the computer that keeps the history: another port than 8765. (If 8765 is taken, it picks the next free one by itself.) |
-| `--data D:\InstantShare` | Keeps the history and settings in another folder, for example next to the program on a USB stick. |
+| `--data D:\InstantShare` | Keeps the history and settings in another folder, for example on another drive. |
 | `--hidden` | Starts in the tray, without the window. Windows starts it this way at sign-in. |
 
 Starting the program while it is already running brings its window to the front.
@@ -144,6 +154,8 @@ Starting the program while it is already running brings its window to the front.
 
 | What | Where |
 |---|---|
+| The program | `C:\Program Files\SCAFFApps\Instant Share`, with a copy of its installer, which **Get the app** hands out |
+| Your registration (name and e-mail, shared by every SCAFFApps app) | `%APPDATA%\SCAFFApps\registration.json` |
 | The history, files included | `%LOCALAPPDATA%\InstantShare\history.db` on the computer that keeps it. To back it up, quit Instant Share and copy it. |
 | Settings (setup, name, appearance) | `%LOCALAPPDATA%\InstantShare\settings.json` on each computer |
 | A log, for troubleshooting | `%LOCALAPPDATA%\InstantShare\textshare.log` on each computer |
@@ -167,6 +179,10 @@ Starting the program while it is already running brings its window to the front.
 - **Locks that hold.** "Who should see it", "only the sender edits and deletes", pins and the archive are enforced by
   the computer that keeps the history, by each device's key.
 - **Only your own network.** It refuses connections from outside the local network.
+- **Your registration.** The Windows app asks for your name and e-mail address once and sends them to SCAFFApps
+  (`www.scaffapps.com`), with the app's name and version, the Windows version and a random number made for your
+  Windows account, so SCAFFApps knows who uses its apps. Nothing shared, and nothing else about you or the computer,
+  is sent.
 
 ## Updates
 
@@ -175,11 +191,12 @@ Settings > About > **Updates** shows this version and whether a newer one is out
 (the default), the apps ask GitHub once a day and say so in a notification. **Update now** downloads the new version,
 checks it against the SHA-256 published in the release notes, then:
 
-- **Windows**: restarts in the new program, saved next to the old one (the old file is removed; the history, settings
-  and start-with-Windows stay).
+- **Windows**: the new version's installer is checked the same way and run with Windows' permission: Instant Share
+  closes, is updated in the same folder and opens again (the history, settings and start-with-Windows stay). The
+  SCAFFApps Suite can do the same.
 - **Android**: opens Android's installer (allow Instant Share to install apps, once); the update installs over the app.
 
-Only that question goes to the internet; nothing shared does.
+That question and your registration are all that go to the internet; nothing shared ever does.
 
 ## What it does not do
 
@@ -198,7 +215,9 @@ You need Windows and Python 3.10 or newer (the release is built with Python 3.14
 - Run the app from the source: `pythonw app.py` (needs `pywebview`, `pillow` and the Windows notification packages:
   `pip install pywebview pillow winrt-runtime winrt-Windows.UI.Notifications winrt-Windows.Data.Xml.Dom`).
 - Run the plain server: `py instantshare.py`, or double-click `Instant Share.cmd`.
-- Produce the portable app, `instantshare.py` and `THIRD-PARTY-NOTICES.txt` in the `release` folder: `py build.py`.
+- Produce the installer (`Instant-Share-Setup-<version>.exe`, made with NSIS: the `makensis.exe` that electron-builder
+  keeps for the other SCAFFApps apps, or the one `MAKENSIS` names), the Android app, `instantshare.py` and
+  `THIRD-PARTY-NOTICES.txt` in the `release` folder: `py build.py`.
   The first run makes a build environment in `C:\venvs\textshare-build` with the versions it needs. The build prints
   each file's SHA-256 checksum and saves the list in `release\SHA256.txt`.
 - The Android app is built by the same `py build.py`, when the phone-app tools are on the PC (a JDK 17 and the
@@ -217,8 +236,9 @@ You need Windows and Python 3.10 or newer (the release is built with Python 3.14
 |---|---|
 | `instantshare.py` | The heart: the server that keeps the history (SQLite), the page every device shows, finding computers on the network, and the security (its own certificate, pairing with SPAKE2, device keys). Python standard library only. |
 | `app.py` | The Windows app around it: the window, the setup and pairing, the tray icon, Windows notifications, copying and saving, updates. |
-| `build.py` | Packs the app into the portable `.exe`. |
-| `build/` | The icon (`icon.svg`, and `make_icon.py`, which draws `icon.png` and `icon.ico`). |
+| `build.py` | Packs the app into one program and makes its installer (`build/installer.nsi`). |
+| `registration.py` | The name and e-mail registration, the Python twin of `registration.js` in the other SCAFFApps apps. |
+| `build/` | The icon (`icon.svg`, and `make_icon.py`, which draws `icon.png` and `icon.ico`), and `installer.nsi`. |
 | `android/` | Instant Share for Android: Java sources (`src/`), resources, the setup page (`assets/`, made by `make_setup.py`) and `build.ps1`. |
 | `handbook/` | The handbook: `handbook.html`, its pictures, and `build_handbook.py`. |
 | `Instant Share.cmd` | Runs the plain server from the source. |

@@ -1,7 +1,7 @@
 """Instant Share: pass text between the computers on your own network.
 
 This file is the heart of Instant Share: the server that keeps the history, and the page every computer shows. On Windows
-the app (app.py, packed into the portable .exe by build.py) runs it behind its own window and tray icon. On its own,
+the app (app.py, packed into the installed program by build.py) runs it behind its own window and tray icon. On its own,
 with nothing but Python's standard library, it runs as a plain server for Mac and Linux, or for anyone who prefers a
 browser:
 
@@ -39,9 +39,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 FROZEN = getattr(sys, "frozen", False)                       # running as the packed .exe
 APP_FILE = Path(sys.executable if FROZEN else __file__).resolve()
+
+
+def app_to_hand_out():
+    """What "Get the app" hands to another computer: the installer, which an installed copy keeps beside itself
+    (Instant Share is installed, not copied: the installer puts itself there as Instant-Share-Setup-<version>.exe),
+    else this program itself (instantshare.py when run from source)."""
+    if FROZEN:
+        setups = sorted(APP_FILE.parent.glob("Instant-Share-Setup-*.exe"))
+        if setups:
+            return setups[-1]
+    return APP_FILE
 DEFAULT_PORT = 8765
 MAX_BODY = 30 * 1024 * 1024      # biggest share accepted, in bytes (20 MB of text, or a 5 MB file with some)
 LIST_LIMIT = 300                 # the history shows the newest this many (search reaches older ones)
@@ -1174,10 +1185,10 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(303, "", "text/plain; charset=utf-8", headers)
         elif path == "/":
             self.reply(200, PAGE, "text/html; charset=utf-8", PAGE_HEADERS)
-        elif path == "/download":     # this very program, to run Instant Share on another computer
+        elif path == "/download":     # Instant Share's installer (or this program), for another computer
+            give = app_to_hand_out()
             ctype = "application/vnd.microsoft.portable-executable" if FROZEN else "text/x-python; charset=utf-8"
-            self.reply(200, APP_FILE.read_bytes(), ctype,
-                       [("Content-Disposition", f'attachment; filename="{APP_FILE.name}"')])
+            self.reply(200, give.read_bytes(), ctype, [("Content-Disposition", f'attachment; filename="{give.name}"')])
         elif path == "/download/android":   # the phone app, for phones on the same network
             apk = android_app()
             if not apk:

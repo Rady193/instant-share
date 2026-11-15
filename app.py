@@ -6,7 +6,7 @@ encrypted. On every computer the app waits in the tray when its window is closed
 something with it, a Windows notification shows who, a preview, and Copy or Save (kept in the Notification Centre).
 Phones use the Android app or a browser.
 
-    pythonw app.py              (build.py packs this into the portable .exe)
+    pythonw app.py              (build.py packs this into the installed program)
         --hidden                start in the tray without the window (how Windows starts it at sign-in)
         --data FOLDER           keep the history and the settings in another folder
         --port 9000             the port when this computer keeps the history (default 8765)
@@ -38,6 +38,7 @@ from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 import instantshare as ts
+import registration as reg
 
 APP = "Instant Share"
 # how Windows knows Instant Share's notifications (its name and icon in them and in the Notification Centre);
@@ -540,7 +541,7 @@ class App:
             webview.settings["REMOTE_DEBUGGING_PORT"] = int(os.environ["TEXTSHARE_DEBUG_PORT"])
         pin_window_certificates(self)
         self.notes = Notifier(self)
-        hidden = self.args.hidden and self.settings.get("mode") in ("host", "join")
+        hidden = self.args.hidden and self.settings.get("mode") in ("host", "join") and reg.read() is not None
         self.window = webview.create_window(APP, html=self.local_page("starting"), js_api=Api(self), width=1220,
                                             height=820, min_size=(420, 520), hidden=hidden,
                                             on_top=bool(self.settings.get("on_top")),
@@ -566,6 +567,19 @@ class App:
         self.window.events.loaded.wait(15)   # the first page ("Starting…") in place, so the next one is not lost under it
         self.set_theme(self.theme)
         self.instance.listen(self.show)
+        if reg.read() is None:               # the user's name and e-mail first, asked once for every SCAFFApps app
+            self.registering = True
+            self.window.load_html(self.local_page("register"))
+            return
+        self._carry_on()
+
+    def after_register(self):
+        self.registering = False
+        self.window.load_html(self.local_page("starting"))
+        self._carry_on()
+
+    def _carry_on(self):
+        reg.report_in_background("instant-share", ts.VERSION)
         mode = self.settings.get("mode")
         if mode in ("host", "join"):
             self.start_tray()
@@ -616,7 +630,7 @@ class App:
     def on_closing(self):
         """Closing the window: once set up, Instant Share waits in the tray, so the others can go on sharing with
         this computer and its pop-ups still come; Quit in the tray menu ends it."""
-        if self.quitting or self.mode is None:
+        if self.quitting or self.mode is None or getattr(self, "registering", False):
             self.quitting = True
             self.stop_tray()
             return True
@@ -675,10 +689,10 @@ class App:
             return dict(self.update, current=ts.VERSION)
         self.release = rel
         newer = version_tuple(rel["version"]) > version_tuple(ts.VERSION)
-        exe = f"Instant-Share-{rel['version']}-portable.exe"
+        setup = f"Instant-Share-Setup-{rel['version']}.exe"
         self.update = {"latest": rel["version"], "available": newer, "page": rel["page"],
                        "checked": int(time.time() * 1000),
-                       "can_install": ts.FROZEN and exe in rel["assets"] and exe in rel["hashes"]}
+                       "can_install": installed() and setup in rel["assets"] and setup in rel["hashes"]}
         self.settings["update_checked"] = time.time()
         if newer and tell and self.settings.get("update_told") != rel["version"]:
             self.settings["update_told"] = rel["version"]
@@ -687,24 +701,24 @@ class App:
         return dict(self.update, current=ts.VERSION)
 
     def update_now(self):
-        """Download the new version next to this one, check it against the release's SHA-256, start it, and quit:
-        it takes over (the same history and settings, the start with Windows) and removes this file."""
-        if not ts.FROZEN:
-            return {"error": "This copy runs from Python source: get the new version from the Releases page.",
-                    "page": f"https://github.com/{REPO}/releases/latest"}
+        """Download the new version's installer, check it against the release's SHA-256, and start it with Windows'
+        permission: it closes this copy, installs the new version in the same folder and opens it (/run)."""
+        if not installed():
+            return {"error": "This copy is not installed (it runs from Python source or a copied folder): get the "
+                             "installer from the Releases page.", "page": f"https://github.com/{REPO}/releases/latest"}
         try:
             rel = self.release or latest_release()
             v = rel["version"]
             if version_tuple(v) <= version_tuple(ts.VERSION):
                 return {"error": f"{ts.VERSION} is the newest version already."}
-            name = f"Instant-Share-{v}-portable.exe"
+            name = f"Instant-Share-Setup-{v}.exe"
             url, expected = rel["assets"].get(name), rel["hashes"].get(name)
             if not url or not expected:
-                return {"error": "That release has no Windows program with a checksum. Get it from the Releases page.",
+                return {"error": "That release has no installer with a checksum. Get it from the Releases page.",
                         "page": rel["page"]}
-            old = Path(sys.executable).resolve()
-            new = old.with_name(name)
-            part = old.with_name(name + ".download")
+            folder = Path(os.environ.get("TEMP") or self.data) / "Instant Share update"
+            folder.mkdir(parents=True, exist_ok=True)
+            setup, part = folder / name, folder / (name + ".download")
             digest = hashlib.sha256()
             request = urllib.request.Request(url, headers={"User-Agent": "InstantShare-update"})
             with urllib.request.urlopen(request, timeout=60) as r, open(part, "wb") as out:
@@ -715,18 +729,14 @@ class App:
                 part.unlink(missing_ok=True)
                 return {"error": "The download did not match its published checksum, so nothing was changed. "
                                  "Try again later."}
-            os.replace(part, new)
+            os.replace(part, setup)
         except OSError as e:
             return {"error": f"Could not download it: {e}"}
-        log(f"Updating to {v}: {new}")
-        main = my_windows().get("main")
-        command = [str(new), "--after-update", str(old), "--data", str(self.data)]
-        if self.args.port:
-            command += ["--port", str(self.args.port)]
-        if not (main and user32.IsWindowVisible(main)):
-            command.append("--hidden")
-        # a fresh start for the new program (not as a child of this one, whose files go when it ends)
-        subprocess.Popen(command, env=dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT="1"), close_fds=True)
+        log(f"Updating to {v} with {setup}")
+        # administrator rights: Windows asks first. More than 32 means it started; 32 or less, it did not (refused)
+        started = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(setup), "/S /run", None, 1)
+        if started <= 32:
+            return {"error": "Windows did not get permission to install it. Choose Update now again and answer Yes."}
         threading.Thread(target=self.quit, daemon=True).start()
         return {"ok": True, "version": v}
 
@@ -1196,6 +1206,11 @@ def pin_window_certificates(app):
     webview.settings["IGNORE_SSL_ERRORS"] = True            # (handled above: only the paired key gets through)
 
 
+def installed():
+    """This copy was installed by Instant Share's installer (its uninstaller is beside it), so it can update itself."""
+    return ts.FROZEN and (Path(sys.executable).parent / "Uninstall Instant Share.exe").exists()
+
+
 def version_tuple(v):
     return tuple(int(x) for x in re.findall(r"\d+", str(v))[:3])
 
@@ -1259,6 +1274,14 @@ class Api:
 
     def __init__(self, app):
         self._app = app
+
+    def register(self, name, email):
+        """The register page: keeps the user's name and e-mail (registration.py), then Instant Share starts."""
+        r, error = reg.save(name, email)
+        if not r:
+            return {"ok": False, "error": error}
+        threading.Thread(target=self._app.after_register, daemon=True).start()
+        return {"ok": True}
 
     def find(self):
         app = self._app
@@ -1594,12 +1617,51 @@ ready(() => {
 </script>
 """
 
+REGISTER = """
+<div class="center">
+  <div class="brand">{mark}</div>
+  <h1>Welcome to Instant Share</h1>
+  <p class="lead">Before you start, please tell us who you are. You are asked only once.</p>
+  <div style="width: min(380px, 100%); text-align: left">
+    <label style="display: block; margin-bottom: 12px; font-weight: 600">Your name
+      <input id="name" autocomplete="name" maxlength="150" style="display: block; width: 100%; height: 36px; margin-top: 6px; padding: 0 10px; background: var(--inset); border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); font: inherit; font-weight: 400"></label>
+    <label style="display: block; margin-bottom: 12px; font-weight: 600">E-mail address
+      <input id="email" type="email" autocomplete="email" maxlength="150" style="display: block; width: 100%; height: 36px; margin-top: 6px; padding: 0 10px; background: var(--inset); border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); font: inherit; font-weight: 400"></label>
+    <p class="err" id="err"></p>
+    <button class="btn primary" id="go" style="width: 100%; height: 38px">Continue</button>
+  </div>
+  <p class="lead" style="font-size: 12px; max-width: 460px; margin-top: 22px">Your name and e-mail address are sent to
+  SCAFFApps with this app's name and version and your Windows version, so we know who uses our apps. Nothing else about
+  you or this computer is sent. The other SCAFFApps apps on this Windows account use the same details and do not ask
+  again. Published by SCAFFApps · www.scaffapps.com</p>
+</div>
+<script>
+{ready}
+ready(() => {
+  $("#name").focus();
+  const say = (t, f) => { $("#err").textContent = t; if (f) $(f).focus(); };
+  const go = async () => {
+    const name = $("#name").value.trim(), email = $("#email").value.trim();
+    if (!name) return say("Please enter your name.", "#name");
+    if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) return say("Please enter a valid e-mail address.", "#email");
+    $("#go").disabled = true; say("");
+    const r = await window.pywebview.api.register(name, email);
+    if (!r.ok) { $("#go").disabled = false; say(r.error || "Could not save your details."); }
+  };
+  $("#go").addEventListener("click", go);
+  $("#email").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+});
+</script>
+"""
+
 
 def local_page(kind, info=None, theme="dark"):
     info = info or {}
     if kind == "setup":
         body = (SETUP.replace("{mark}", MARK).replace("{version}", ts.VERSION).replace("{ready}", READY)
                 .replace("{info}", json.dumps(info).replace("</", "<\\/")))
+    elif kind == "register":
+        body = REGISTER.replace("{mark}", MARK).replace("{ready}", READY)
     elif kind == "pair":
         body = (PAIR.replace("{mark}", MARK).replace("{name}", html.escape(info.get("name", "")))
                 .replace("{ready}", READY).replace("{info}", json.dumps(info).replace("</", "<\\/")))
