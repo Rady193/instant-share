@@ -39,7 +39,7 @@ Once set up, the app waits in the tray when its window is closed, so it can show
 
 ## Install
 
-Download from the [Releases page](https://github.com/Rady193/text-share/releases/latest).
+Download from the [Releases page](https://github.com/Rady193/instant-share/releases/latest).
 
 | File | What it is |
 |---|---|
