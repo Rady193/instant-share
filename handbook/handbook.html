@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Text Share Handbook</title>
+<style>
+  /* The look of the Multi Screens handbook (light print, accent #4a6cf5), as for every SCAFFApps tool. */
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; color: #1b1f27; font: 10.5pt/1.5 "Segoe UI", system-ui, sans-serif; }
+  h1, h2, h3 { line-height: 1.2; }
+  h2 { margin: 0 0 4mm; padding-bottom: 2.5mm; font-size: 19pt; letter-spacing: -.2pt; border-bottom: .6mm solid #4a6cf5; break-after: avoid; }
+  h3 { margin: 7mm 0 2mm; font-size: 12.5pt; break-after: avoid; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
+  li { margin-bottom: 1.2mm; }
+  section { break-before: page; }
+  strong { font-weight: 650; }
+  .lead { font-size: 11.5pt; color: #3a4252; }
+  .muted { color: #667085; }
+
+  .cover { height: 247mm; display: flex; flex-direction: column; justify-content: center; }
+  .cover img { width: 30mm; height: 30mm; margin-bottom: 9mm; }
+  .cover h1 { margin: 0; font-size: 40pt; letter-spacing: -.8pt; }
+  .cover .sub { margin-top: 3mm; font-size: 17pt; color: #4a6cf5; font-weight: 600; }
+  .cover .line { width: 26mm; height: 1.2mm; margin: 10mm 0; background: #4a6cf5; border-radius: 1mm; }
+  .cover p { max-width: 125mm; font-size: 12pt; color: #3a4252; }
+  .cover .meta { margin-top: auto; color: #667085; font-size: 10pt; }
+
+  .toc { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 12mm; }
+  .toc li { display: flex; gap: 3mm; padding: 1.7mm 0; border-bottom: .2mm solid #e3e7f0; break-inside: avoid; margin: 0; }
+  .toc b { width: 7mm; color: #4a6cf5; }
+
+  table { width: 100%; margin: 2mm 0 4mm; border-collapse: collapse; font-size: 9.6pt; break-inside: avoid; }
+  th, td { padding: 1.8mm 2.4mm; text-align: left; vertical-align: top; border-bottom: .2mm solid #e3e7f0; }
+  th { color: #667085; font-size: 8.6pt; font-weight: 650; letter-spacing: .3pt; text-transform: uppercase; background: #f6f8fc; }
+  td:first-child { white-space: nowrap; font-weight: 600; }
+  table.wrap td:first-child { white-space: normal; }
+
+  figure { margin: 3mm 0 5mm; break-inside: avoid; }
+  figure img { display: block; width: 100%; border: .3mm solid #d5dae6; border-radius: 2mm; }
+  figure.narrow img { width: 62%; margin: 0 auto; }
+  figure.mid img { width: 80%; margin: 0 auto; }
+  figure.small img { width: 52%; margin: 0 auto; }
+  figcaption { margin-top: 1.6mm; color: #667085; font-size: 8.8pt; text-align: center; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; align-items: start; }
+  .pair figure { margin: 0; }
+
+  .tip, .warn { margin: 3mm 0 4mm; padding: 3mm 4mm; border-radius: 2mm; break-inside: avoid; }
+  .tip { background: #f1f5ff; border-left: 1.1mm solid #4a6cf5; }
+  .warn { background: #fff7ed; border-left: 1.1mm solid #e8833a; }
+  .tip b, .warn b { display: block; margin-bottom: .6mm; }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li { position: relative; padding-left: 10mm; margin-bottom: 2.6mm; break-inside: avoid; }
+  .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: .2mm; width: 6.4mm; height: 6.4mm; display: grid; place-items: center; color: #fff; background: #4a6cf5; border-radius: 50%; font-size: 9pt; font-weight: 700; }
+
+  kbd { padding: .3mm 1.6mm; background: #f1f3f8; border: .25mm solid #cfd5e2; border-bottom-width: .6mm; border-radius: 1.2mm; font: 9pt "Segoe UI", sans-serif; white-space: nowrap; }
+  code { padding: .2mm 1.2mm; background: #f1f3f8; border-radius: 1mm; font: 9.2pt Consolas, monospace; overflow-wrap: anywhere; }
+  pre.cmd { margin: 2mm 0 4mm; padding: 2.6mm 3.5mm; background: #f1f3f8; border-radius: 1.6mm; font: 9.2pt Consolas, monospace; white-space: pre-wrap; break-inside: avoid; }
+
+  .flow { display: flex; align-items: center; gap: 5mm; margin: 5mm 0 6mm; break-inside: avoid; }
+  .flow .many { display: grid; gap: 2.4mm; }
+  .flow .box { padding: 2.4mm 4mm; border: .35mm solid #d5dae6; border-radius: 2mm; background: #fff; font-size: 9.6pt; }
+  .flow .box small { display: block; color: #667085; font-size: 8.4pt; }
+  .flow .arrow { flex: none; color: #4a6cf5; font-size: 18pt; }
+  .flow .hub { flex: 1; padding: 4mm 5mm; border-radius: 2.4mm; background: #191a1b; color: #ccc; }
+  .flow .hub b { display: block; font-size: 11pt; color: #fff; }
+  .flow .hub span { font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <img src="../build/icon.png" alt="">
+  <h1>Text Share</h1>
+  <div class="sub">Handbook</div>
+  <div class="line"></div>
+  <p>Pass text, photos and PDFs between the computers on your own network. Share on one, and the others have it at once, with a pop-up by the clock and a Copy button. Choose who sees it. No internet, no accounts.</p>
+  <div class="meta">Version 1.0.0 · Windows 10 and 11 (64-bit) · Published by SCAFFApps</div>
+</div>
+
+<section>
+  <h2>Contents</h2>
+  <ol class="toc">
+    <li><b>1</b> What Text Share is</li>
+    <li><b>2</b> Installing and setting up</li>
+    <li><b>3</b> The window at a glance</li>
+    <li><b>4</b> Sharing text, photos and PDFs</li>
+    <li><b>5</b> Who should see it</li>
+    <li><b>6</b> The history</li>
+    <li><b>7</b> Pop-ups by the clock</li>
+    <li><b>8</b> Phones and browsers</li>
+    <li><b>9</b> The tray icon and keeping it running</li>
+    <li><b>10</b> Options, shortcuts and files</li>
+    <li><b>11</b> Privacy and security</li>
+    <li><b>12</b> Troubleshooting</li>
+  </ol>
+
+  <h3 style="margin-top:12mm">1. What Text Share is</h3>
+  <p class="lead">Text Share passes text, photos and PDFs between the computers on your own network: commands, addresses, links, notes, code, a photo of a drawing, a form to sign. Anything you would otherwise e-mail to yourself, carry on a USB stick or type again.</p>
+  <p><strong>One</strong> computer keeps the history. The others run the same app and connect to it; they find it on the network by themselves. Phones and computers without the app use a browser.</p>
+  <div class="flow">
+    <div class="many">
+      <div class="box">Laptop<small>Text Share app</small></div>
+      <div class="box">Another computer<small>Text Share app</small></div>
+      <div class="box">Phone or tablet<small>any browser</small></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="hub"><b>The computer that keeps the history</b><span>Text Share app · answers only your own network · no internet needed</span></div>
+  </div>
+  <ul>
+    <li><strong>Share:</strong> write, paste or drop a file and press Share. The other devices have it within a few seconds.</li>
+    <li><strong>Be told:</strong> on every computer with the app, a pop-up by the clock shows who shared what, with a Copy button.</li>
+    <li><strong>Choose who sees it:</strong> everyone, or only the devices you tick.</li>
+    <li><strong>Keep:</strong> everything shared stays in a history you can search, until you delete it.</li>
+  </ul>
+  <div class="tip"><b>What it is for, and what it is not</b>Text Share is for passing things between devices you own, on a network you trust: at home or in your own office. It has no password and no encryption, so it is not for public or shared Wi-Fi (see section 11).</div>
+</section>
+
+<section>
+  <h2>2. Installing and setting up</h2>
+  <table class="wrap">
+    <tr><th>File</th><th>What it is</th></tr>
+    <tr><td>Text-Share-1.0.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere, including a USB stick, and double-click it. Use the same file on every computer.</td></tr>
+    <tr><td>textshare.py</td><td>Text Share as a plain server, for Mac and Linux: <code>python3 textshare.py</code> keeps the history there, and every device uses a browser.</td></tr>
+    <tr><td>Text-Share-Handbook-1.0.0.pdf</td><td>This handbook.</td></tr>
+  </table>
+  <div class="warn"><b>"Windows protected your PC"</b>The app is not code-signed, so Windows may show this message the first time you run it. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</div>
+
+  <h3>The first start: one question</h3>
+  <figure class="mid">
+    <img src="img/setup.png" alt="The setup page">
+    <figcaption>The first start on a laptop. Text Share has already found OFFICE-PC, the computer that keeps the history.</figcaption>
+  </figure>
+  <ol class="steps">
+    <li><strong>On one computer</strong>, one that stays on while you work, choose <strong>Use this computer</strong>. It keeps the history. Windows asks whether to allow Text Share on networks: allow it on <strong>Private networks</strong>, so the others can reach it.</li>
+    <li><strong>On every other computer</strong>, choose that computer in the list under <em>Connect to the computer that keeps it</em>. If it is not listed, type its name or its address, for example <code>192.168.1.20</code>, and press <strong>Connect</strong>.</li>
+    <li>Leave <strong>Start Text Share when I sign in to Windows</strong> ticked, so it is always ready to show what others share.</li>
+  </ol>
+  <p>The setup can be changed later: <strong>Change setup</strong> at the bottom of the window, or in the tray icon's menu.</p>
+</section>
+
+<section>
+  <h2>3. The window at a glance</h2>
+  <figure>
+    <img src="img/main-dark.png" alt="Text Share in its dark appearance">
+    <figcaption>The dark appearance (the default): the editor on the left, the history on the right.</figcaption>
+  </figure>
+  <table class="wrap">
+    <tr><th>Part</th><th>What it does</th></tr>
+    <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with the number of other devices online. Red: it cannot be reached (section 12).</td></tr>
+    <tr><td>This device</td><td>The name shown next to everything this device shares, and in the other devices' lists. Click it to change it.</td></tr>
+    <tr><td>Sun or moon</td><td>Switches between the dark and the light appearance. The choice is remembered.</td></tr>
+    <tr><td>Write or paste</td><td>The editor. What you type stays until you share it, even if you close the window.</td></tr>
+    <tr><td>File</td><td>Adds a photo or a PDF (section 4).</td></tr>
+    <tr><td>To</td><td>Who should see it: everyone, or the devices you tick (section 5).</td></tr>
+    <tr><td>Share</td><td>Shares what is in the editor, and the file, if any.</td></tr>
+    <tr><td>History</td><td>Everything shared with this device, newest first, with a search box (section 6).</td></tr>
+    <tr><td>Bottom line</td><td>Which computer keeps the history, the address for phones and browsers, the version, <strong>Get the app</strong> (downloads the program) and <strong>Change setup</strong>.</td></tr>
+  </table>
+  <figure>
+    <img src="img/main-light.png" alt="Text Share in its light appearance">
+    <figcaption>The same window in the light appearance.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>4. Sharing text, photos and PDFs</h2>
+  <h3>Text</h3>
+  <ol class="steps">
+    <li>Write or paste in the editor.</li>
+    <li>Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, or the blue <strong>Share</strong> button.</li>
+    <li>The editor empties, and the text is at the top of the history on every device that may see it.</li>
+  </ol>
+
+  <h3>A photo or a PDF</h3>
+  <figure class="small">
+    <img src="img/attach.png" alt="A photo waiting to be shared, with a line of text">
+    <figcaption>A photo added, with a line about it, ready to share with LAPTOP-1 only.</figcaption>
+  </figure>
+  <p>Add one file to a share in any of three ways:</p>
+  <ul>
+    <li>press <strong>File</strong> and choose it;</li>
+    <li>drag it from File Explorer onto the editor;</li>
+    <li>paste a picture (a screenshot, for example) into the editor with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
+  </ul>
+  <p>It shows under the editor; <strong>✕</strong> takes it off again. Text in the editor goes with it, as a caption. A file can also be shared on its own.</p>
+  <table class="wrap">
+    <tr><th>What can be shared</th><th>Up to</th></tr>
+    <tr><td>Photos: PNG, JPEG, GIF and WebP</td><td>1 MB each</td></tr>
+    <tr><td>PDF files</td><td>1 MB each</td></tr>
+    <tr><td>Text</td><td>20 MB in one share</td></tr>
+  </table>
+  <div class="tip"><b>Photos from a phone are often bigger than 1 MB</b>Share a smaller copy: most phones can send or save a photo at a smaller size, and a screenshot of it is usually well under 1 MB.</div>
+  <p>Text Share checks what a file really is from its contents, not its name, and refuses anything else. A renamed program or web page cannot be passed off as a photo.</p>
+</section>
+
+<section>
+  <h2>5. Who should see it</h2>
+  <div class="pair">
+    <figure>
+      <img src="img/to.png" alt="The list of devices">
+      <figcaption>The devices Text Share knows, with who is online now.</figcaption>
+    </figure>
+    <div>
+      <p>The <strong>To</strong> button next to Share says who will see what you share. Click it to choose:</p>
+      <ul>
+        <li><strong>Everyone</strong>: every device, now and later. This is the default.</li>
+        <li><strong>Only some devices</strong>: tick them. The others will not see it, in the history or as a pop-up.</li>
+      </ul>
+      <p>The list shows every device that has used Text Share in the last 30 days. A green dot means it is <strong>online</strong> now: the app is running there (in its window or in the tray), or a browser has the page open. Devices that are offline can be ticked too; they see the item when they come back.</p>
+      <p>Your choice stays for the next share, and the button shows it, for example <strong>To: LAPTOP-1</strong>. Tick <strong>Everyone</strong> to go back.</p>
+      <p>In the history, an item shared with chosen devices shows them after an arrow, for example <span style="color:#4a6cf5">→ LAPTOP-1</span>, or <span style="color:#4a6cf5">→ you</span>.</p>
+    </div>
+  </div>
+  <div class="warn"><b>Tidy, not locked</b>Sharing with chosen devices keeps it out of the others' history and pop-ups. It is not a lock: someone on your network who knows how could still read it. Section 11 explains.</div>
+</section>
+
+<section>
+  <h2>6. The history</h2>
+  <figure class="mid">
+    <img src="img/history.png" alt="The newest items in the history">
+    <figcaption>Each item shows who shared it, for whom (if not for everyone), when, and how long it is.</figcaption>
+  </figure>
+  <table class="wrap">
+    <tr><th>Button</th><th>What it does</th></tr>
+    <tr><td>Copy</td><td>Copies the text, ready to paste anywhere. On a photo with no text, Copy copies the photo itself; with text, the button for the photo is <strong>Copy photo</strong>.</td></tr>
+    <tr><td>Save</td><td>Saves the photo or PDF in your Downloads folder and shows it there.</td></tr>
+    <tr><td>Edit</td><td>Puts the text in the editor so you can change it and share it again. The original stays.</td></tr>
+    <tr><td>✕</td><td>Deletes the item for every device. It turns into <strong>Delete?</strong>: click again within three seconds to confirm.</td></tr>
+    <tr><td>Show all</td><td>Under items longer than about eight lines. It opens the whole item; <strong>Show less</strong> folds it again.</td></tr>
+  </table>
+  <ul>
+    <li><strong>Photos</strong> show as pictures: click one to see it full size, and click again (or press <kbd>Esc</kbd>) to close it. <strong>PDFs</strong> show their name: click it to open the PDF.</li>
+    <li><strong>Search the history</strong> finds items by their text, their file name, or the device that shared them.</li>
+    <li><strong>New items glow</strong> briefly when they arrive.</li>
+    <li><strong>Arabic and other right-to-left text</strong> reads right to left, line by line.</li>
+    <li>The history shows the newest 300 items; search reaches all of them.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>7. Pop-ups by the clock</h2>
+  <div class="pair">
+    <figure>
+      <img src="img/toast-text.png" alt="A pop-up for text">
+      <figcaption>Text shared by LAPTOP-1 (dark appearance).</figcaption>
+    </figure>
+    <figure>
+      <img src="img/toast-photo.png" alt="A pop-up for a photo">
+      <figcaption>A photo shared with you, and one more item (light).</figcaption>
+    </figure>
+  </div>
+  <p>When another device shares something with this computer, a small pop-up appears above the clock, with a sound, even when the Text Share window is closed. It does not take the keyboard away from what you are doing.</p>
+  <table class="wrap">
+    <tr><th>In the pop-up</th><th>What it does</th></tr>
+    <tr><td>Copy</td><td>Text: copies all of it, however long. Photo: copies the photo, ready to paste into a document, a chat or an e-mail.</td></tr>
+    <tr><td>Save</td><td>Shown for a PDF: saves it in Downloads and shows it there.</td></tr>
+    <tr><td>Open</td><td>Opens the Text Share window. Clicking the preview does the same.</td></tr>
+    <tr><td>✕</td><td>Closes the pop-up. It also goes by itself after about ten seconds, but not while the mouse is over it.</td></tr>
+  </table>
+  <p>"<strong>shared with you</strong>" means it was shared with chosen devices, this one among them. "<strong>+2 more</strong>" means more arrived at the same time: they are in the history. No pop-up appears while the Text Share window is in front: the history shows new items itself.</p>
+</section>
+
+<section>
+  <h2>8. Phones and browsers</h2>
+  <div class="pair">
+    <figure>
+      <img src="img/phone.png" alt="Text Share on a phone" style="width:78%; margin:0 auto">
+      <figcaption>On a phone, the editor sits above the history.</figcaption>
+    </figure>
+    <div>
+      <p>Phones, tablets and computers without the app use a browser on the same network. The address is at the bottom of the Text Share window, under <strong>Phones and browsers</strong>, for example <code>http://OFFICE-PC:8765</code>. Open it, then bookmark it or add it to the home screen.</p>
+      <p>In a browser, everything works as in the app except:</p>
+      <ul>
+        <li>no pop-ups: the page shows new items while it is open;</li>
+        <li><strong>Save</strong> downloads the file the browser's usual way;</li>
+        <li>photos are copied from the full-size picture, the browser's usual way.</li>
+      </ul>
+      <p>A browser counts as a device of its own, named once at the top of the page, and appears in the others' lists while the page is open.</p>
+      <div class="tip"><b>If Copy does nothing on a phone</b>Press <strong>Edit</strong> to put the text in the editor, then select it there and copy it the phone's usual way.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>9. The tray icon and keeping it running</h2>
+  <p>Once set up, Text Share keeps running in the tray, by the clock, when you close its window: the computer that keeps the history goes on serving the others, and every computer goes on showing pop-ups. The first time, a note says so.</p>
+  <table class="wrap">
+    <tr><th>Tray icon</th><th>What it does</th></tr>
+    <tr><td>Click</td><td>Opens the Text Share window.</td></tr>
+    <tr><td>Right-click</td><td>The menu: <strong>Open Text Share</strong>, <strong>Start with Windows</strong> (ticked when it does), <strong>Change setup…</strong> and <strong>Quit Text Share</strong>, which really stops it.</td></tr>
+  </table>
+  <p>Double-clicking the program while it is running does not start a second copy: it opens the window of the running one.</p>
+
+  <h3>Keep the computer that keeps the history awake</h3>
+  <p>A computer that is asleep cannot share. On it, open <strong>Settings &gt; System &gt; Power &amp; battery &gt; Screen, sleep and hibernate</strong> and set sleep to <strong>Never</strong> when plugged in. The screen may still turn off.</p>
+
+  <h3>A new version</h3>
+  <ol class="steps">
+    <li>Quit Text Share from the tray menu.</li>
+    <li>Start the new file. The history and the settings are kept: they are stored apart from the program.</li>
+    <li>On the computer that keeps the history, Windows may ask again to allow it on networks: allow it on Private networks.</li>
+  </ol>
+  <p>If Text Share starts with Windows, the new file takes over that job by itself the first time it runs.</p>
+
+  <h3>Backing up or moving the history</h3>
+  <p>The whole history, files included, is one file, <code>history.db</code>, in <code>%LOCALAPPDATA%\TextShare</code> on the computer that keeps it (paste that into File Explorer's address bar). To back it up or move it, quit Text Share first, then copy the file. To start afresh, quit Text Share and delete it.</p>
+</section>
+
+<section>
+  <h2>10. Options, shortcuts and files</h2>
+  <h3>Keyboard shortcuts</h3>
+  <table>
+    <tr><th>Keys</th><th>What they do</th></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Share what is in the editor, and its file.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> in the editor</td><td>Pastes text, or adds a copied picture as the file.</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Closes the device list or a full-size photo.</td></tr>
+  </table>
+
+  <h3>Options</h3>
+  <p>For special cases, add these after the program's name in a command window (open the program's folder, type <code>cmd</code> in its address bar and press <kbd>Enter</kbd>):</p>
+  <table class="wrap">
+    <tr><th>Option</th><th>What it does</th></tr>
+    <tr><td><code>--port 9000</code></td><td>On the computer that keeps the history: use another port than 8765. (If 8765 is taken, Text Share already picks the next free one by itself.)</td></tr>
+    <tr><td><code>--data D:\TextShare</code></td><td>Keeps the history and settings in another folder, for example next to the program on a USB stick.</td></tr>
+    <tr><td><code>--hidden</code></td><td>Starts in the tray, without the window. Windows starts it this way at sign-in.</td></tr>
+  </table>
+
+  <h3>Where things are saved</h3>
+  <table class="wrap">
+    <tr><th>What</th><th>Where</th></tr>
+    <tr><td>The history, files included</td><td><code>%LOCALAPPDATA%\TextShare\history.db</code> on the computer that keeps it.</td></tr>
+    <tr><td>Settings (setup, name, appearance)</td><td><code>%LOCALAPPDATA%\TextShare\settings.json</code> on each computer.</td></tr>
+    <tr><td>A log, for troubleshooting</td><td><code>%LOCALAPPDATA%\TextShare\textshare.log</code> on each computer.</td></tr>
+    <tr><td>Saved photos and PDFs</td><td>Your Downloads folder.</td></tr>
+    <tr><td>Start with Windows</td><td>The usual list of programs that start at sign-in (Settings &gt; Apps &gt; Startup).</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>11. Privacy and security</h2>
+  <h3>What Text Share does</h3>
+  <ul>
+    <li><strong>Stays on your network.</strong> It answers only devices on its own local network and refuses anything from outside it. It never reaches the internet, and nothing you share leaves your network.</li>
+    <li><strong>Keeps one copy.</strong> The history is stored on the computer that keeps it, and nowhere else.</li>
+    <li><strong>Can't be read by websites.</strong> A website open in someone's browser cannot read or change the history.</li>
+    <li><strong>Checks files.</strong> Only real photos and PDFs, by their contents, up to 1 MB.</li>
+  </ul>
+  <h3>What it does not do</h3>
+  <ul>
+    <li><strong>No password.</strong> Anyone on the same network who opens the address can use Text Share, read what is shared with everyone, add to it and delete from it.</li>
+    <li><strong>No encryption.</strong> Text Share talks plain <code>http</code>. Someone watching your own network could see what is shared.</li>
+    <li><strong>"Who should see it" is not a lock.</strong> Items shared with chosen devices are kept out of the others' view, but someone with technical knowledge on your network could still read them.</li>
+    <li><strong>No expiry.</strong> Items stay until someone deletes them.</li>
+  </ul>
+  <div class="warn"><b>Use it only on networks you trust</b>Home, or your own office network, is fine. Do not use it on public Wi-Fi, in a hotel or café, or on a network shared with other companies. If you pass a password or a key through Text Share, delete the item once you have pasted it where it belongs.</div>
+</section>
+
+<section>
+  <h2>12. Troubleshooting</h2>
+  <table class="wrap">
+    <tr><th style="width:34%">Problem</th><th>What to do</th></tr>
+    <tr><td>Setup finds no computer, or cannot connect</td><td>
+      <ul style="margin:0">
+        <li>Check that Text Share runs on the computer that keeps the history, and that both are on the same network.</li>
+        <li>On that computer, set the network to <strong>Private</strong>: Settings &gt; Network &amp; internet &gt; Wi-Fi or Ethernet &gt; Network profile type.</li>
+        <li>Type its numbered address instead of its name.</li>
+        <li>A VPN on either computer can hide your own network. Disconnect it and try again.</li>
+        <li>Guest Wi-Fi often stops devices from seeing each other. Use the main network.</li>
+        <li>If Windows never asked to allow Text Share, allow it yourself in an administrator command window on the computer that keeps the history:</li>
+      </ul>
+      <pre class="cmd" style="margin-bottom:0">netsh advfirewall firewall add rule name="Text Share" dir=in action=allow protocol=TCP localport=8765 profile=private
+netsh advfirewall firewall add rule name="Text Share search" dir=in action=allow protocol=UDP localport=8765 profile=private</pre>
+    </td></tr>
+    <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Text Share was quit there. Start it again. The window reconnects by itself, and what you typed stays in the editor.</td></tr>
+    <tr><td>No pop-ups</td><td>Text Share must be running on this computer, in its window or in the tray. Check the tray (click the <strong>^</strong> by the clock). Windows' Do not disturb does not stop them; full-screen games and presentations may cover them.</td></tr>
+    <tr><td>A device is missing from "Who should see it"</td><td>It appears once Text Share has run on it (or a browser has opened the page) while connected to the same computer. A device unused for 30 days leaves the list.</td></tr>
+    <tr><td>"That file is … Photos and PDFs can be up to 1 MB"</td><td>Share a smaller copy (section 4).</td></tr>
+    <tr><td>The program does not start, or disappears</td><td>Choose <strong>More info</strong> then <strong>Run anyway</strong> on the SmartScreen message. If your antivirus moved the file away, restore it and mark it as allowed.</td></tr>
+    <tr><td>"Open Text Share by the server's IP address or computer name"</td><td>A browser opened the page through a name Text Share does not trust. Use the address shown at the bottom of the Text Share window.</td></tr>
+    <tr><td>Something else</td><td>The log, <code>%LOCALAPPDATA%\TextShare\textshare.log</code>, says what Text Share did. Send it along when asking for help.</td></tr>
+  </table>
+  <figure class="mid">
+    <img src="img/offline.png" alt="The red dot when Text Share cannot be reached">
+    <figcaption>The top of the window when the computer that keeps the history cannot be reached.</figcaption>
+  </figure>
+</section>
+
+</body>
+</html>

@@ -3,11 +3,13 @@
     py build.py
 
 The first run makes the build environment, C:\\venvs\\textshare-build (outside OneDrive: thousands of small files),
-with the PyInstaller version below. The program carries its own Python, so the computers it runs on need nothing.
-release/ also gets textshare.py itself, for Mac and Linux (python3 textshare.py), and the files' SHA-256 checksums.
+with the versions below. The program is app.py (its window, tray and pop-ups, drawn by Windows' own Edge WebView2)
+around textshare.py, and carries its own Python, so the computers it runs on need nothing. release/ also gets
+textshare.py itself, for Mac and Linux (python3 textshare.py), and the files' SHA-256 checksums.
 """
 
 import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -15,6 +17,9 @@ import sys
 from pathlib import Path
 
 PYINSTALLER = "6.22.3"
+NEEDS = [f"pyinstaller=={PYINSTALLER}", "pywebview==6.2.1", "pillow", "playwright"]
+BUNDLED = ["pywebview", "bottle", "proxy_tools", "typing_extensions", "pythonnet", "clr_loader", "cffi", "pycparser",
+           "pillow"]                      # what the .exe carries besides Python: their licences go in the notices
 HERE = Path(__file__).resolve().parent
 VENV = Path(r"C:\venvs\textshare-build")
 WORK = VENV / "work"
@@ -59,11 +64,37 @@ def version_file(v, exe_name):
     return path
 
 
+LICENCES = r"""
+import json, sys, importlib.metadata as md
+out = []
+for name in sys.argv[1:]:
+    d = md.distribution(name)
+    meta = d.metadata
+    licence = (meta.get("License-Expression") or (meta.get("License") or "").strip().split("\n")[0]).strip()
+    if not licence or len(licence) > 60:
+        licence = next((c.split("::")[-1].strip() for c in meta.get_all("Classifier") or []
+                        if c.startswith("License ::")), "see below")
+    texts = []
+    for f in d.files or []:
+        if any(k in f.name.upper() for k in ("LICENSE", "LICENCE", "COPYING", "NOTICE")) and not f.name.endswith((".py", ".pyc")):
+            try:
+                texts.append(f.read_text(encoding="utf-8").strip())
+            except Exception:
+                pass
+    home = meta.get("Home-page") or next((u.split(",", 1)[-1].strip() for u in meta.get_all("Project-URL") or []), "")
+    out.append({"name": meta["Name"], "version": d.version, "licence": licence, "texts": texts, "home": home})
+sys.stdout.reconfigure(encoding="utf-8")
+print(json.dumps(out))
+"""
+
+
 def notices(v, target):
-    """The licences of what the .exe carries besides Text Share: Python (with its Windows build's libraries) and
-    PyInstaller's bootloader. Taken from the Python the build used, so they always match."""
+    """The licences of what the .exe carries besides Text Share: Python (with its Windows build's libraries),
+    PyInstaller's bootloader and the Python packages in BUNDLED. Taken from the build environment, so they match."""
     base = subprocess.check_output([str(PY), "-c", "import sys; print(sys.base_prefix)"], text=True).strip()
     python_license = (Path(base) / "LICENSE.txt").read_text(encoding="utf-8")
+    packages = json.loads(subprocess.check_output([str(PY), "-c", LICENCES, *BUNDLED], text=True, encoding="utf-8"))
+    rule = "\n\n" + "=" * 78 + "\n\n"
     target.write_text(
         f"Text Share {v} for Windows (the .exe) carries these third-party components, each under its own licence:\n\n"
         "1. Python, under the Python Software Foundation License, with the libraries its Windows build includes\n"
@@ -71,7 +102,12 @@ def notices(v, target):
         "2. The PyInstaller bootloader, which starts the program: GPL 2.0 or later with the PyInstaller bootloader\n"
         "   exception, which allows programs made with it to be distributed under any licence.\n"
         "   https://pyinstaller.org/en/stable/license.html\n\n"
-        + "=" * 78 + "\n\n" + python_license, encoding="utf-8")
+        "3. These Python packages (the window, and copying photos), each with its licence text below:\n"
+        + "".join(f"   {p['name']} {p['version']}: {p['licence']}\n" for p in packages)
+        + rule + python_license
+        + "".join(rule + f"{p['name']} {p['version']} ({p['licence']})\n\n"
+                  + ("\n\n".join(p["texts"]) or f"No licence text is shipped with this package; see {p['home']}")
+                  for p in packages), encoding="utf-8")
 
 
 def main():
@@ -82,7 +118,7 @@ def main():
 
     if not PY.exists():
         run(sys.executable, "-m", "venv", VENV)
-    run(PY, "-m", "pip", "install", "-q", "--disable-pip-version-check", f"pyinstaller=={PYINSTALLER}", "pillow")
+    run(PY, "-m", "pip", "install", "-q", "--disable-pip-version-check", *NEEDS)
     WORK.mkdir(parents=True, exist_ok=True)
     if not (HERE / "build" / "icon.ico").exists():
         run(PY, HERE / "build" / "make_icon.py")
@@ -90,11 +126,14 @@ def main():
     release = HERE / "release"
     release.mkdir(exist_ok=True)
     run(PY, "-m", "PyInstaller", "--noconfirm", "--clean", "--log-level", "WARN",
-        "--onefile", "--console", "--name", exe_name[:-4],
+        "--onefile", "--windowed", "--name", exe_name[:-4],
         "--icon", HERE / "build" / "icon.ico",
+        "--add-data", f"{HERE / 'build' / 'icon.png'};build", "--add-data", f"{HERE / 'build' / 'icon.ico'};build",
+        "--exclude-module", "tkinter", "--exclude-module", "playwright", "--exclude-module", "pystray",
+        "--exclude-module", "numpy", "--exclude-module", "PIL._avif", "--exclude-module", "PIL.AvifImagePlugin",   # not used; numpy alone is 24 MB
         "--version-file", version_file(v, exe_name),
         "--distpath", release, "--workpath", WORK, "--specpath", WORK,
-        HERE / "textshare.py")
+        HERE / "app.py")
     shutil.copy2(HERE / "textshare.py", release / "textshare.py")
     notices(v, release / "THIRD-PARTY-NOTICES.txt")
 
