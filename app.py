@@ -1420,6 +1420,16 @@ PAGE_STYLE = """
   --danger-fill: #e5484d; --ok: #1a7f37; color-scheme: light }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
+/* SCAFFApps scrollbars, as the SCAFFERP system and www.scaffapps.com (and instantshare.py's page): a slim purple thumb
+   with a light edge on no track, wider under the pointer; never the grey Windows bar. Phones keep their own. */
+@media (pointer: fine) {
+  ::-webkit-scrollbar { width: 12px; height: 12px; background: transparent }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0 }
+  ::-webkit-scrollbar-thumb { background-color: rgba(91, 44, 131, .55); border: 3px solid transparent; border-radius: 12px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 1px rgba(250, 247, 241, .55); min-height: 40px; min-width: 40px }
+  ::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background-color: rgba(91, 44, 131, .85); border-width: 1.5px }
+}
 body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
   font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
   display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px }

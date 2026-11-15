@@ -1767,9 +1767,16 @@ body { margin: 0; display: flex; flex-direction: column; background: var(--bg); 
 button, input, textarea { font: inherit; color: inherit }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
 input[type="checkbox"] { accent-color: var(--accent-strong) }
-::-webkit-scrollbar { width: 10px; height: 10px }
-::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 999px; border: 2px solid var(--bg) }
-::-webkit-scrollbar-corner { background: transparent }
+/* SCAFFApps scrollbars, as the SCAFFERP system and www.scaffapps.com: a slim purple thumb with a light edge on no
+   track, wider under the pointer; never the grey Windows bar with its arrows. Phones keep their own. */
+@media (pointer: fine) {
+  ::-webkit-scrollbar { width: 12px; height: 12px; background: transparent }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0 }
+  ::-webkit-scrollbar-thumb { background-color: rgba(91, 44, 131, .55); border: 3px solid transparent; border-radius: 12px;
+    background-clip: padding-box; box-shadow: inset 0 0 0 1px rgba(250, 247, 241, .55); min-height: 40px; min-width: 40px }
+  ::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background-color: rgba(91, 44, 131, .85); border-width: 1.5px }
+}
 svg.icon { display: block; width: 18px; height: 18px; flex: none }
 
 .top { display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 14px; background: var(--surface); border-bottom: 1px solid var(--line) }
