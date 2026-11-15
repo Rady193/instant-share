@@ -1,10 +1,10 @@
 # Text Share
 
-Text Share passes text, photos and PDFs between the computers on your own network. Share on one computer, and the
-others have it at once, with a pop-up by the clock and a Copy button. Choose who sees each share. Everything stays
+Text Share passes text, photos and PDFs between the computers and Android phones on your own network. Share on
+one, and the others have it at once, with a pop-up (or a phone notification) and a Copy button. Choose who sees each share. Everything stays
 in a history you can search, copy from and delete from. It needs no internet and no accounts.
 
-Version 1.0.0 · Windows 10 and 11 (64-bit) · Published by SCAFFApps
+Version 1.0.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
 
 The **[handbook](Text%20Share%20Handbook.pdf)** explains everything, with pictures.
 
@@ -24,13 +24,14 @@ The **[handbook](Text%20Share%20Handbook.pdf)** explains everything, with pictur
 
 ## How it works
 
-**One** computer keeps the history. The others run the same app and connect to it; they find it on the network by
-themselves. Phones, tablets and computers without the app open its address in a browser.
+**One** computer keeps the history. The other computers run the same app, and Android phones run Text Share for
+Android; they find it on the network by themselves. iPhones, tablets and computers without the app open its address
+in a browser.
 
 ```
-  laptop  (app) ──┐
-  laptop  (app) ──┼──▶  the computer that keeps the history  (app)
-  phone (browser) ┘
+  laptop          (app) ──┐
+  Android phone   (app) ──┼──▶  the computer that keeps the history  (app)
+  iPhone      (browser) ──┘
 ```
 
 Once set up, the app waits in the tray when its window is closed, so it can show what others share.
@@ -42,6 +43,7 @@ Download from the [Releases page](https://github.com/Rady193/text-share/releases
 | File | What it is |
 |---|---|
 | `Text-Share-1.0.0-portable.exe` | The app for Windows, in one file. Nothing is installed and no administrator permission is needed: copy it anywhere (a USB stick works too) and double-click it. Use the same file on every computer. |
+| `Text-Share-1.0.0.apk` | Text Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** at the bottom of its page in the phone's browser. |
 | `Text-Share-Handbook-1.0.0.pdf` | The handbook. |
 | `textshare.py` | Text Share as a plain server, for Mac and Linux: `python3 textshare.py` (Python 3.10 or newer, nothing else) keeps the history there, and every device uses a browser. |
 | `THIRD-PARTY-NOTICES.txt` | The licences of the parts the Windows app carries inside it. |
@@ -88,7 +90,10 @@ netsh advfirewall firewall add rule name="Text Share search" dir=in action=allow
 - **Tray icon**: click to open; right-click for Start with Windows, Change setup and Quit.
 - **Finds the other computers by itself**, and follows the computer that keeps the history if its address changes.
 - **Arabic and other right-to-left text** reads right to left, line by line.
-- **Phones and browsers** work too, without the app.
+- **Text Share for Android**: the same history on the phone, notifications with Copy and Save while the app is
+  closed (no Google services, no internet: one connection kept open to the computer that keeps the history), and
+  Android's **Share** menu: share a link, a text, a photo or a PDF from any app to Text Share.
+- **iPhones and other browsers** use the same address, without notifications.
 
 ## Keyboard shortcuts
 
@@ -143,6 +148,12 @@ You need Windows and Python 3.10 or newer (the release is built with Python 3.14
 - Produce the portable app, `textshare.py` and `THIRD-PARTY-NOTICES.txt` in the `release` folder: `py build.py`.
   The first run makes a build environment in `C:\venvs\textshare-build` with the versions it needs. The build prints
   each file's SHA-256 checksum and saves the list in `release\SHA256.txt`.
+- The Android app is built by the same `py build.py`, when the phone-app tools are on the PC (a JDK 17 and the
+  Android SDK with `platforms;android-34` and `build-tools;34.0.0`, in `%LOCALAPPDATA%\ScaffERP-android-tools`): it
+  writes `android\assets\setup.html` (`android\make_setup.py`), runs `android\build.ps1` (no Gradle), packs the APK
+  into the `.exe` and copies it to `release`. The first build makes the signing key,
+  `%LOCALAPPDATA%\ScaffERP-android-tools\textshare-release.keystore`: **keep it and back it up**, since Android
+  installs an update over the app only when it is signed with the same key.
 - Produce the handbook (`Text Share Handbook.pdf`, and a copy in `release`):
   `C:\venvs\textshare-build\Scripts\python.exe handbook\build_handbook.py`. It retakes the pictures from the real
   pages with a made-up history; `--no-shots` keeps the pictures as they are.
@@ -155,6 +166,7 @@ You need Windows and Python 3.10 or newer (the release is built with Python 3.14
 | `app.py` | The Windows app around it: the window, the setup, the tray icon, the pop-ups, copying and saving. |
 | `build.py` | Packs the app into the portable `.exe`. |
 | `build/` | The icon (`icon.svg`, and `make_icon.py`, which draws `icon.png` and `icon.ico`). |
+| `android/` | Text Share for Android: Java sources (`src/`), resources, the setup page (`assets/`, made by `make_setup.py`) and `build.ps1`. |
 | `handbook/` | The handbook: `handbook.html`, its pictures, and `build_handbook.py`. |
 | `Text Share.cmd` | Runs the plain server from the source. |
 | `RELEASE-NOTES.md` | What changed in each version. |

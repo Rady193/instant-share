@@ -44,6 +44,16 @@ FULL_LIMIT = 64 * 1024           # items longer than this come as a preview in t
 PREVIEW = 4000                   # characters of a long item's preview
 
 
+def android_app():
+    """The Android app (Text-Share.apk), if this copy of Text Share carries one: packed into the .exe, or built
+    next to the source (android/build)."""
+    for folder in ([Path(sys._MEIPASS) / "android"] if FROZEN else []) + [Path(__file__).resolve().parent / "android" / "build"]:
+        apk = folder / "Text-Share.apk"
+        if apk.is_file():
+            return apk
+    return None
+
+
 def now_ms():
     return int(time.time() * 1000)
 
@@ -128,6 +138,9 @@ class Store:
         self.lock = threading.Lock()
         self.boot = secrets.token_hex(4)    # a restart changes the revision, so every page reloads its list
         self.changes = 0
+        self.news = threading.Condition()   # wakes the devices waiting for something new (long polls)
+        self.waiting = {}                   # device id -> how many of its requests are waiting right now
+        self.closed = False
         self.seen = {r[0]: {"name": r[1], "kind": r[2], "seen": r[3], "saved": r[3]}
                      for r in self.db.execute("SELECT id, name, kind, last_seen FROM devices")}
 
@@ -154,7 +167,7 @@ class Store:
     def devices(self, me=""):
         now = now_ms()
         out = [{"id": i, "name": d["name"], "kind": d["kind"], "seen": d["seen"], "me": i == me,
-                "online": now - d["seen"] < ONLINE_MS}
+                "online": now - d["seen"] < ONLINE_MS or self.waiting.get(i, 0) > 0}
                for i, d in list(self.seen.items()) if now - d["seen"] < FORGET_MS]
         out.sort(key=lambda d: (not d["online"], d["name"].lower()))
         return {"now": now, "devices": out}
@@ -213,8 +226,40 @@ class Store:
                                 (item_id, key)).fetchone()
         return r
 
-    def events(self, me, after):
-        """For the app on a device: what others shared for it since `after` (the newest id it has seen)."""
+    def changed(self):
+        """Something was added or deleted: new revision, and the waiting devices look again."""
+        with self.news:
+            self.changes += 1
+            self.news.notify_all()
+
+    def events(self, me, after, wait=0):
+        """For the app on a device: what others shared for it since `after` (the newest id it has seen). With
+        `wait` (seconds, up to 50) the answer waits until there is something, or the time is up: the phone and the
+        computers keep one such request open and so hear of a share the moment it is made. A device waiting like
+        that counts as online."""
+        end = time.monotonic() + min(max(wait, 0), 50)
+        device = me if DEVICE_ID.fullmatch(me or "") else None
+        if device:
+            with self.news:
+                self.waiting[device] = self.waiting.get(device, 0) + 1
+        try:
+            while True:
+                before = self.changes
+                answer = self._events(me, after)
+                left = end - time.monotonic()
+                if answer["items"] or after is None or left <= 0 or self.closed:
+                    return answer
+                with self.news:
+                    if self.changes == before and not self.closed:
+                        self.news.wait(left)
+        finally:
+            if device:
+                with self.news:
+                    self.waiting[device] -= 1
+                if device in self.seen:
+                    self.seen[device]["seen"] = now_ms()
+
+    def _events(self, me, after):
         params = self._me(me)
         with self.lock:
             newest = self.db.execute(f"SELECT COALESCE(MAX(id), 0) FROM items WHERE {VISIBLE}", params).fetchone()[0]
@@ -245,7 +290,7 @@ class Store:
                 (now_ms(), device, text, sender, recipients, fname, ftype, len(fdata) if file else None,
                  secrets.token_urlsafe(12) if file else None, fdata))
             self.db.commit()
-            self.changes += 1
+            self.changed()
             return self._summary(cur.lastrowid), False
 
     def _summary(self, item_id):
@@ -260,11 +305,15 @@ class Store:
                                    [item_id] + self._me(me)).rowcount
             self.db.commit()
             if gone:
-                self.changes += 1
+                self.changed()
             return gone > 0
 
     def close(self):
-        self.db.close()
+        with self.news:
+            self.closed = True
+            self.news.notify_all()
+        with self.lock:
+            self.db.close()
 
 
 # ---------------------------------------------------------------- who may ask
@@ -403,6 +452,12 @@ class Handler(BaseHTTPRequestHandler):
             ctype = "application/vnd.microsoft.portable-executable" if FROZEN else "text/x-python; charset=utf-8"
             self.reply(200, APP_FILE.read_bytes(), ctype,
                        [("Content-Disposition", f'attachment; filename="{APP_FILE.name}"')])
+        elif path == "/download/android":   # the phone app, for phones on the same network
+            apk = android_app()
+            if not apk:
+                return self.fail(404, "The Android app is not included in this copy of Text Share.", False)
+            self.reply(200, apk.read_bytes(), "application/vnd.android.package-archive",
+                       [("Content-Disposition", 'attachment; filename="Text-Share.apk"')])
         elif m := re.fullmatch(r"/files/(\d+)/([A-Za-z0-9_-]+)(?:/[^/]*)?", path):
             found = store.get_file(int(m[1]), m[2])
             if not found:
@@ -422,7 +477,7 @@ class Handler(BaseHTTPRequestHandler):
             port = self.server.server_port
             addresses = [f"http://{h}:{port}/" for h in [socket.gethostname(), *lan_addresses()]]
             self.reply(200, {"server": socket.gethostname(), "version": VERSION, "you": ip, "name": name,
-                             "addresses": addresses, "id": me})
+                             "addresses": addresses, "id": me, "android": android_app() is not None})
         elif path == "/api/items":
             me = self.who()
             q = qs.get("q", [""])[0].strip()[:200]
@@ -443,8 +498,9 @@ class Handler(BaseHTTPRequestHandler):
             me = self.who()
             if not me:
                 return self.fail(400, "Say which device is asking.")
-            after = qs.get("after", [""])[0]
-            self.reply(200, store.events(me, int(after) if after.isdigit() else None))
+            after, wait = qs.get("after", [""])[0], qs.get("wait", ["0"])[0]
+            self.reply(200, store.events(me, int(after) if after.isdigit() else None,
+                                         int(wait) if wait.isdigit() else 0))
         else:
             self.fail(404, "Not found.", api)
 
@@ -903,13 +959,16 @@ footer a:hover { color: var(--accent) }
 
 @media (max-width: 860px) {
   html, body { height: auto }
-  main { grid-template-columns: 1fr }
+  main { grid-template-columns: minmax(0, 1fr) }      /* never wider than the phone */
+  .head { flex-wrap: wrap; row-gap: 6px }
+  .acts { flex-wrap: wrap }
   #editor { min-height: 38vh }
   .scroll { overflow: visible }
   .top { flex-wrap: wrap; row-gap: 2px }
   .status { order: 3; width: 100% }
   .me .lbl, .meta { display: none }
 }
+@media (pointer: coarse) { kbd { display: none } }
 @media (prefers-reduced-motion: reduce) { .item.fresh { animation: none } #toast, .btn, .item { transition: none } }
 </style>
 </head>
@@ -1011,7 +1070,25 @@ let targets = new Set();          // the devices chosen; none = everyone
 try { targets = new Set(JSON.parse(saved.get("to", "[]"))); } catch {}
 let attachment = null;            // {name, type, size, data (base64), url}
 const nodes = new Map();          // item id -> its card (items never change, so a card is made once)
-const app = () => (window.pywebview && window.pywebview.api) || null;
+/* Inside the Android app, its own side answers through window.TextShareAndroid: quick calls answer at once,
+   the ones that fetch something answer later through textShareDone(call, answer). */
+const android = window.TextShareAndroid || null;
+let androidCalls = 0;
+const androidWaiting = {};
+window.textShareDone = (call, answer) => { const r = androidWaiting[call]; delete androidWaiting[call]; if (r) r(answer); };
+const androidAsk = (method, ...args) => new Promise((resolve) => {
+  const call = ++androidCalls;
+  androidWaiting[call] = resolve;
+  android[method](call, ...args);
+});
+const androidApp = android && {
+  copy_image: (url) => androidAsk("copyImage", url),
+  save_file: (url, name) => androidAsk("saveFile", url, name),
+  set_theme: (theme) => Promise.resolve(android.setTheme(theme)),
+  set_name: (name) => Promise.resolve(android.setName(name)),
+  open_setup: () => Promise.resolve(android.openSetup()),
+};
+const app = () => (window.pywebview && window.pywebview.api) || androidApp || null;
 
 /* ---------------- talking to the server ---------------- */
 
@@ -1036,6 +1113,9 @@ async function hello() {
     $("#where").textContent = h.server;
     const a = h.addresses || [];
     $("#others").textContent = a.length ? "Phones and browsers: " + a.slice(0, 2).map((u) => u.replace(/\/$/, "")).join("  or  ") : "";
+    const get = document.querySelector('footer a[href="/download"]');
+    if (android) get.hidden = true;                      // in the Android app already
+    else if (h.android && /Android/i.test(navigator.userAgent)) { get.href = "/download/android"; get.textContent = "Get the Android app"; }
     if (!device) {    // the app says which computer this is; a browser goes by the network's name for it
       device = params.get("me") || h.name || h.you || "this device";
       saved.set("device", device);
@@ -1520,12 +1600,31 @@ $("#theme").addEventListener("click", () => {
   tellApp();
 });
 
+/* Shared from another app on the phone (Android's Share menu): into the editor, ready to share. */
+function sharedIn(s) {
+  if (!s) return;
+  if (s.text) setEditor(editor.value.trim() ? editor.value.replace(/\s*$/, "") + "\n" + s.text : s.text);
+  if (s.file) {
+    if (!ACCEPT.includes(s.file.type)) toast("Only photos (PNG, JPEG, GIF, WebP) and PDF files can be shared.", true);
+    else if (s.file.size > FILE_MAX) toast(`That file is ${size(s.file.size)}. Photos and PDFs can be up to 1 MB.`, true);
+    else {
+      attachment = { name: s.file.name, type: s.file.type, size: s.file.size, data: s.file.data,
+                     url: "data:" + s.file.type + ";base64," + s.file.data };
+      showAttachment();
+    }
+  }
+  editor.focus();
+  toast("Ready to share: choose who should see it, then press Share.");
+}
+window.textShareIncoming = sharedIn;
+
 editor.value = saved.get("draft", "");
 applyWrap();
 updateCount();
 showMe();
 showTargets();
 hello().finally(() => { poll(); loadDevices(); });
+if (android) { try { sharedIn(JSON.parse(android.takeShared() || "null")); } catch {} }
 setInterval(loadDevices, 5000);
 inApp();
 </script>

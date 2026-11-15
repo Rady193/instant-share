@@ -13,3 +13,6 @@ desktop.ini
 # OneDrive / sync conflict copies
 *-ROG.*
 *-DESKTOP-*.*
+
+# Android build output
+android/build/

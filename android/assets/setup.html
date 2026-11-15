@@ -1,0 +1,155 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Text Share</title><script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "light" ? "light" : "dark";</script><style>
+:root { --bg: #121314; --surface: #191a1b; --surface-2: #202122; --surface-3: #2a2b2c; --line: #2a2b2c;
+  --line-strong: #333536; --text: #cccccc; --dim: #8c8c8c; --accent: #48a0c7; --accent-strong: #297aa0;
+  --accent-hover: #2b7da3; --accent-soft: rgba(57,148,188,.16); --danger: #f48771; --danger-fill: #c74e39;
+  --ok: #73c991; color-scheme: dark }
+:root[data-theme="light"] { --bg: #eef0f4; --surface: #ffffff; --surface-2: #f4f5f8; --surface-3: #e7e9ef;
+  --line: #dfe2e9; --line-strong: #c9cdd8; --text: #171a21; --dim: #667085; --accent: #3f63f0;
+  --accent-strong: #4a6cf5; --accent-hover: #3f63f0; --accent-soft: rgba(63,99,240,.1); --danger: #e5484d;
+  --danger-fill: #e5484d; --ok: #1a7f37; color-scheme: light }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+  font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px }
+input[type="checkbox"] { accent-color: var(--accent-strong) }
+.wrap { width: min(860px, 100%) }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 14px; margin-bottom: 24px }
+h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; letter-spacing: -.01em }
+.lead { margin: 0 0 24px; color: var(--dim); font-size: 14px; max-width: 640px }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px }
+.card.now { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
+.card h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600 }
+.card p { margin: 0 0 14px; color: var(--dim) }
+.tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--accent-strong);
+  color: #fff; font-size: 11px; font-weight: 600; vertical-align: 1px }
+button { font: inherit; color: inherit; cursor: pointer }
+.btn { display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 12px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font-weight: 500;
+  transition: background .12s, border-color .12s }
+.btn:hover { background: var(--surface-3); border-color: var(--line-strong) }
+.btn:disabled { opacity: .55; cursor: default }
+.btn.primary { padding: 0 16px; color: #fff; background: var(--accent-strong); border-color: transparent; font-weight: 600 }
+.btn.primary:hover { background: var(--accent-hover) }
+.link { background: none; border: 0; padding: 0; color: var(--dim); text-decoration: underline; font-size: 12px }
+.link:hover { color: var(--accent) }
+.chk { display: flex; gap: 8px; align-items: center; margin: 16px 0 0; color: var(--dim); cursor: pointer }
+.found { display: grid; gap: 6px; margin: 0 0 10px }
+.found button { display: flex; justify-content: space-between; align-items: center; width: 100%; height: 36px; padding: 0 12px;
+  text-align: left; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px }
+.found button:hover { border-color: var(--accent); background: var(--surface-3) }
+.found small { color: var(--dim) }
+.status { color: var(--dim); margin: 0 0 10px }
+label.small { display: block; margin: 14px 0 6px; color: var(--dim) }
+.row { display: flex; gap: 8px }
+input:not([type]) { flex: 1; min-width: 0; height: 32px; padding: 0 10px; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; color: var(--text); font: inherit; outline: none;
+  transition: border-color .12s, box-shadow .12s }
+input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
+.err { color: var(--danger); margin: 10px 0 0; min-height: 1em }
+.foot { margin-top: 22px; color: var(--dim); font-size: 12px; display: flex; gap: 14px; align-items: center }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-strong); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px }
+@keyframes spin { to { transform: rotate(1turn) } }
+.center { text-align: center; max-width: 520px }
+.center .brand { justify-content: center }
+.center .row { justify-content: center; margin-top: 20px }
+@media (max-width: 760px) { .cards { grid-template-columns: 1fr } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none } }
+
+.wrap { padding-top: 8px }
+.card { padding: 18px }
+.foot { flex-wrap: wrap }
+@media (max-width: 520px) { body { justify-content: flex-start; padding: 28px 18px } h1 { font-size: 21px } }
+</style></head><body>
+<div class="wrap">
+  <div class="brand"><svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5b2c83"/><path d="M7 12h17l-4-4M25 20H8l4 4" fill="none" stroke="#f0c33c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Text Share</div>
+  <div id="away" hidden>
+    <h1 id="awayTitle"></h1>
+    <p class="lead" id="awayText"></p>
+    <div class="row"><button class="btn primary" id="retry">Try again</button>
+      <button class="btn" id="other">Choose another computer</button></div>
+  </div>
+  <div id="choose" hidden>
+    <h1>Set up Text Share on this phone</h1>
+    <p class="lead">Text Share keeps its history on one computer on your Wi-Fi. Choose it below: Text Share must be
+    running there, and this phone on the same Wi-Fi.</p>
+    <section class="card">
+      <h2>The computer that keeps the history</h2>
+      <p class="status" id="status"><span class="spin"></span>Looking for Text Share on your Wi-Fi…</p>
+      <div class="found" id="found"></div>
+      <button class="link" id="again" hidden>Look again</button>
+      <label class="small" for="addr">Not listed? Its name or address:</label>
+      <div class="row"><input id="addr" placeholder="e.g. OFFICE-PC or 192.168.1.20" autocomplete="off"
+        autocapitalize="off" spellcheck="false"><button class="btn" id="go">Connect</button></div>
+      <p class="err" id="err"></p>
+    </section>
+  </div>
+  <div class="foot"><span>This phone: <b id="me"></b></span><span>Text Share 1.0.0 · SCAFFApps</span>
+    <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
+</div>
+<script>
+const A = window.TextShareAndroid;
+const $ = (s) => document.querySelector(s);
+const q = new URLSearchParams(location.search);
+let calls = 0;
+const waiting = {};
+window.textShareDone = (call, answer) => { const r = waiting[call]; delete waiting[call]; if (r) r(answer); };
+const ask = (method, ...args) => new Promise((resolve) => { const call = ++calls; waiting[call] = resolve; A[method](call, ...args); });
+const info = JSON.parse(A.info());
+$("#me").textContent = info.me;
+$("#back").hidden = !info.host;
+const busy = (on) => document.querySelectorAll("#choose button, #choose input").forEach((b) => { b.disabled = on; });
+const fail = (r) => { busy(false); $("#err").textContent = (r && r.error) || "Something went wrong."; };
+
+async function find() {
+  $("#again").hidden = true;
+  $("#found").textContent = "";
+  $("#status").innerHTML = '<span class="spin"></span>Looking for Text Share on your Wi-Fi…';
+  const r = await ask("find");
+  const found = (r && r.found) || [];
+  $("#status").textContent = found.length ? "Found on your Wi-Fi:"
+    : "None found. Is Text Share running on the computer that keeps the history, and this phone on the same Wi-Fi?";
+  for (const f of found) {
+    const b = document.createElement("button");
+    const left = document.createElement("span"), right = document.createElement("small");
+    left.textContent = f.name;
+    right.textContent = (info.host && info.host.toLowerCase() === f.name.toLowerCase() ? "connected · " : "") + f.address;
+    b.append(left, right);
+    b.addEventListener("click", async () => {
+      busy(true); $("#err").textContent = "";
+      const res = await ask("join", f.name, f.address, f.port);
+      if (!res.ok) fail(res);
+    });
+    $("#found").append(b);
+  }
+  $("#again").hidden = false;
+}
+
+function choose() { $("#away").hidden = true; $("#choose").hidden = false; find(); }
+$("#again").addEventListener("click", find);
+const go = async () => {
+  if (!$("#addr").value.trim()) { $("#addr").focus(); return; }
+  busy(true); $("#err").textContent = "";
+  const res = await ask("connect", $("#addr").value);
+  if (!res.ok) { fail(res); $("#addr").focus(); }
+};
+$("#go").addEventListener("click", go);
+$("#addr").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+$("#back").addEventListener("click", () => A.back());
+$("#retry").addEventListener("click", () => { $("#retry").disabled = true; $("#retry").textContent = "Trying…"; A.retry(); });
+$("#other").addEventListener("click", choose);
+
+if (q.get("unreachable") && info.host) {        // set up, but the computer does not answer: say so, try again by itself
+  $("#awayTitle").textContent = "Can't reach " + info.host;
+  $("#awayText").textContent = "Text Share must be running on " + info.host + ", and this phone must be on the same "
+    + "Wi-Fi. Trying again every few seconds…";
+  $("#away").hidden = false;
+  setTimeout(() => A.retry(), 6000);
+} else {
+  choose();
+}
+</script>
+</body></html>

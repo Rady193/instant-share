@@ -26,6 +26,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 import traceback
 import urllib.request
 import winreg
@@ -756,14 +757,20 @@ class App:
         threading.Thread(target=self.questions, args=(base, self.listening), daemon=True, name="questions").start()
 
     def questions(self, base, turn):
-        """Every few seconds: anything new for this device? (The asking also keeps it on the others' lists.)"""
+        """Anything new for this device? One question kept open (the computer that keeps the history answers the
+        moment something arrives, or after 25 s), asked again at once. It also keeps this device on the others'
+        lists as online."""
         after = None
         while turn == self.listening and not self.quitting:
+            started = time.monotonic()
             try:
-                answer = self.ask("/api/events" + (f"?after={after}" if after is not None else ""), base)
+                answer = self.ask("/api/events" + (f"?after={after}&wait=25" if after is not None else ""), base,
+                                  timeout=45)
                 if after is not None and answer["items"] and turn == self.listening:
                     self.pop_up(base, answer["items"])
                 after = answer["newest"] if after is None else max(after, answer["newest"])
+                if answer["items"] or time.monotonic() - started > 1:
+                    continue                     # straight back to waiting
             except (OSError, ValueError, KeyError):
                 pass                             # away for now: the page says so; asked again shortly
             threading.Event().wait(EVERY)

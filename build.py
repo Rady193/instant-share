@@ -10,6 +10,7 @@ textshare.py itself, for Mac and Linux (python3 textshare.py), and the files' SH
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -110,6 +111,20 @@ def notices(v, target):
                   for p in packages), encoding="utf-8")
 
 
+def android(v, release):
+    """Text Share for Android (android/build.ps1), when the phone-app tools are on this PC; else the build goes on
+    without it, and says so."""
+    tools = Path(os.environ.get("LOCALAPPDATA", "")) / "ScaffERP-android-tools"
+    if not (tools / "sdk").is_dir():
+        print(f"!! No Android tools in {tools}: building without the Android app.")
+        return None
+    run(PY, HERE / "android" / "make_setup.py")
+    run("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", HERE / "android" / "build.ps1", "-Tools", tools)
+    apk = HERE / "android" / "build" / "Text-Share.apk"
+    shutil.copy2(apk, release / f"Text-Share-{v}.apk")
+    return apk
+
+
 def main():
     if sys.platform != "win32":
         sys.exit("build.py makes the Windows program; on Mac or Linux just run:  python3 textshare.py")
@@ -125,12 +140,14 @@ def main():
 
     release = HERE / "release"
     release.mkdir(exist_ok=True)
+    apk = android(v, release)                                  # the phone app first: the .exe hands it to phones
     run(PY, "-m", "PyInstaller", "--noconfirm", "--clean", "--log-level", "WARN",
         "--onefile", "--windowed", "--name", exe_name[:-4],
         "--icon", HERE / "build" / "icon.ico",
         "--add-data", f"{HERE / 'build' / 'icon.png'};build", "--add-data", f"{HERE / 'build' / 'icon.ico'};build",
         "--exclude-module", "tkinter", "--exclude-module", "playwright", "--exclude-module", "pystray",
         "--exclude-module", "numpy", "--exclude-module", "PIL._avif", "--exclude-module", "PIL.AvifImagePlugin",   # not used; numpy alone is 24 MB
+        *(["--add-data", f"{apk};android"] if apk else []),
         "--version-file", version_file(v, exe_name),
         "--distpath", release, "--workpath", WORK, "--specpath", WORK,
         HERE / "app.py")
@@ -139,7 +156,7 @@ def main():
 
     print(f"\nText Share {v}:")
     lines = []
-    for name in (exe_name, "textshare.py"):
+    for name in [exe_name] + ([f"Text-Share-{v}.apk"] if apk else []) + ["textshare.py"]:
         data = (release / name).read_bytes()
         digest = hashlib.sha256(data).hexdigest().upper()
         size = f"{len(data) / 1048576:.1f} MB" if len(data) > 1048576 else f"{len(data) / 1024:.0f} KB"

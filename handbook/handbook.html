@@ -76,8 +76,8 @@
   <h1>Text Share</h1>
   <div class="sub">Handbook</div>
   <div class="line"></div>
-  <p>Pass text, photos and PDFs between the computers on your own network. Share on one, and the others have it at once, with a pop-up by the clock and a Copy button. Choose who sees it. No internet, no accounts.</p>
-  <div class="meta">Version 1.0.0 · Windows 10 and 11 (64-bit) · Published by SCAFFApps</div>
+  <p>Pass text, photos and PDFs between the computers and Android phones on your own network. Share on one, and the others have it at once, with a pop-up or a notification and a Copy button. Choose who sees it. No internet, no accounts.</p>
+  <div class="meta">Version 1.0.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps</div>
 </div>
 
 <section>
@@ -90,7 +90,7 @@
     <li><b>5</b> Who should see it</li>
     <li><b>6</b> The history</li>
     <li><b>7</b> Pop-ups by the clock</li>
-    <li><b>8</b> Phones and browsers</li>
+    <li><b>8</b> The Android app, and browsers</li>
     <li><b>9</b> The tray icon and keeping it running</li>
     <li><b>10</b> Options, shortcuts and files</li>
     <li><b>11</b> Privacy and security</li>
@@ -99,19 +99,20 @@
 
   <h3 style="margin-top:12mm">1. What Text Share is</h3>
   <p class="lead">Text Share passes text, photos and PDFs between the computers on your own network: commands, addresses, links, notes, code, a photo of a drawing, a form to sign. Anything you would otherwise e-mail to yourself, carry on a USB stick or type again.</p>
-  <p><strong>One</strong> computer keeps the history. The others run the same app and connect to it; they find it on the network by themselves. Phones and computers without the app use a browser.</p>
+  <p><strong>One</strong> computer keeps the history. The other computers run the same app and connect to it, and Android phones run Text Share for Android; they find it on the network by themselves. Anything else (an iPhone, a computer without the app) uses a browser.</p>
   <div class="flow">
     <div class="many">
       <div class="box">Laptop<small>Text Share app</small></div>
       <div class="box">Another computer<small>Text Share app</small></div>
-      <div class="box">Phone or tablet<small>any browser</small></div>
+      <div class="box">Android phone<small>Text Share for Android</small></div>
+      <div class="box">iPhone, tablet<small>any browser</small></div>
     </div>
     <div class="arrow">→</div>
     <div class="hub"><b>The computer that keeps the history</b><span>Text Share app · answers only your own network · no internet needed</span></div>
   </div>
   <ul>
     <li><strong>Share:</strong> write, paste or drop a file and press Share. The other devices have it within a few seconds.</li>
-    <li><strong>Be told:</strong> on every computer with the app, a pop-up by the clock shows who shared what, with a Copy button.</li>
+    <li><strong>Be told:</strong> on every computer with the app, a pop-up by the clock shows who shared what, with a Copy button; on an Android phone, a notification does.</li>
     <li><strong>Choose who sees it:</strong> everyone, or only the devices you tick.</li>
     <li><strong>Keep:</strong> everything shared stays in a history you can search, until you delete it.</li>
   </ul>
@@ -123,6 +124,7 @@
   <table class="wrap">
     <tr><th>File</th><th>What it is</th></tr>
     <tr><td>Text-Share-1.0.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere, including a USB stick, and double-click it. Use the same file on every computer.</td></tr>
+    <tr><td>Text-Share-1.0.0.apk</td><td>Text Share for Android 10 and newer (section 8). Phones on the same Wi-Fi can also get it straight from the computer that keeps the history.</td></tr>
     <tr><td>textshare.py</td><td>Text Share as a plain server, for Mac and Linux: <code>python3 textshare.py</code> keeps the history there, and every device uses a browser.</td></tr>
     <tr><td>Text-Share-Handbook-1.0.0.pdf</td><td>This handbook.</td></tr>
   </table>
@@ -264,24 +266,34 @@
 </section>
 
 <section>
-  <h2>8. Phones and browsers</h2>
+  <h2>8. The Android app, and browsers</h2>
   <div class="pair">
     <figure>
-      <img src="img/phone.png" alt="Text Share on a phone" style="width:78%; margin:0 auto">
-      <figcaption>On a phone, the editor sits above the history.</figcaption>
+      <img src="img/android-setup.png" alt="Setting up Text Share on a phone">
+      <figcaption>The first start: OFFICE-PC found on the Wi-Fi.</figcaption>
     </figure>
-    <div>
-      <p>Phones, tablets and computers without the app use a browser on the same network. The address is at the bottom of the Text Share window, under <strong>Phones and browsers</strong>, for example <code>http://OFFICE-PC:8765</code>. Open it, then bookmark it or add it to the home screen.</p>
-      <p>In a browser, everything works as in the app except:</p>
-      <ul>
-        <li>no pop-ups: the page shows new items while it is open;</li>
-        <li><strong>Save</strong> downloads the file the browser's usual way;</li>
-        <li>photos are copied from the full-size picture, the browser's usual way.</li>
-      </ul>
-      <p>A browser counts as a device of its own, named once at the top of the page, and appears in the others' lists while the page is open.</p>
-      <div class="tip"><b>If Copy does nothing on a phone</b>Press <strong>Edit</strong> to put the text in the editor, then select it there and copy it the phone's usual way.</div>
-    </div>
+    <figure>
+      <img src="img/android-app.png" alt="Text Share on a phone">
+      <figcaption>The same history as on the computers.</figcaption>
+    </figure>
   </div>
+  <h3>Installing it</h3>
+  <ol class="steps">
+    <li>On the phone, on the same Wi-Fi, open the address shown at the bottom of the Text Share window on a computer (for example <code>http://OFFICE-PC:8765</code>) in the browser, and tap <strong>Get the Android app</strong> at the bottom. Or copy <code>Text-Share-1.0.0.apk</code> to the phone.</li>
+    <li>Open the downloaded file. Android asks to allow installing apps from that source the first time: allow it, then <strong>Install</strong>.</li>
+    <li>Open Text Share and tap the computer that keeps the history. Allow notifications, and allow Text Share to run in the background (Android asks both, once): that is what lets shares arrive at once.</li>
+  </ol>
+  <h3>Using it</h3>
+  <ul>
+    <li>Everything works as on a computer: write, add a photo or a PDF (<strong>File</strong>), choose who sees it (<strong>To</strong>), <strong>Share</strong>.</li>
+    <li><strong>From any other app</strong>: tap <strong>Share</strong> there (on a link, a text, a photo, a PDF) and choose <strong>Text Share</strong>. It lands in the editor, ready to share.</li>
+    <li><strong>Notifications</strong>: when someone shares something with the phone, a notification shows who, a preview (the picture, for a photo), and buttons: <strong>Copy</strong> for text, <strong>Copy</strong> or <strong>Copy photo</strong> for a photo, <strong>Save</strong> (to Downloads) and <strong>Open</strong> for a PDF. They come with the app closed too.</li>
+    <li>A small "Connected to OFFICE-PC" notice stays while Text Share listens; Android requires it. Tap it to hide it for good: shares still arrive.</li>
+    <li>The phone's <strong>Back</strong> button puts Text Share away; it keeps listening.</li>
+  </ul>
+  <h3>iPhones and other browsers</h3>
+  <p>iPhones, tablets and computers without the app open the same address in their browser, and bookmark it (or add it to the home screen). Everything works except notifications: the page shows new items while it is open. <strong>Save</strong> downloads the file the browser's usual way.</p>
+  <div class="tip"><b>Why there is no iPhone app</b>An iPhone app may only be woken by Apple's internet service, and Text Share never uses the internet. On an iPhone, keep the page open in the browser to see shares as they come.</div>
 </section>
 
 <section>
@@ -376,6 +388,8 @@ netsh advfirewall firewall add rule name="Text Share search" dir=in action=allow
     </td></tr>
     <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Text Share was quit there. Start it again. The window reconnects by itself, and what you typed stays in the editor.</td></tr>
     <tr><td>No pop-ups</td><td>Text Share must be running on this computer, in its window or in the tray. Check the tray (click the <strong>^</strong> by the clock). Windows' Do not disturb does not stop them; full-screen games and presentations may cover them.</td></tr>
+    <tr><td>No notifications on the phone</td><td>Check that notifications are allowed for Text Share (the phone's Settings &gt; Apps &gt; Text Share &gt; Notifications), and that its battery use is <strong>Unrestricted</strong> (same place &gt; Battery). Some phones also stop apps they think are unused: open Text Share once after restarting the phone. The phone must be on the same Wi-Fi as the computer that keeps the history.</td></tr>
+    <tr><td>The phone can't install the app</td><td>Allow installing unknown apps for the browser or Files app you opened it with, when Android asks. The app needs Android 10 or newer.</td></tr>
     <tr><td>A device is missing from "Who should see it"</td><td>It appears once Text Share has run on it (or a browser has opened the page) while connected to the same computer. A device unused for 30 days leaves the list.</td></tr>
     <tr><td>"That file is … Photos and PDFs can be up to 1 MB"</td><td>Share a smaller copy (section 4).</td></tr>
     <tr><td>The program does not start, or disappears</td><td>Choose <strong>More info</strong> then <strong>Run anyway</strong> on the SmartScreen message. If your antivirus moved the file away, restore it and mark it as allowed.</td></tr>

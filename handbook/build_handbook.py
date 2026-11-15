@@ -149,6 +149,16 @@ window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise
 """
 
 
+ANDROID = """
+window.TextShareAndroid = new Proxy({}, { get: (_, m) => (...a) => {
+  const reply = (call, answer) => setTimeout(() => window.textShareDone(call, answer), 100);
+  if (m === "info") return JSON.stringify({ me: "PHONE", host: "", version: "1.0.0", theme: "dark" });
+  if (m === "find") return reply(a[0], { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765 }], host: "" });
+  if (m === "takeShared") return null;
+} });
+"""
+
+
 def frame(path, theme, title, scale):
     """Draws a window title bar (as Windows draws it for the app) above a picture of the window's inside."""
     inside = Image.open(path).convert("RGB")
@@ -242,11 +252,29 @@ def shots(browser, store):
                                                 "width": area["width"] + 20, "height": area["height"] + 16})
     pg.context.close()
 
-    # on a phone
-    pg = page(390, 844, "dark", 2)
+    # the Android app: its setup, and the history (a stand-in answers for the app's Java side)
+    phone = dict(viewport={"width": 390, "height": 760}, device_scale_factor=2, is_mobile=True, has_touch=True)
+    ctx = browser.new_context(**phone)
+    ctx.add_init_script(ANDROID)
+    pg = ctx.new_page()
+    pg.goto((ROOT / "android" / "assets" / "setup.html").as_uri() + "?theme=dark")
+    pg.wait_for_selector("#found button")
+    pg.wait_for_timeout(300)
+    pg.screenshot(path=IMG / "android-setup.png")
+    ctx.close()
+    ctx = browser.new_context(**phone, locale="en-GB")
+    ctx.add_init_script(ANDROID)
+    ctx.route("**/api/hello", lambda route: route.fulfill(json={
+        "server": "OFFICE-PC", "version": textshare.VERSION, "you": "192.168.1.31", "name": "PHONE", "id": DEV["PHONE"],
+        "addresses": ["http://OFFICE-PC:8765/", "http://192.168.1.20:8765/"], "android": True}))
+    online(store)
+    pg = ctx.new_page()
+    pg.goto(f"{URL}?app=1&id={DEV['PHONE']}&me=PHONE&theme=dark")
+    pg.wait_for_selector(".item")
+    pg.wait_for_selector("#status.on")
     pg.wait_for_timeout(500)
-    pg.screenshot(path=IMG / "phone.png")
-    pg.context.close()
+    pg.screenshot(path=IMG / "android-app.png")
+    ctx.close()
 
     # the app's setup page (on a laptop, finding OFFICE-PC)
     ctx = browser.new_context(viewport={"width": 1000, "height": 640}, device_scale_factor=1.5)
