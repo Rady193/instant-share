@@ -60,12 +60,14 @@ Function OpenAsUser
 FunctionEnd
 
 ; Instant Share running (this one, or an older single-file copy): it is closed, so its files can be replaced.
+; The old single files are Instant-Share-1.x.x-portable.exe and Text-Share-1.x.x-portable.exe: "Instant-Share-1*",
+; never "Instant-Share-*", which would also close this installer (Instant-Share-Setup-...).
 !macro CloseInstantShare
   nsExec::Exec 'taskkill /IM "${EXE}" /T'
   Sleep 1500
   nsExec::Exec 'taskkill /F /IM "${EXE}" /T'
-  nsExec::Exec 'taskkill /F /IM "Instant-Share-*" /T'
-  nsExec::Exec 'taskkill /F /IM "Text-Share-*" /T'
+  nsExec::Exec 'taskkill /F /IM "Instant-Share-1*" /T'
+  nsExec::Exec 'taskkill /F /IM "Text-Share-1*" /T'
   Sleep 800
 !macroend
 
