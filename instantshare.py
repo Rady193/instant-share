@@ -1834,6 +1834,7 @@ footer { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; padding
 a { color: var(--accent) }                 /* never the browser's own blue */
 footer a { color: var(--dim) }
 .pub { color: var(--text); font-weight: 600 }
+footer .credit { display: inline-flex; flex-wrap: wrap; gap: 4px 16px }   /* the version and the publisher wrap together */
 footer a:hover { color: var(--accent) }
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 8px); opacity: 0; transition: opacity .18s, transform .18s; max-width: min(560px, 90vw); padding: 10px 16px; background: var(--surface-3); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow); pointer-events: none; text-align: center }
 #toast.show { opacity: 1; transform: translate(-50%, 0) }
@@ -2069,7 +2070,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
   <span>The history is kept on <b id="where">the server</b>. No internet needed: only this network.</span>
   <span id="others" title="Phones, tablets and computers without the app: open this in a browser"></span>
   <span class="grow"></span>
-  <span>Instant Share __VERSION__ · Published by <b class="pub">SCAFFApps</b> · www.scaffapps.com</span>
+  <span class="credit"><span>Instant Share __VERSION__</span><span>Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span></span>
   <a class="get-app" href="/download" title="Download Instant Share, to run it on another computer">Get the app</a>
   <a class="change-setup" href="#" hidden title="Which computer keeps the history">Change setup</a>
 </footer>
@@ -2113,7 +2114,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
       <div class="line" id="folderLine" hidden><span class="label"><span class="sub" id="folderPath"></span></span><button id="setFolder" class="btn sm" type="button">Show the history folder</button></div>
     </section>
     <section class="sec"><h3>About</h3>
-      <div class="line"><span class="label">Instant Share __VERSION__<span class="sub">Published by <b class="pub">SCAFFApps</b> · www.scaffapps.com</span><span class="sub" id="setSecure"></span></span><a class="get-app" href="/download">Get the app</a></div>
+      <div class="line"><span class="label">Instant Share __VERSION__<span class="sub">Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span><span class="sub" id="setSecure"></span></span><a class="get-app" href="/download">Get the app</a></div>
       <div class="line" id="updLine" hidden><span class="label">Updates<span class="sub" id="updSub"></span></span><button id="updBtn" class="btn sm" type="button">Check now</button></div>
       <label class="line" id="updAutoLine" hidden><span class="label">Check for updates once a day<span class="sub">Asks GitHub whether a newer version is out; nothing else is sent</span></span><input type="checkbox" class="switch" id="setUpdAuto"></label>
       <div class="line" id="quitLine" hidden><span class="label">Quit Instant Share<span class="sub" id="quitSub">Closes it completely: no more pop-ups until you start it again</span></span><button id="quitApp" class="btn sm" type="button">Quit</button></div>

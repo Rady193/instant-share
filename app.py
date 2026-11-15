@@ -1507,7 +1507,7 @@ SETUP = """
   </div>
   <label class="chk"><input type="checkbox" id="autostart"> Start Instant Share when I sign in to Windows. It waits in
     the tray, ready to show what others share.</label>
-  <div class="foot"><span>This computer: <b id="me"></b></span><span>Instant Share {version} · Published by <b class="pub">SCAFFApps</b> · www.scaffapps.com</span>
+  <div class="foot"><span>This computer: <b id="me"></b></span><span>Instant Share {version}</span><span>Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
@@ -1631,7 +1631,7 @@ REGISTER = """
     <p class="err" id="err"></p>
     <button class="btn primary" id="go" style="width: 100%; height: 38px">Continue</button>
   </div>
-  <p class="lead" style="font-size: 12px; margin: 22px auto 0">Published by <b class="pub">SCAFFApps</b> · www.scaffapps.com</p>
+  <p class="lead" style="font-size: 12px; margin: 22px auto 0">Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</p>
 </div>
 <script>
 {ready}
