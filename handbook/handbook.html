@@ -1,453 +1,598 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <title>Instant Share Handbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:wght@400..800&family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&display=block" rel="stylesheet">
+<link rel="stylesheet" href="brochure.css">
+<link rel="stylesheet" href="handbook.css">
 <style>
-  /* The look of the Multi Screens handbook (light print, accent #4a6cf5), as for every SCAFFApps tool. */
-  * { box-sizing: border-box; }
-  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; color: #1b1f27; font: 10.5pt/1.5 "Segoe UI", system-ui, sans-serif; }
-  h1, h2, h3 { line-height: 1.2; }
-  h2 { margin: 0 0 4mm; padding-bottom: 2.5mm; font-size: 19pt; letter-spacing: -.2pt; border-bottom: .6mm solid #4a6cf5; break-after: avoid; }
-  h3 { margin: 7mm 0 2mm; font-size: 12.5pt; break-after: avoid; }
-  p { margin: 0 0 3mm; }
-  ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
-  li { margin-bottom: 1.2mm; }
-  section { break-before: page; }
-  strong { font-weight: 650; }
-  .lead { font-size: 11.5pt; color: #3a4252; }
-  .muted { color: #667085; }
-
-  .cover { height: 247mm; display: flex; flex-direction: column; justify-content: center; }
-  .cover img { width: 30mm; height: 30mm; margin-bottom: 9mm; }
-  .cover h1 { margin: 0; font-size: 40pt; letter-spacing: -.8pt; }
-  .cover .sub { margin-top: 3mm; font-size: 17pt; color: #4a6cf5; font-weight: 600; }
-  .cover .line { width: 26mm; height: 1.2mm; margin: 10mm 0; background: #4a6cf5; border-radius: 1mm; }
-  .cover p { max-width: 125mm; font-size: 12pt; color: #3a4252; }
-  .cover .meta { margin-top: auto; color: #667085; font-size: 10pt; }
-
-  .toc { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 12mm; }
-  .toc li { display: flex; gap: 3mm; padding: 1.7mm 0; border-bottom: .2mm solid #e3e7f0; break-inside: avoid; margin: 0; }
-  .toc b { width: 7mm; color: #4a6cf5; }
-
-  table { width: 100%; margin: 2mm 0 4mm; border-collapse: collapse; font-size: 9.6pt; break-inside: avoid; }
-  th, td { padding: 1.8mm 2.4mm; text-align: left; vertical-align: top; border-bottom: .2mm solid #e3e7f0; }
-  th { color: #667085; font-size: 8.6pt; font-weight: 650; letter-spacing: .3pt; text-transform: uppercase; background: #f6f8fc; }
-  td:first-child { white-space: nowrap; font-weight: 600; }
-  table.wrap td:first-child { white-space: normal; }
-
-  figure { margin: 3mm 0 5mm; break-inside: avoid; }
-  figure img { display: block; width: 100%; border: .3mm solid #d5dae6; border-radius: 2mm; }
-  figure.narrow img { width: 62%; margin: 0 auto; }
-  figure.mid img { width: 80%; margin: 0 auto; }
-  figure.small img { width: 52%; margin: 0 auto; }
-  figcaption { margin-top: 1.6mm; color: #667085; font-size: 8.8pt; text-align: center; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; align-items: start; }
-  .pair figure { margin: 0; }
-
-  .tip, .warn { margin: 3mm 0 4mm; padding: 3mm 4mm; border-radius: 2mm; break-inside: avoid; }
-  .tip { background: #f1f5ff; border-left: 1.1mm solid #4a6cf5; }
-  .warn { background: #fff7ed; border-left: 1.1mm solid #e8833a; }
-  .tip b, .warn b { display: block; margin-bottom: .6mm; }
-
-  .steps { counter-reset: step; list-style: none; padding: 0; }
-  .steps li { position: relative; padding-left: 10mm; margin-bottom: 2.6mm; break-inside: avoid; }
-  .steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: .2mm; width: 6.4mm; height: 6.4mm; display: grid; place-items: center; color: #fff; background: #4a6cf5; border-radius: 50%; font-size: 9pt; font-weight: 700; }
-
-  kbd { padding: .3mm 1.6mm; background: #f1f3f8; border: .25mm solid #cfd5e2; border-bottom-width: .6mm; border-radius: 1.2mm; font: 9pt "Segoe UI", sans-serif; white-space: nowrap; }
-  code { padding: .2mm 1.2mm; background: #f1f3f8; border-radius: 1mm; font: 9.2pt Consolas, monospace; overflow-wrap: anywhere; }
-  pre.cmd { margin: 2mm 0 4mm; padding: 2.6mm 3.5mm; background: #f1f3f8; border-radius: 1.6mm; font: 9.2pt Consolas, monospace; white-space: pre-wrap; break-inside: avoid; }
-
-  .flow { display: flex; align-items: center; gap: 5mm; margin: 5mm 0 6mm; break-inside: avoid; }
-  .flow .many { display: grid; gap: 2.4mm; }
-  .flow .box { padding: 2.4mm 4mm; border: .35mm solid #d5dae6; border-radius: 2mm; background: #fff; font-size: 9.6pt; }
-  .flow .box small { display: block; color: #667085; font-size: 8.4pt; }
-  .flow .arrow { flex: none; color: #4a6cf5; font-size: 18pt; }
-  .flow .hub { flex: 1; padding: 4mm 5mm; border-radius: 2.4mm; background: #191a1b; color: #ccc; }
-  .flow .hub b { display: block; font-size: 11pt; color: #fff; }
-  .flow .hub span { font-size: 9pt; }
+  /* the welcome page's picture of how the devices connect */
+  .flow { display: grid; grid-template-columns: 1fr 6mm 1.15fr; gap: 2mm; align-items: center }
+  .flow .from { display: flex; flex-direction: column; gap: 2mm }
+  .flow .box { background: #fff; outline: .3mm solid var(--ink); padding: 2.4mm 3mm; box-shadow: var(--shadow-s) }
+  .flow .box b { display: block; font: 800 8.4pt/1.25 var(--display); color: var(--ink) } .flow .box span { font-size: 7.2pt; color: var(--muted) }
+  .flow .arrow { font: 800 16pt/1 var(--display); color: var(--purple); text-align: center }
+  .flow .host { background: var(--purple); outline-color: var(--ink) } .flow .host b { color: #fff } .flow .host span { color: #e6dcf0 }
+  .phones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; align-items: start }
+  .mono-box { font: 500 6.6pt/1.5 var(--mono); background: #fff; outline: .3mm solid var(--ink); padding: 2mm 3mm; margin-top: 1.5mm; word-break: break-all }
 </style>
+<!-- The Instant Share handbook, in the SCAFFApps brochure style. The pictures (img/) are retaken by build_handbook.py
+     from Instant Share's own pages, with a made-up history and made-up devices. Page numbers come from the page order. -->
 </head>
 <body>
 
-<div class="cover">
-  <img src="../build/icon.png" alt="">
-  <h1>Instant Share</h1>
-  <div class="sub">Handbook</div>
-  <div class="line"></div>
-  <p>Pass text, photos, documents and voice notes between the computers and Android phones on your own network. Share on one, and the others have it at once, with a notification and a Copy button. Choose who sees it; pin, archive, edit. Encrypted, and only for the devices that joined with a code. No accounts; no internet needed.</p>
-  <div class="meta">Version 1.2.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps</div>
-</div>
+<!-- =============================================================================================== cover -->
+<section class="page cover" id="cover">
+  <div class="grain"></div>
+  <div class="logo-c"><img src="img/app-icon.svg" alt=""></div>
+  <div class="ver">1.3</div>
+  <div class="lbl top"><span>SCAFFApps</span><span>/</span><span>Instant Share</span><span class="dot">·</span><span>The handbook</span></div>
+  <div class="rule r1"></div>
+  <div class="band"></div><div class="band-foot"></div>
+  <div class="bigword"><div class="w ink">SHAR<em>E</em></div><div class="w lit">SHAR<em>E</em></div><div class="sel"><b></b><b></b><b></b><b></b></div></div>
+  <div class="ruler" aria-hidden="true"></div>
+  <div class="head">
+    <div class="sticker"><h1>Share it here.<br><em>Have it there.</em></h1></div>
+    <p>Text, photos, documents and voice notes between the computers and Android phones on your own network. Share on one: the others have it at once.</p>
+  </div>
+  <div class="concrete"></div>
+  <div class="shot app"><img src="img/main-dark.png" alt=""></div>
+  <div class="lines">
+    <div><a href="#install"></a><b>Install and set up</b><span>One computer keeps the history</span></div>
+    <div><a href="#share"></a><b>Sharing text and files</b><span>Write, paste, drop, Enter</span></div>
+    <div><a href="#to"></a><b>Who should see it</b><span>Everyone, or the devices you tick</span></div>
+    <div><a href="#history"></a><b>The history</b><span>Copy, save, pin, archive, edit</span></div>
+    <div><a href="#android"></a><b>The Android app</b><span>And any browser</span></div>
+    <div><a href="#privacy"></a><b>Privacy and security</b><span>Only the devices you let in</span></div>
+  </div>
+  <div class="foot">
+    <img class="lgh" src="img/logo-h.svg" alt="SCAFFApps">
+    <div class="grow"></div>
+    <div class="contact"><div class="ct">Contact us</div><div class="mail">info@scaffapps.com</div></div>
+    <div class="qr"><img src="img/qr.png" alt="QR code for www.scaffapps.com"><i></i><i></i><i></i><i></i></div>
+  </div>
+</section>
 
-<section>
-  <h2>Contents</h2>
-  <ol class="toc">
-    <li><b>1</b> What Instant Share is</li>
-    <li><b>2</b> Installing and setting up</li>
-    <li><b>3</b> The window at a glance</li>
-    <li><b>4</b> Sharing text and files</li>
-    <li><b>5</b> Who should see it</li>
-    <li><b>6</b> The history</li>
-    <li><b>7</b> Settings</li>
-    <li><b>8</b> Notifications on Windows</li>
-    <li><b>9</b> The Android app, and browsers</li>
-    <li><b>10</b> The tray icon and keeping it running</li>
-    <li><b>11</b> Shortcuts, options and files</li>
-    <li><b>12</b> Privacy and security</li>
-    <li><b>13</b> Troubleshooting</li>
-  </ol>
-
-  <h3 style="margin-top:12mm">1. What Instant Share is</h3>
-  <p class="lead">Instant Share passes things between the devices on your own network: commands, addresses, links, notes, code, a photo of a drawing, a quotation, a voice note. Anything you would otherwise e-mail to yourself, carry on a USB stick or type again.</p>
-  <p><strong>One</strong> computer keeps the history. The other computers run the same app and connect to it, and Android phones run Instant Share for Android; they find it on the network by themselves. Anything else (an iPhone, a computer without the app) uses a browser.</p>
-  <div class="flow">
-    <div class="many">
-      <div class="box">Laptop<small>Instant Share app</small></div>
-      <div class="box">Android phone<small>Instant Share for Android</small></div>
-      <div class="box">iPhone, tablet<small>any browser</small></div>
+<!-- =============================================================================================== contents and welcome -->
+<section class="page" id="contents">
+  <div class="grain"></div>
+  <div class="pad" style="flex-direction: row; gap: 10mm">
+    <div style="width: 74mm; display: flex; flex-direction: column; gap: 4mm">
+      <div class="kicker">Inside</div>
+      <h1>Contents</h1>
+      <div class="toc">
+        <a href="#install"><span class="n"></span><span><b>Install and set up</b><span>The installer · your name, once · one question</span></span></a>
+        <a href="#join"><span class="n"></span><span><b>Joining with a code</b><span>Once for each device · removing one</span></span></a>
+        <a href="#window"><span class="n"></span><span><b>The window at a glance</b><span>The editor · the history · the top</span></span></a>
+        <a href="#share"><span class="n"></span><span><b>Sharing text and files</b><span>Text · a file · what can be shared</span></span></a>
+        <a href="#to"><span class="n"></span><span><b>Who should see it</b><span>Everyone, or some devices</span></span></a>
+        <a href="#history"><span class="n"></span><span><b>The history</b><span>Copy, save, pin, archive, edit, delete · search</span></span></a>
+        <a href="#settings"><span class="n"></span><span><b>Settings</b><span>Every part · storage</span></span></a>
+        <a href="#notify"><span class="n"></span><span><b>Notifications and the tray</b><span>On Windows · keeping it running</span></span></a>
+        <a href="#android"><span class="n"></span><span><b>The Android app, and browsers</b><span>Installing it · using it · iPhones</span></span></a>
+        <a href="#updates"><span class="n"></span><span><b>Updates</b><span>Checked, verified and installed for you</span></span></a>
+        <a href="#privacy"><span class="n"></span><span><b>Privacy and security</b><span>What keeps strangers out · what it does not do</span></span></a>
+        <a href="#keys"><span class="n"></span><span><b>Shortcuts and help</b><span>The keys · if something is not right</span></span></a>
+      </div>
     </div>
-    <div class="arrow">→</div>
-    <div class="hub"><b>The computer that keeps the history</b><span>Instant Share app · answers only your own network, encrypted, and only devices that joined · no internet needed</span></div>
-  </div>
-  <ul>
-    <li><strong>Share:</strong> write, paste or drop a file and press Enter. The other devices have it within a moment.</li>
-    <li><strong>Be told:</strong> a Windows notification on computers, an Android notification on phones, each with a Copy button.</li>
-    <li><strong>Choose who sees it:</strong> everyone, or only the devices you tick.</li>
-    <li><strong>Keep it tidy:</strong> pin what you need often, archive (swipe left) what you are done with, edit or delete what you shared.</li>
-  </ul>
-  <div class="tip"><b>Only the devices you let in</b>Everything between the devices is encrypted, and only devices that joined with a pairing code can see or share anything (section 2). Someone else on the same Wi-Fi gets nothing. It is still meant for your own devices, at home or in your own office (section 12).</div>
-</section>
-
-<section>
-  <h2>2. Installing and setting up</h2>
-  <table class="wrap">
-    <tr><th>File</th><th>What it is</th></tr>
-    <tr><td>Instant-Share-1.2.0-portable.exe</td><td>The app for Windows 10 and 11 (64-bit), in one file. Nothing is installed and no administrator permission is needed: copy it anywhere and double-click it. Use the same file on every computer.</td></tr>
-    <tr><td>Instant-Share-1.2.0.apk</td><td>Instant Share for Android 10 and newer (section 9). Phones on the same Wi-Fi can also get it from the computer that keeps the history.</td></tr>
-    <tr><td>instantshare.py</td><td>Instant Share as a plain server, for Mac and Linux: <code>python3 instantshare.py</code>; every device then uses a browser.</td></tr>
-  </table>
-  <div class="warn"><b>"Windows protected your PC"</b>The app is not code-signed, so Windows may show this message the first time. Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</div>
-  <div class="tip"><b>Coming from 1.1 (or Text Share 1.0)?</b>Update every device to 1.2: a 1.2 computer no longer talks to older versions. Quit the old one from its tray menu, then start the new file: it keeps the history, settings and "start with Windows". The computer that keeps the history is joined already; each other computer and phone joins it once with a code (below), and keeps its own items. On the phone, install the new app over the old one.</div>
-
-  <h3>The first start: one question</h3>
-  <figure class="mid">
-    <img src="img/setup.png" alt="The setup page">
-    <figcaption>The first start on a laptop. Instant Share has already found OFFICE-PC, the computer that keeps the history.</figcaption>
-  </figure>
-  <ol class="steps">
-    <li><strong>On one computer</strong>, one that stays on while you work, choose <strong>Use this computer</strong>. Windows asks whether to allow Instant Share on networks: allow it on <strong>Private networks</strong>.</li>
-    <li><strong>On every other computer</strong>, choose that computer in the list, or type its name or address and press <strong>Connect</strong>.</li>
-    <li>Leave <strong>Start Instant Share when I sign in to Windows</strong> ticked, so it is always ready to show what others share.</li>
-  </ol>
-  <p>To change it later: <strong>Settings</strong> (the gear) &gt; <strong>Change setup</strong>, or the tray icon's menu.</p>
-
-  <h3>Joining with a code, once</h3>
-  <div class="pair">
-    <figure>
-      <img src="img/pair.png" alt="A laptop joining OFFICE-PC with a pairing code">
-      <figcaption>A laptop joining OFFICE-PC: the code shown there, typed here.</figcaption>
-    </figure>
-    <figure>
-      <img src="img/devices.png" alt="Settings, Devices, with a pairing code">
-      <figcaption>On a device that has joined: Settings &gt; Devices &gt; <strong>Add a device</strong>.</figcaption>
-    </figure>
-  </div>
-  <p>Only devices that have joined can see the history or share. The computer that keeps it is joined from the start. Every other computer, phone or browser joins once:</p>
-  <ol class="steps">
-    <li>On a device that has joined already (the computer that keeps the history, for example), open <strong>Settings</strong> &gt; <strong>Devices</strong> &gt; <strong>Add a device</strong>, or <strong>Add a device…</strong> in the tray menu. A 6-digit code appears, good for 10 minutes and for one device.</li>
-    <li>On the new device, type the code where it asks for it, and press <strong>Join</strong>.</li>
-  </ol>
-  <p>The code itself never travels over the network: both devices check it without sending it, so someone listening learns nothing from it. Five wrong tries and the code stops working; make a new one. <strong>Settings &gt; Devices</strong> also lists every device that has joined, with <strong>Remove</strong> to take one off (a lost phone, a computer sold): it can see nothing more until it joins again with a new code.</p>
-</section>
-
-<section>
-  <h2>3. The window at a glance</h2>
-  <figure>
-    <img src="img/main-dark.png" alt="Instant Share in its dark appearance">
-    <figcaption>The dark appearance (the default): the editor on the left, the history on the right, with a pinned item on top.</figcaption>
-  </figure>
-  <table class="wrap">
-    <tr><th>Part</th><th>What it does</th></tr>
-    <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with the number of other devices online. Red: it cannot be reached (section 13).</td></tr>
-    <tr><td>This device</td><td>The name shown next to everything this device shares. Click it to change it (in Settings).</td></tr>
-    <tr><td>Pin</td><td>Keeps the window on top of the other programs; click again to stop (Windows app).</td></tr>
-    <tr><td>Sun or moon</td><td>Switches between the dark and the light appearance.</td></tr>
-    <tr><td>Gear</td><td>Settings (section 7).</td></tr>
-    <tr><td>Enter sends, Wrap long lines</td><td>Enter shares at once (Shift+Enter starts a new line); long lines fold to fit.</td></tr>
-    <tr><td>File, Clear</td><td>Add a file; empty the editor.</td></tr>
-    <tr><td>To, Share</td><td>Who should see it (section 5), and Share.</td></tr>
-    <tr><td>History</td><td>Everything shared with this device: pinned items first, then the newest, with a search box.</td></tr>
-  </table>
-  <figure>
-    <img src="img/main-light.png" alt="Instant Share in its light appearance">
-    <figcaption>The same window in the light appearance.</figcaption>
-  </figure>
-</section>
-
-<section>
-  <h2>4. Sharing text and files</h2>
-  <h3>Text</h3>
-  <ol class="steps">
-    <li>Write or paste in the editor.</li>
-    <li>Press <kbd>Enter</kbd>, or the blue <strong>Share</strong> button. (<kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line. With <strong>Enter sends</strong> off, it is <kbd>Ctrl</kbd>+<kbd>Enter</kbd>.)</li>
-    <li>The editor empties, and the text is at the top of the history on every device that may see it.</li>
-  </ol>
-  <h3>A file</h3>
-  <figure class="small">
-    <img src="img/attach.png" alt="A photo waiting to be shared, with a line of text">
-    <figcaption>A photo added, with a line about it, ready to share with LAPTOP-1 only.</figcaption>
-  </figure>
-  <p>Add one file to a share: press <strong>File</strong>, drag it from File Explorer onto the editor, or paste a picture with <kbd>Ctrl</kbd>+<kbd>V</kbd>. Text in the editor goes with it, as a caption; <strong>✕</strong> takes the file off again.</p>
-  <table class="wrap">
-    <tr><th>What can be shared</th><th>In the history</th></tr>
-    <tr><td>Photos: PNG, JPEG, GIF, WebP, BMP, HEIC</td><td>Shown as pictures (HEIC as a file)</td></tr>
-    <tr><td>PDF</td><td>Opens in the PDF viewer</td></tr>
-    <tr><td>Word, Excel, PowerPoint (also .doc, .xls, .ppt and OpenDocument), RTF, text, CSV</td><td>A file with its kind on it: <strong>Save</strong> it, then open it</td></tr>
-    <tr><td>Audio: MP3, M4A, AAC, WAV, OGG, Opus, FLAC, AMR (voice notes)</td><td>A player, to listen right there</td></tr>
-    <tr><td>Short videos: MP4, MOV, 3GP</td><td>A player</td></tr>
-    <tr><td>ZIP</td><td>A file to save</td></tr>
-  </table>
-  <p>Each file can be up to <strong>5 MB</strong>; text up to 20 MB. Instant Share checks what a file really is from its contents, not its name: programs, scripts and web pages are refused, even renamed.</p>
-  <div class="tip"><b>Photos and videos from a phone are often bigger than 5 MB</b>Share a smaller copy: most phones can send or save a photo at a smaller size; a screenshot of it is usually well under 5 MB.</div>
-</section>
-
-<section>
-  <h2>5. Who should see it</h2>
-  <div class="pair">
-    <figure>
-      <img src="img/to.png" alt="The list of devices">
-      <figcaption>The devices Instant Share knows, with who is online now.</figcaption>
-    </figure>
-    <div>
-      <p>The <strong>To</strong> button next to Share says who will see what you share. Click it to choose:</p>
-      <ul>
-        <li><strong>Everyone</strong>: every device, now and later (the default).</li>
-        <li><strong>Only some devices</strong>: tick them. The others will not see it, in the history or as a notification.</li>
-      </ul>
-      <p>A green dot means the device is <strong>online</strong>: the app is running there (in its window or in the tray), or a browser has the page open. Offline devices can be ticked too; they see it when they come back.</p>
-      <p>Your choice stays for the next share, and the button shows it, for example <strong>To: LAPTOP-1</strong>. In the history, such an item shows its devices after an arrow: <span style="color:#4a6cf5">→ LAPTOP-1</span>.</p>
+    <div class="grow" style="display: flex; flex-direction: column; gap: 4.5mm">
+      <div class="kicker">Welcome</div>
+      <h2>No more e-mailing <em>yourself.</em></h2>
+      <div class="letter">
+        <p class="first">Instant Share passes things between the devices on your own network: commands, addresses, links, notes, code, a photo of a drawing, a quotation, a voice note. Anything you would otherwise e-mail to yourself, carry on a USB stick or type again.</p>
+        <p>One computer keeps the history. The other computers run the same app and connect to it; Android phones run Instant Share for Android. They find it on the network by themselves. Anything else, an iPhone or a computer without the app, uses a browser.</p>
+        <p><b>Share</b> on one device and the others have it within a moment, with a notification and a <b>Copy</b> button. Choose who sees it; pin, archive or edit. Encrypted, and only for the devices that joined with a code. No accounts, and no internet needed.</p>
+      </div>
+      <div class="flow">
+        <div class="from">
+          <div class="box"><b>Laptop</b><span>The Instant Share app</span></div>
+          <div class="box"><b>Android phone</b><span>Instant Share for Android</span></div>
+          <div class="box"><b>iPhone, tablet</b><span>Any browser</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="box host"><b>The computer that keeps the history</b><span>The Instant Share app · answers only your own network, encrypted, and only devices that joined · no internet needed</span></div>
+      </div>
+      <p class="serif" style="font-style: italic; font-size: 11pt; color: var(--purple); margin: 0">The SCAFFApps team</p>
+      <figure style="margin-top: auto"><div class="shot" style="height: 50mm"><img src="img/main-light.png" alt=""></div>
+        <figcaption><b>The light appearance:</b> the sun or moon button switches it.</figcaption></figure>
     </div>
   </div>
-  <div class="tip"><b>Locked, not only tidy</b>Each device is known by its own key from joining, so a device that was not chosen cannot see the item or open its file, even with its address. Only its sender can edit or delete it (section 12).</div>
+  <div class="folio"><span>Instant Share handbook · Version 1.3</span><span class="n"></span></div>
 </section>
 
-<section>
-  <h2>6. The history</h2>
-  <figure class="mid">
-    <img src="img/menu.png" alt="An item's menu">
-    <figcaption>OFFICE-PC's own message, changed after it was shared ("edited 18:00"), with its ⋯ menu open.</figcaption>
-  </figure>
-  <table class="wrap">
-    <tr><th>On each item</th><th>What it does</th></tr>
-    <tr><td>Copy</td><td>Copies the text, ready to paste. On a photo (in the apps), <strong>Copy</strong> or <strong>Copy photo</strong> copies the picture itself.</td></tr>
-    <tr><td>Save</td><td>Saves the file in the folder chosen in Settings (Downloads unless you change it) and shows it there.</td></tr>
-    <tr><td>⋯ &gt; Pin to the top</td><td>Keeps it above everything else, under <strong>Pinned</strong>, on this device. <strong>Unpin</strong> undoes it.</td></tr>
-    <tr><td>⋯ &gt; Archive</td><td>Puts it away on this device: it leaves your history (the others still have it). <strong>Undo</strong> appears for a few seconds.</td></tr>
-    <tr><td>⋯ &gt; Edit</td><td>Only on what <em>this</em> device shared. The text comes back into the editor, under "Editing your message"; change it and press <strong>Save</strong>. Everyone sees the new text in place, marked <em>edited</em> with the time. <strong>Cancel</strong> leaves it as it was.</td></tr>
-    <tr><td>⋯ &gt; Delete for everyone</td><td>Only on what this device shared: it disappears from every device's history (after a question).</td></tr>
-  </table>
-  <ul>
-    <li><strong>Swipe left</strong> on a phone or touch screen to archive an item quickly.</li>
-    <li><strong>The archive</strong>: Settings &gt; <strong>Archived messages</strong> &gt; <strong>Show</strong>. Swipe left there (or ⋯ &gt; Back to the history) to bring one back; <strong>Back to the history</strong> at the top returns.</li>
-    <li><strong>Search the history</strong> finds items by their text, their file name, or the device that shared them.</li>
-    <li><strong>Photos</strong> open full size with a click; <strong>Show all</strong> opens a long item; new items glow briefly; Arabic and other right-to-left text reads right to left, line by line.</li>
-    <li>The history shows the newest 300 items (and every pinned one); search reaches all of them.</li>
-  </ul>
+<!-- =============================================================================================== install and set up -->
+<section class="page" id="install">
+  <div class="tab" style="--c: #5b2c83; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></i><b>INSTALL</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 01 · Installing and setting up</div>
+      <h1>Install on each computer. <em>One keeps the history.</em></h1>
+      <p class="lede">One installer, for 64-bit Windows 10 and 11, on every computer. Instant Share installs for everyone on the computer, with its shortcut in the Start menu's <b>SCAFFApps</b> folder. Phones get the Android app.</p>
+    </div>
+    <ol class="hsteps c4">
+      <li><span><b>Download</b>Instant-Share-Setup-1.3.x.exe from the Releases page, or install it from the SCAFFApps Suite.</span></li>
+      <li><span><b>Install</b>Windows asks for permission once. It closes an older copy first.</span></li>
+      <li><span><b>Your name, once</b>The first SCAFFApps app on a Windows account asks for your name and e-mail.</span></li>
+      <li><span><b>One question</b>Is this the computer that keeps the history, or does it connect to one?</span></li>
+    </ol>
+    <div class="g2">
+      <figure><div class="shot fit dark-bg"><img src="img/register.png" alt=""></div>
+        <figcaption><b>The first start on a Windows account:</b> your name and e-mail, asked once.</figcaption></figure>
+      <figure><div class="shot fit dark-bg"><img src="img/setup.png" alt=""></div>
+        <figcaption><b>Then the one question,</b> on a laptop: Instant Share has already found OFFICE-PC.</figcaption></figure>
+    </div>
+    <div class="split">
+      <ol class="hsteps">
+        <li><span><b>On one computer</b>One that stays on while you work: choose <b>Use this computer</b>. Windows asks whether to allow Instant Share on networks: allow it on <b>Private networks</b>.</span></li>
+        <li><span><b>On every other computer</b>Choose that computer in the list, or type its name or address and press <b>Connect</b>.</span></li>
+        <li><span><b>Always ready</b>Leave <b>Start Instant Share when I sign in to Windows</b> ticked.</span></li>
+      </ol>
+      <div class="gtk">
+        <h3>Good to know</h3>
+        <ul class="ticks">
+          <li><b>"Windows protected your PC"</b> may show the first time: the installer is not code-signed. Choose <b>More info</b>, then <b>Run anyway</b>.</li>
+          <li><b>To change it later:</b> Settings (the gear) &gt; <b>Change setup</b>, or the tray icon's menu.</li>
+          <li><b>Coming from 1.2</b> (one file)? Run the installer once on each computer: it closes the old copy and keeps the history and settings.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Install and set up</span><span class="n"></span></div>
 </section>
 
-<section>
-  <h2>7. Settings</h2>
-  <div class="pair">
-    <figure>
-      <img src="img/settings.png" alt="Settings" style="width:82%; margin:0 auto">
-      <figcaption>Settings on the computer that keeps the history.</figcaption>
-    </figure>
-    <div>
-      <p>The gear at the top right opens Settings:</p>
-      <table class="wrap">
-        <tr><th>Part</th><th>What it holds</th></tr>
-        <tr><td>This device</td><td>Its name, shown to the others.</td></tr>
-        <tr><td>Appearance</td><td>Dark or Light.</td></tr>
-        <tr><td>Writing</td><td>Enter sends; Wrap long lines.</td></tr>
-        <tr><td>This computer (Windows)</td><td><strong>Keep the window on top</strong> of the other programs. <strong>Copy what arrives</strong>: text and photos others share go straight to the clipboard, ready to paste, without a click.</td></tr>
-        <tr><td>Saving files</td><td>Where <strong>Save</strong> puts files: <strong>Change…</strong> to choose a folder; <strong>Use Downloads</strong> to go back. (Apps only; browsers save their own way.)</td></tr>
-        <tr><td>History</td><td>Which computer keeps it, and <strong>Change setup</strong>; the archived messages; the address for phones and browsers.</td></tr>
-        <tr><td>Devices</td><td><strong>Add a device</strong> (a pairing code, section 2), and every device that has joined, with <strong>Remove</strong>.</td></tr>
-        <tr><td>Storage</td><td>How much of the history's 2 GB is used, and by what (below). On the computer that keeps it: <strong>Show the history folder</strong>.</td></tr>
-        <tr><td>About</td><td>The version, <strong>Get the app</strong>, <strong>Updates</strong> (section 10), and in the apps <strong>Quit Instant Share</strong>, which closes it completely.</td></tr>
+<!-- =============================================================================================== joining with a code -->
+<section class="page" id="join">
+  <div class="tab" style="--c: #141414; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></i><b>JOIN</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 02 · Joining with a code</div>
+      <h1>Six digits, once. <em>Then it is yours.</em></h1>
+      <p class="lede">Only devices that have joined can see the history or share. The computer that keeps it is joined from the start; every other computer, phone or browser joins once, with a code.</p>
+    </div>
+    <div class="split w">
+      <figure><div class="shot fit dark-bg"><img src="img/devices.png" alt=""></div>
+        <figcaption><b>On a device that has joined:</b> Settings &gt; Devices &gt; <b>Add a device</b> shows a code, and every device that has joined.</figcaption></figure>
+      <div class="stack">
+        <ol class="hsteps">
+          <li><span><b>A code</b>On a device that has joined (the computer that keeps the history, for example), open Settings &gt; Devices &gt; <b>Add a device</b>, or <b>Add a device…</b> in the tray menu. A 6-digit code appears, good for 10 minutes and for one device.</span></li>
+          <li><span><b>Type it on the new device</b>Where it asks for it, and press <b>Join</b>.</span></li>
+        </ol>
+      </div>
+    </div>
+    <figure class="fill"><div class="shot dark-bg"><img src="img/pair.png" alt=""></div>
+      <figcaption><b>A laptop joining OFFICE-PC:</b> the code shown there, typed here.</figcaption></figure>
+    <div class="split">
+      <div class="gtk gold">
+        <h3>The code never travels</h3>
+        <p class="note-p" style="font-size: 8.3pt">Both devices check it without sending it, so someone listening to the network learns nothing from it. Five wrong tries and the code stops working: make a new one.</p>
+      </div>
+      <div class="gtk">
+        <h3>Removing a device</h3>
+        <p class="note-p" style="font-size: 8.3pt">Settings &gt; Devices lists every device that has joined, with <b>Remove</b> to take one off (a lost phone, a computer sold): it sees nothing more until it joins again with a new code.</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Joining with a code</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== the window -->
+<section class="page" id="window">
+  <div class="tab" style="--c: #f0c33c; --on: #141414"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M11 9v11"/></svg></i><b>WINDOW</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 03 · The window at a glance</div>
+      <h1>Write on the left. <em>Everything shared, on the right.</em></h1>
+      <p class="lede">The editor is where you write or drop what to share; the history holds everything shared with this device, pinned items first.</p>
+    </div>
+    <figure class="fill"><div class="shot dark-bg"><img src="img/main-dark.png" alt=""></div>
+      <figcaption><b>The dark appearance</b> (the usual one): the editor, and the history with a pinned item on top.</figcaption></figure>
+    <div class="split">
+      <table class="tbl tight">
+        <tr><th>Part</th><th>What it does</th></tr>
+        <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with how many other devices are online. Red: it cannot be reached.</td></tr>
+        <tr><td>This device</td><td>The name shown next to everything it shares. Click it to change it.</td></tr>
+        <tr><td>Pin · sun or moon · gear</td><td>Keep the window on top · dark or light · Settings.</td></tr>
+      </table>
+      <table class="tbl tight">
+        <tr><th>Part</th><th>What it does</th></tr>
+        <tr><td>Enter sends, Wrap</td><td>Enter shares at once (Shift+Enter: a new line); long lines fold to fit.</td></tr>
+        <tr><td>File, Clear · To, Share</td><td>Add a file, empty the editor · who should see it, and Share.</td></tr>
+        <tr><td>History</td><td>Pinned first, then the newest, with a search box.</td></tr>
       </table>
     </div>
   </div>
-  <h3>Storage</h3>
-  <figure class="small">
-    <img src="img/storage.png" alt="Storage">
-    <figcaption>The share of 2 GB used, then what the history holds, by kind.</figcaption>
-  </figure>
-  <p>The history can hold <strong>2 GB</strong> in all. The bar shows what is in it: messages, photos, documents, audio, videos and archives, with the number of items and their size. When it is full, new shares are refused with a message: delete old files (⋯ &gt; Delete, on what you shared) to make room.</p>
+  <div class="folio"><span>Instant Share handbook · The window at a glance</span><span class="n"></span></div>
 </section>
 
-<section>
-  <h2>8. Notifications on Windows</h2>
-  <p>When another device shares something with this computer, Windows shows a notification, with a sound, even when the Instant Share window is closed: who shared it, the text or the file's name, and the photo itself for a photo. It stays in Windows' <strong>Notification Centre</strong> (click the date and time by the clock) until you clear it.</p>
-  <table class="wrap">
-    <tr><th>On the notification</th><th>What it does</th></tr>
-    <tr><td>Copy</td><td>Text: copies all of it. Photo: copies the picture. With <strong>Copy what arrives</strong> on (Settings), it is on the clipboard already.</td></tr>
-    <tr><td>Save</td><td>For any other file: saves it in the folder chosen in Settings; a second notification says where, with <strong>Show in folder</strong>.</td></tr>
-    <tr><td>Open, or a click on it</td><td>Opens the Instant Share window.</td></tr>
-  </table>
-  <ul>
-    <li>No notification appears while the Instant Share window is in front: the history shows new items itself.</li>
-    <li>They follow Windows' own settings: <strong>Do not disturb</strong> keeps them out of sight (they still go to the Notification Centre), and Settings &gt; System &gt; Notifications &gt; <strong>Instant Share</strong> chooses banners, sounds, or none.</li>
-    <li>Their buttons work while Instant Share runs (in the tray is enough). When it quits, its notifications are cleared from the Notification Centre.</li>
-  </ul>
-</section>
-
-<section>
-  <h2>9. The Android app, and browsers</h2>
-  <div class="pair">
-    <figure>
-      <img src="img/android-app.png" alt="Instant Share on a phone">
-      <figcaption>The history on a phone; the gear opens Settings.</figcaption>
-    </figure>
-    <figure>
-      <img src="img/android-settings.png" alt="Settings on a phone">
-      <figcaption>Settings on a phone, with where files are saved.</figcaption>
-    </figure>
+<!-- =============================================================================================== sharing -->
+<section class="page" id="share">
+  <div class="tab" style="--c: #5b2c83; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h13l-4-4M20 12l-4 4"/><path d="M4 5v14"/></svg></i><b>SHARE</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 04 · Sharing text and files</div>
+      <h1>Write it, drop it. <em>Press Enter.</em></h1>
+      <p class="lede">Write or paste in the editor and press <kbd>Enter</kbd>, or <b>Share</b>. The editor empties, and the text is at the top of the history on every device that may see it.</p>
+    </div>
+    <figure><div class="shot fit dark-bg"><img src="img/attach.png" alt=""></div>
+      <figcaption><b>A photo added,</b> with a line about it, ready to share with LAPTOP-1 only.</figcaption></figure>
+    <ol class="hsteps c3">
+      <li><span><b>Text</b><kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line. With <b>Enter sends</b> off, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> shares.</span></li>
+      <li><span><b>A file</b>Press <b>File</b>, drag one from File Explorer onto the editor, or paste a picture with <kbd>Ctrl</kbd>+<kbd>V</kbd>. Text in the editor goes with it, as a caption; ✕ takes the file off again.</span></li>
+      <li><span><b>Checked</b>Instant Share checks what a file really is from its contents, not its name: programs, scripts and web pages are refused, even renamed.</span></li>
+    </ol>
+    <table class="tbl">
+      <tr><th>What can be shared</th><th>In the history</th></tr>
+      <tr><td>Photos: PNG, JPEG, GIF, WebP, BMP, HEIC</td><td>Shown as pictures (HEIC as a file).</td></tr>
+      <tr><td>PDF</td><td>Opens in the PDF viewer.</td></tr>
+      <tr><td>Word, Excel, PowerPoint, OpenDocument, RTF, text, CSV</td><td>A file with its kind on it: Save it, then open it.</td></tr>
+      <tr><td>Audio: MP3, M4A, AAC, WAV, OGG, Opus, FLAC, AMR</td><td>A player, to listen right there (voice notes).</td></tr>
+      <tr><td>Short videos: MP4, MOV, 3GP · ZIP</td><td>A player · a file to save.</td></tr>
+    </table>
+    <div class="gtk gold">
+      <h3>Up to 5 MB a file</h3>
+      <p class="note-p" style="font-size: 8.3pt">Text can be up to 20 MB. Photos and videos from a phone are often bigger than 5 MB: share a smaller copy (most phones can send or save a photo smaller; a screenshot of it is usually well under 5 MB).</p>
+    </div>
   </div>
-  <h3>Installing it</h3>
-  <ol class="steps">
-    <li>Copy <code>Instant-Share-1.2.0.apk</code> to the phone, or download it there from the Releases page. (A phone browser can also get it from the computer that keeps the history: see <strong>iPhones and other browsers</strong> below for opening the page.)</li>
-    <li>Open the downloaded file and allow installing from that source when Android asks; then <strong>Install</strong>. It installs over an older Instant Share, keeping its setup.</li>
-    <li>Open it and tap the computer that keeps the history, then type the pairing code shown on a device that has joined (section 2). Allow notifications, and allow it to run in the background (Android asks both, once).</li>
-  </ol>
-  <figure class="small">
-    <img src="img/android-pair.png" alt="The phone asking for the pairing code" style="width:60%; margin:0 auto">
-    <figcaption>The phone, after choosing OFFICE-PC: the code from Settings &gt; Devices there.</figcaption>
-  </figure>
-  <h3>Using it</h3>
-  <ul>
-    <li>Everything works as on a computer: write, add a file, choose who sees it, share; Copy, Save, pin, archive (swipe left), edit and delete your own.</li>
-    <li><strong>From any other app</strong>: tap <strong>Share</strong> there on a link, a text, a photo, a document or a voice note, and choose <strong>Instant Share</strong>. It lands in the editor, ready to share.</li>
-    <li><strong>Notifications</strong> with Copy (text, photo), Save and Open (files) come with the app closed too. A small "Connected to OFFICE-PC" notice stays while it listens; tap it to hide it for good.</li>
-    <li>Documents open in the phone's own apps (a PDF reader, Word, Excel...). <strong>Save files to</strong> in Settings chooses the folder, with Android's own folder picker.</li>
-    <li><strong>Back</strong> first closes what is open (Settings, a menu, a photo, the archive), then puts Instant Share away. It never returns to the setup.</li>
-  </ul>
-  <h3>iPhones and other browsers</h3>
-  <p>They open the address shown in Settings &gt; <strong>Phones and browsers</strong>, for example <code>https://OFFICE-PC:8765</code>. The first time, the browser warns that the connection's certificate is not from an authority it knows: Instant Share makes its own, on the computer that keeps the history (there is no web address to certify). Continue to the page (on an iPhone: <strong>Show Details</strong> &gt; <strong>visit this website</strong>), then type a pairing code (section 2) and a name for the device. Everything works except notifications (the page shows new items while it is open); <strong>Save</strong> downloads the browser's usual way.</p>
-  <div class="warn"><b>Browsers cannot check the computer's key</b>The apps check, every time, that they talk to the very computer they joined. A browser cannot: it only shows its warning, every time it meets a certificate it does not know. Open the page only on your own network, by the address you were given, and prefer the apps where there is one.</div>
+  <div class="folio"><span>Instant Share handbook · Sharing text and files</span><span class="n"></span></div>
 </section>
 
-<section>
-  <h2>10. The tray icon and keeping it running</h2>
-  <p>Once set up, Instant Share keeps running in the tray, by the clock, when you close its window: the computer that keeps the history goes on serving the others, and every computer goes on showing notifications.</p>
-  <table class="wrap">
-    <tr><th>Tray icon</th><th>What it does</th></tr>
-    <tr><td>Click</td><td>Opens the window.</td></tr>
-    <tr><td>Right-click</td><td><strong>Open Instant Share</strong>, <strong>Add a device…</strong> (a pairing code), <strong>Start with Windows</strong> (ticked when it does), <strong>Change setup…</strong> and <strong>Quit Instant Share</strong>, which really stops it (also in Settings &gt; About).</td></tr>
-  </table>
-  <p>Double-clicking the program while it is running opens the running one. <strong>Keep the window on top</strong> (the pin, or Settings) keeps the window above other programs until you turn it off; it is remembered.</p>
-  <h3>Keep the computer that keeps the history awake</h3>
-  <p>A computer that is asleep cannot share. On it, open <strong>Settings &gt; System &gt; Power &amp; battery &gt; Screen, sleep and hibernate</strong> and set sleep to <strong>Never</strong> when plugged in.</p>
-  <h3>A new version</h3>
-  <p>New versions are published on the <strong>Releases</strong> page of Instant Share on GitHub. Settings &gt; About &gt; <strong>Updates</strong> says which version this is and whether a newer one is out:</p>
-  <ul>
-    <li><strong>Check now</strong> asks GitHub at once. With <strong>Check for updates once a day</strong> on (the default), the apps ask by themselves once a day and say so in a notification when a new version is out. Only that question goes to the internet; nothing you share does.</li>
-    <li><strong>Update now</strong> on Windows downloads the new program next to this one, checks it against the checksum published with it, then restarts in it: the history, settings and "start with Windows" stay, and the old file is removed.</li>
-    <li>On Android, <strong>Update now</strong> downloads the new app, checks it, and opens Android's installer (allow Instant Share to install apps the first time). It installs over this one, keeping its setup.</li>
-    <li>Update the computer that keeps the history together with the others: devices on different versions may not understand each other.</li>
-  </ul>
-  <p>By hand: quit Instant Share from the tray menu and start the new file instead. On the computer that keeps the history, Windows may ask again to allow it on networks: allow it on Private networks.</p>
-  <h3>Backing up or moving the history</h3>
-  <p>The whole history, files included, is one file, <code>history.db</code>, in <code>%LOCALAPPDATA%\InstantShare</code> on the computer that keeps it (Settings &gt; <strong>Show the history folder</strong>). To back it up or move it, quit Instant Share first, then copy the file.</p>
-</section>
-
-<section>
-  <h2>11. Shortcuts, options and files</h2>
-  <h3>Keyboard shortcuts</h3>
-  <table>
-    <tr><th>Keys</th><th>What they do</th></tr>
-    <tr><td><kbd>Enter</kbd></td><td>Share (with Enter sends on); <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line.</td></tr>
-    <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Share, always.</td></tr>
-    <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> in the editor</td><td>Pastes text, or adds a copied picture as the file.</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Closes what is open: a question, a menu, a photo, the device list, Settings, the archive.</td></tr>
-  </table>
-  <h3>Options</h3>
-  <p>For special cases, add these after the program's name in a command window (open the program's folder, type <code>cmd</code> in its address bar and press <kbd>Enter</kbd>):</p>
-  <table class="wrap">
-    <tr><th>Option</th><th>What it does</th></tr>
-    <tr><td><code>--port 9000</code></td><td>On the computer that keeps the history: another port than 8765. (If 8765 is taken, it picks the next free one by itself.)</td></tr>
-    <tr><td><code>--data D:\InstantShare</code></td><td>Keeps the history and settings in another folder, for example next to the program on a USB stick.</td></tr>
-    <tr><td><code>--hidden</code></td><td>Starts in the tray, without the window. Windows starts it this way at sign-in.</td></tr>
-  </table>
-  <h3>Where things are saved</h3>
-  <table class="wrap">
-    <tr><th>What</th><th>Where</th></tr>
-    <tr><td>The history, files included</td><td><code>%LOCALAPPDATA%\InstantShare\history.db</code> on the computer that keeps it.</td></tr>
-    <tr><td>Settings</td><td><code>%LOCALAPPDATA%\InstantShare\settings.json</code> on each computer.</td></tr>
-    <tr><td>A log, for troubleshooting</td><td><code>%LOCALAPPDATA%\InstantShare\textshare.log</code> on each computer.</td></tr>
-    <tr><td>This computer's encryption key and certificate</td><td><code>tls-key.pem</code> and <code>tls-cert.pem</code> in the same folder, on the computer that keeps the history. Keep them with <code>history.db</code> when moving it: with a new key, every device must join again.</td></tr>
-    <tr><td>Joined devices' keys</td><td>Each device keeps its own (in its settings); the computer that keeps the history keeps only a fingerprint of each.</td></tr>
-    <tr><td>Saved files</td><td>The folder chosen in Settings; Downloads unless you change it.</td></tr>
-    <tr><td>Pins and archive</td><td>Kept with the history, for each device.</td></tr>
-  </table>
-</section>
-
-<section>
-  <h2>12. Privacy and security</h2>
-  <h3>What keeps strangers out</h3>
-  <ul>
-    <li><strong>Only devices that joined.</strong> A device joins once with a 6-digit pairing code from a device that has joined (section 2), and gets its own secret key. Without one, nothing: not the history, not the list of devices, not a file, not a share. <strong>Remove</strong> (Settings &gt; Devices) takes a device off at once.</li>
-    <li><strong>The code never travels.</strong> Both sides check it without sending it (a method called SPAKE2), so listening to the network reveals nothing about it. Someone pretending to be your computer gets one guess at it, not a million; the code allows five tries and lasts ten minutes.</li>
-    <li><strong>Encrypted.</strong> Everything between the devices goes over <code>https</code> (TLS 1.2 or newer), with a key the computer that keeps the history makes for itself.</li>
-    <li><strong>The apps check whom they talk to.</strong> When an app joins, it remembers the computer's key, and from then on it refuses any other, so a device pretending to be that computer is refused too, with a message.</li>
-    <li><strong>Locks that hold.</strong> Each request carries the device's own key, so "who should see it", "only the sender edits and deletes", pins and the archive are enforced by the computer that keeps the history, not only by the page.</li>
-    <li><strong>Stays on your network.</strong> It answers only devices on its own local network, and nothing you share leaves it. The only thing that reaches the internet is the apps' question to GitHub about a new version (which can be turned off).</li>
-    <li><strong>Can't be read by websites, and checks files.</strong> A website open in a browser cannot reach the history; files are checked by their contents, and documents only ever download.</li>
-  </ul>
-  <h3>What it does not do</h3>
-  <ul>
-    <li><strong>A browser cannot check the computer's key</strong> (section 9): it warns about the certificate every time, so a fake page would look the same. Use the apps where you can.</li>
-    <li><strong>The history file is not encrypted on the disk</strong> of the computer that keeps it: anyone who can sign in to that Windows account can copy it. Protect that computer with a password, and BitLocker if you can.</li>
-    <li><strong>Devices that joined are trusted.</strong> Any of them can add a device or remove one. Remove a device you no longer use.</li>
-    <li><strong>No expiry.</strong> Items stay until their sender deletes them.</li>
-  </ul>
-  <div class="warn"><b>Passwords and keys</b>Instant Share keeps them safe from others on your network, but they stay in the history on the computer that keeps it. Delete such an item once you have pasted it where it belongs.</div>
-</section>
-
-<section>
-  <h2>13. Troubleshooting</h2>
-  <table class="wrap">
-    <tr><th style="width:34%">Problem</th><th>What to do</th></tr>
-    <tr><td>Setup finds no computer, or cannot connect</td><td>
-      <ul style="margin:0">
-        <li>Check that Instant Share runs on the computer that keeps the history, and that both are on the same network.</li>
-        <li>On that computer, set the network to <strong>Private</strong>: Settings &gt; Network &amp; internet &gt; Wi-Fi or Ethernet &gt; Network profile type.</li>
-        <li>Type its numbered address instead of its name. A VPN, or a guest Wi-Fi, can hide devices from each other.</li>
-        <li>If Windows never asked to allow it, allow it yourself in an administrator command window on that computer:</li>
+<!-- =============================================================================================== who should see it -->
+<section class="page" id="to">
+  <div class="tab" style="--c: #141414; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="m16 11 2 2 4-4"/></svg></i><b>WHO</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 05 · Who should see it</div>
+      <h1>Everyone, <em>or only these.</em></h1>
+      <p class="lede">The <b>To</b> button next to Share says who will see what you share. Click it to choose.</p>
+    </div>
+    <div class="split w">
+      <figure><div class="shot fit dark-bg"><img src="img/to.png" alt=""></div>
+        <figcaption><b>The devices Instant Share knows,</b> with who is online now.</figcaption></figure>
+      <div class="stack">
+        <ol class="hsteps">
+          <li><span><b>Everyone</b>Every device, now and later. The usual choice.</span></li>
+          <li><span><b>Only some devices</b>Tick them. The others will not see it, in the history or as a notification.</span></li>
+        </ol>
+        <p class="note-p">A <b>green dot</b> means the device is online: the app runs there, in its window or the tray, or a browser has the page open. Offline devices can be ticked too: they see it when they come back.</p>
+        <p class="note-p">Your choice stays for the next share, and the button shows it: <b>To: LAPTOP-1</b>. In the history, such an item shows its devices after an arrow: <b>→ LAPTOP-1</b>.</p>
+      </div>
+    </div>
+    <div class="gtk gold">
+      <h3>Locked, not only tidy</h3>
+      <ul class="ticks">
+        <li>Each device is known by its own key from joining, so a device that was not chosen cannot see the item or open its file, even with its address.</li>
+        <li>Only its sender can edit or delete an item.</li>
       </ul>
-      <pre class="cmd" style="margin-bottom:0">netsh advfirewall firewall add rule name="Instant Share" dir=in action=allow protocol=TCP localport=8765 profile=private
-netsh advfirewall firewall add rule name="Instant Share search" dir=in action=allow protocol=UDP localport=8765 profile=private</pre>
-    </td></tr>
-    <tr><td>It asks for a pairing code</td><td>This device has not joined yet, or was removed: on a device that has joined, Settings &gt; Devices &gt; <strong>Add a device</strong>, and type the code it shows. "Not right": check the digits, or make a new code (each lasts ten minutes and five tries).</td></tr>
-    <tr><td>"This is not the … this computer joined"</td><td>The computer at that address shows another key than when this device joined. If Instant Share was set up again there (a new key: a reinstalled Windows, a replaced folder), choose <strong>Setup</strong> and join it again. If not, someone may be pretending to be it: do not join.</td></tr>
-    <tr><td>"… runs Instant Share 1.1"</td><td>Update that computer to 1.2 too: 1.2 talks only to 1.2.</td></tr>
-    <tr><td>The browser warns about the connection</td><td>Expected the first time: see section 9, iPhones and other browsers.</td></tr>
-    <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Instant Share was quit there. Start it again; the window reconnects by itself, and what you typed stays.</td></tr>
-    <tr><td>No notifications on Windows</td><td>Instant Share must be running on this computer, in its window or in the tray (click the <strong>^</strong> by the clock). Check that <strong>Do not disturb</strong> is off (Settings &gt; System &gt; Notifications; Windows can turn it on by itself during presentations, games and when duplicating a display), and that <strong>Instant Share</strong> is allowed in the list below it. Missed ones are in the Notification Centre.</td></tr>
-    <tr><td>"Could not ask GitHub"</td><td>Checking for updates needs the internet; sharing does not. Try later, or update by hand (section 10).</td></tr>
-    <tr><td>No notifications on the phone</td><td>Allow notifications for Instant Share (the phone's Settings &gt; Apps &gt; Instant Share &gt; Notifications) and set its battery use to <strong>Unrestricted</strong>. The phone must be on the same Wi-Fi.</td></tr>
-    <tr><td>"The history … is full (2 GB)"</td><td>Delete old files you shared (⋯ &gt; Delete for everyone). Settings &gt; Storage shows what takes the room.</td></tr>
-    <tr><td>"That kind of file can't be shared"</td><td>Only the kinds in section 4 can be shared. A program or script inside a ZIP is fine; on its own it is refused.</td></tr>
-    <tr><td>"Only the device that shared it can …"</td><td>Edit and Delete belong to the sender. To put someone else's item away on your device, archive it.</td></tr>
-    <tr><td>The program does not start, or disappears</td><td>Choose <strong>More info</strong> then <strong>Run anyway</strong> on the SmartScreen message. If your antivirus moved the file, restore it and mark it as allowed.</td></tr>
-    <tr><td>Something else</td><td>The log, <code>%LOCALAPPDATA%\InstantShare\textshare.log</code>, says what Instant Share did. Send it along when asking for help.</td></tr>
-  </table>
-  <figure class="mid">
-    <img src="img/offline.png" alt="The red dot when Instant Share cannot be reached">
-    <figcaption>The top of the window when the computer that keeps the history cannot be reached.</figcaption>
-  </figure>
+    </div>
+    <figure class="fill"><div class="shot dark-bg"><img src="img/menu.png" alt=""></div>
+      <figcaption><b>Sent to LAPTOP-1 only:</b> OFFICE-PC's message shows <b>→ LAPTOP-1</b>, and, as its sender, it may edit or delete it.</figcaption></figure>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Who should see it</span><span class="n"></span></div>
 </section>
 
+<!-- =============================================================================================== the history -->
+<section class="page" id="history">
+  <div class="tab" style="--c: #f0c33c; --on: #141414"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></i><b>HISTORY</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 06 · The history</div>
+      <h1>Copy it, keep it. <em>Put it away.</em></h1>
+      <p class="lede">Everything shared with this device, pinned items first, then the newest. Each item has its own buttons, and a ⋯ menu for the rest.</p>
+    </div>
+    <figure class="fill"><div class="shot dark-bg"><img src="img/history.png" alt=""></div>
+      <figcaption><b>The newest items,</b> under a pinned one: Copy, Save, and the ⋯ menu on each.</figcaption></figure>
+    <div class="split">
+      <table class="tbl tight">
+        <tr><th>On each item</th><th>What it does</th></tr>
+        <tr><td>Copy</td><td>Copies the text. On a photo, in the apps, Copy photo copies the picture itself.</td></tr>
+        <tr><td>Save</td><td>Saves the file in the folder chosen in Settings (Downloads unless you change it) and shows it there.</td></tr>
+        <tr><td>⋯ &gt; Pin to the top</td><td>Keeps it above everything else on this device. Unpin undoes it.</td></tr>
+      </table>
+      <table class="tbl tight">
+        <tr><th>On each item</th><th>What it does</th></tr>
+        <tr><td>⋯ &gt; Archive</td><td>Puts it away on this device (the others still have it). Undo shows for a few seconds.</td></tr>
+        <tr><td>⋯ &gt; Edit</td><td>Only on what this device shared: change the text and Save; everyone sees it, marked edited.</td></tr>
+        <tr><td>⋯ &gt; Delete for everyone</td><td>Only on what this device shared: it disappears from every device, after a question.</td></tr>
+      </table>
+    </div>
+    <ul class="ticks note-p">
+      <li><b>Swipe left</b> on a phone or touch screen to archive an item quickly.</li>
+      <li><b>The archive:</b> Settings &gt; Archived messages &gt; Show. Swipe left there, or ⋯ &gt; Back to the history, to bring one back.</li>
+      <li><b>Search the history</b> finds items by their text, their file name, or the device that shared them.</li>
+      <li>Photos open full size with a click; <b>Show all</b> opens a long item; new items glow briefly; Arabic and other right-to-left text reads right to left.</li>
+      <li>The history shows the newest 300 items, and every pinned one; search reaches all of them.</li>
+    </ul>
+  </div>
+  <div class="folio"><span>Instant Share handbook · The history</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== settings -->
+<section class="page" id="settings">
+  <div class="tab" style="--c: #5b2c83; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg></i><b>SETTINGS</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 07 · Settings</div>
+      <h1>All in one view. <em>No scrolling.</em></h1>
+      <p class="lede">The gear at the top right opens Settings, its parts side by side.</p>
+    </div>
+    <figure><div class="shot fit dark-bg"><img src="img/settings.png" alt=""></div>
+      <figcaption><b>Settings on the computer that keeps the history.</b></figcaption></figure>
+    <div class="split">
+      <table class="tbl tight">
+        <tr><th>Part</th><th>What it holds</th></tr>
+        <tr><td>This device</td><td>Its name, shown to the others.</td></tr>
+        <tr><td>Appearance · Writing</td><td>Dark or light · Enter sends, Wrap long lines.</td></tr>
+        <tr><td>This computer</td><td>Keep the window on top; Copy what arrives straight to the clipboard.</td></tr>
+        <tr><td>Saving files</td><td>Where Save puts files (the apps; browsers save their own way).</td></tr>
+        <tr><td>History · Devices</td><td>Which computer keeps it, and Change setup; the archive; the address for phones and browsers · add or remove devices.</td></tr>
+        <tr><td>Storage · About</td><td>What the history holds · the version, Get the app, Updates, Quit.</td></tr>
+      </table>
+      <div class="split" style="grid-template-columns: 1fr 1.1fr; gap: 4mm">
+        <figure><div class="shot fit dark-bg"><img src="img/storage.png" alt=""></div></figure>
+        <div class="stack">
+          <h3 class="sub-h">Storage</h3>
+          <p class="note-p">The history holds up to 2 GB. The bar shows by what: messages, photos, documents, audio, videos and archives, with how many and how big. When it is full, new shares are refused with a message: delete old files you shared to make room.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Settings</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== notifications and the tray -->
+<section class="page" id="notify">
+  <div class="tab" style="--c: #141414; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><b>NOTIFY</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 08 · Notifications and the tray</div>
+      <h1>Told at once. <em>Always running.</em></h1>
+      <p class="lede">When another device shares something with this computer, Windows shows a notification, with a sound, even when the Instant Share window is closed: who shared it, the text or the file's name, and the photo itself for a photo. It stays in the Notification Centre until you clear it.</p>
+    </div>
+    <figure><div class="shot fit dark-bg"><img src="img/top.png" alt=""></div>
+      <figcaption><b>The top of the window:</b> the dot and status, this device's name, the pin that keeps the window on top, the appearance and Settings.</figcaption></figure>
+    <div class="split">
+      <table class="tbl">
+        <tr><th>On the notification</th><th>What it does</th></tr>
+        <tr><td>Copy</td><td>Text: copies all of it. A photo: copies the picture. With Copy what arrives on, it is on the clipboard already.</td></tr>
+        <tr><td>Save</td><td>Any other file: saves it in the folder chosen in Settings; a second notification says where, with Show in folder.</td></tr>
+        <tr><td>Open, or a click</td><td>Opens the Instant Share window.</td></tr>
+      </table>
+      <table class="tbl">
+        <tr><th>The tray icon</th><th>What it does</th></tr>
+        <tr><td>Click</td><td>Opens the window.</td></tr>
+        <tr><td>Right-click</td><td>Open Instant Share, Add a device…, Start with Windows, Change setup… and Quit Instant Share, which really stops it (also in Settings &gt; About).</td></tr>
+      </table>
+    </div>
+    <div class="facts c3">
+      <div class="fact"><h3>Not while it is in front</h3><p>No notification shows while the Instant Share window is in front: the history shows new items itself.</p></div>
+      <div class="fact"><h3>Windows' own settings</h3><p>Do not disturb keeps them out of sight (they still go to the Notification Centre); Settings &gt; System &gt; Notifications &gt; Instant Share chooses banners, sounds, or none.</p></div>
+      <div class="fact"><h3>Running in the tray</h3><p>Closing the window leaves it running: the computer that keeps the history goes on serving the others, and every computer goes on showing notifications.</p></div>
+    </div>
+    <div class="split">
+      <div class="gtk gold">
+        <h3>Keep the computer that keeps the history awake</h3>
+        <p class="note-p" style="font-size: 8.3pt">A computer that is asleep cannot share. On it, open Settings &gt; System &gt; Power &amp; battery &gt; Screen, sleep and hibernate, and set sleep to <b>Never</b> when plugged in.</p>
+      </div>
+      <div class="gtk">
+        <h3>Backing up the history</h3>
+        <p class="note-p" style="font-size: 8.3pt">Everything shared, files included, is kept on the computer that keeps the history. To back it up or move it: quit Instant Share there, then copy its folder (Settings &gt; Storage &gt; <b>Show the history folder</b>).</p>
+      </div>
+    </div>
+    <p class="note-p">Double-clicking Instant Share while it runs opens the running one. <b>Keep the window on top</b> (the pin, or Settings) keeps the window above other programs until you turn it off.</p>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Notifications and the tray</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== android and browsers -->
+<section class="page" id="android">
+  <div class="tab" style="--c: #f0c33c; --on: #141414"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg></i><b>ANDROID</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 09 · The Android app, and browsers</div>
+      <h1>On the phone, <em>the same.</em></h1>
+      <p class="lede">Instant Share for Android does everything the Windows app does, with Android notifications, and takes shares from any other app.</p>
+    </div>
+    <div class="phones">
+      <figure><div class="shot fit dark-bg"><img src="img/android-setup.png" alt=""></div><figcaption><b>Setting up:</b> it finds OFFICE-PC.</figcaption></figure>
+      <figure><div class="shot fit dark-bg"><img src="img/android-pair.png" alt=""></div><figcaption><b>Joining</b> with the code.</figcaption></figure>
+      <figure><div class="shot fit dark-bg"><img src="img/android-app.png" alt=""></div><figcaption><b>The history</b> on the phone.</figcaption></figure>
+      <figure><div class="shot fit dark-bg"><img src="img/android-settings.png" alt=""></div><figcaption><b>Settings,</b> as on a computer.</figcaption></figure>
+    </div>
+    <div class="split">
+      <ol class="hsteps">
+        <li><span><b>Install it</b>Copy Instant-Share-1.3.x.apk to the phone, or download it there from the Releases page (or <b>Get the Android app</b> on the computer's page). Open it, allow installing from that source, then Install.</span></li>
+        <li><span><b>Join</b>Tap the computer that keeps the history, then type a pairing code (chapter 02). Allow notifications and running in the background, once.</span></li>
+        <li><span><b>Share from any app</b>Tap Share there on a link, a text, a photo, a document or a voice note, and choose Instant Share: it lands in the editor.</span></li>
+      </ol>
+      <div class="gtk">
+        <h3>iPhones and other browsers</h3>
+        <p class="note-p" style="font-size: 8.3pt">They open the address in Settings &gt; Phones and browsers, for example https://OFFICE-PC:8765. The first time, the browser warns about the connection's certificate (Instant Share makes its own): continue to the page, then type a pairing code and a name. Everything works except notifications.</p>
+      </div>
+    </div>
+    <div class="gtk gold">
+      <h3>Prefer the apps</h3>
+      <p class="note-p" style="font-size: 8.3pt">The apps check, every time, that they talk to the very computer they joined. A browser cannot: it shows its warning for any certificate it does not know. Open the page only on your own network, by the address you were given.</p>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · The Android app, and browsers</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== updates -->
+<section class="page dark" id="updates">
+  <div class="tab" style="--c: #5b2c83; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" /></svg></i><b>UPDATE</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 10 · Updates</div>
+      <h1>Always the newest. <em>Never a fuss.</em></h1>
+      <p class="lede">Settings &gt; About &gt; Updates says which version this is and whether a newer one is out. The history, settings and "start with Windows" stay as they are.</p>
+    </div>
+    <figure class="fill"><div class="shot dark-bg"><img src="img/updates.png" alt=""></div>
+      <figcaption><b>About, when a newer version is out.</b> The version shown is an example.</figcaption></figure>
+    <ol class="hsteps c3">
+      <li><span><b>Checked for you</b>With <b>Check for updates once a day</b> on, the apps ask GitHub once a day and say so in a notification when a new version is out. <b>Check now</b> asks at once. Only that question reaches the internet; nothing you share does.</span></li>
+      <li><span><b>Update now, on Windows</b>Downloads the new installer, checks it against the checksum published with it, and runs it with Windows' permission: Instant Share closes, is updated in place and opens again.</span></li>
+      <li><span><b>Update now, on Android</b>Downloads the new app, checks it, and opens Android's installer; it installs over this one, keeping its setup.</span></li>
+    </ol>
+    <div class="facts c3">
+      <div class="fact"><h3>All together</h3><p>Update the computer that keeps the history together with the others: devices on different versions may not understand each other.</p></div>
+      <div class="fact"><h3>The SCAFFApps Suite</h3><p>Installs, opens and updates Instant Share and the other SCAFFApps apps from one window.</p></div>
+      <div class="fact"><h3>Get the app</h3><p>On Instant Share's page, it leads to the Releases page, for another computer or phone.</p></div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Updates</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== privacy and security -->
+<section class="page" id="privacy">
+  <div class="tab" style="--c: #141414; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></i><b>PRIVACY</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 11 · Privacy and security</div>
+      <h1>Your devices only. <em>Nothing else.</em></h1>
+      <p class="lede">What keeps strangers out, and what Instant Share does not do for you.</p>
+    </div>
+    <div class="facts c2" style="gap: 5mm 8mm">
+      <div class="fact"><h3>Only devices that joined</h3><p>A device joins once with a pairing code and gets its own secret key. Without one, nothing: not the history, not the list of devices, not a file, not a share. Remove takes a device off at once.</p></div>
+      <div class="fact"><h3>The code never travels</h3><p>Both sides check it without sending it, so listening to the network reveals nothing. Someone pretending to be your computer gets one guess; the code allows five tries and lasts ten minutes.</p></div>
+      <div class="fact"><h3>Encrypted</h3><p>Everything between the devices goes over https (TLS 1.2 or newer), with a key the computer that keeps the history makes for itself.</p></div>
+      <div class="fact"><h3>The apps check whom they talk to</h3><p>An app remembers the computer's key when it joins and refuses any other, so a device pretending to be that computer is refused, with a message.</p></div>
+      <div class="fact"><h3>Locks that hold</h3><p>Each request carries the device's own key: who should see it, only the sender edits and deletes, pins and the archive are enforced by the computer that keeps the history.</p></div>
+      <div class="fact"><h3>Stays on your network</h3><p>It answers only devices on its own network, and nothing you share leaves it. Websites cannot reach the history; files are checked by their contents.</p></div>
+    </div>
+    <div class="split">
+      <div class="gtk">
+        <h3>What it does not do</h3>
+        <ul class="ticks">
+          <li><b>A browser cannot check the computer's key:</b> it warns every time, so a fake page would look the same. Use the apps where you can.</li>
+          <li><b>The history is not encrypted on the disk</b> of the computer that keeps it: protect that computer with a password, and BitLocker if you can.</li>
+          <li><b>Devices that joined are trusted:</b> any of them can add or remove a device. Remove one you no longer use.</li>
+          <li><b>No expiry:</b> items stay until their sender deletes them.</li>
+        </ul>
+      </div>
+      <div class="gtk gold">
+        <h3>Passwords and keys</h3>
+        <p class="note-p" style="font-size: 8.3pt">Instant Share keeps them safe from others on your network, but they stay in the history on the computer that keeps it. Delete such an item once you have pasted it where it belongs.</p>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Privacy and security</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== shortcuts and help -->
+<section class="page" id="keys">
+  <div class="tab" style="--c: #f0c33c; --on: #141414"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></i><b>KEYS</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 12 · Shortcuts and troubleshooting</div>
+      <h1>The keys. <em>The fixes.</em></h1>
+    </div>
+    <table class="tbl tight">
+      <tr><th style="width: 46mm">Keys</th><th>What they do</th></tr>
+      <tr><td><kbd>Enter</kbd></td><td>Share (with Enter sends on); <kbd>Shift</kbd>+<kbd>Enter</kbd> starts a new line.</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Share, always.</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> in the editor</td><td>Pastes text, or adds a copied picture as the file.</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Closes what is open: a question, a menu, a photo, the device list, Settings, the archive.</td></tr>
+    </table>
+    <figure><div class="shot fit dark-bg"><img src="img/offline.png" alt=""></div>
+      <figcaption><b>The top of the window</b> when the computer that keeps the history cannot be reached.</figcaption></figure>
+    <table class="tbl tight">
+      <tr><th style="width: 58mm">What you see</th><th>What to do</th></tr>
+      <tr><td>Setup finds no computer</td><td>Instant Share must run on the computer that keeps the history, on the same network. Set that network to <b>Private</b> there (Settings &gt; Network &amp; internet), or type its numbered address. A VPN or a guest Wi-Fi can hide devices from each other.</td></tr>
+      <tr><td>It asks for a pairing code</td><td>This device has not joined yet, or was removed: Add a device on a device that has joined, and type the code.</td></tr>
+      <tr><td>"This is not the … this computer joined"</td><td>That computer shows another key. If Instant Share was set up again there, join it again; if not, someone may be pretending to be it: do not join.</td></tr>
+      <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Instant Share was quit there. Start it: the window reconnects by itself, and what you typed stays.</td></tr>
+      <tr><td>No notifications on Windows</td><td>Instant Share must be running (in the tray is enough), Do not disturb off, and Instant Share allowed in Settings &gt; System &gt; Notifications.</td></tr>
+      <tr><td>No notifications on the phone</td><td>Allow its notifications, and set its battery use to Unrestricted. The phone must be on the same Wi-Fi.</td></tr>
+      <tr><td>"The history … is full (2 GB)"</td><td>Delete old files you shared; Settings &gt; Storage shows what takes the room.</td></tr>
+      <tr><td>"That kind of file can't be shared"</td><td>Only the kinds in chapter 04: a program on its own is refused (inside a ZIP is fine).</td></tr>
+      <tr><td>"Could not ask GitHub"</td><td>Checking for updates needs the internet; sharing does not. Try again later.</td></tr>
+    </table>
+    <div class="split">
+      <div class="gtk gold">
+        <h3>Need a hand?</h3>
+        <ul class="ticks">
+          <li>Write to <b>info@scaffapps.com</b> with what you see and what you expected.</li>
+          <li>Say which version you have: Settings &gt; About.</li>
+        </ul>
+      </div>
+      <div class="gtk">
+        <h3>If Windows never asked to allow it</h3>
+        <p class="note-p" style="font-size: 8pt">Allow it yourself, in a command window run as administrator on the computer that keeps the history:</p>
+        <div class="mono-box">netsh advfirewall firewall add rule name="Instant Share" dir=in action=allow protocol=TCP localport=8765 profile=private</div>
+      </div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Shortcuts and help</span><span class="n"></span></div>
+</section>
+
+<!-- =============================================================================================== back cover -->
+<section class="page back" id="back">
+  <div class="grain"></div>
+  <div class="lbl top"><span>SCAFFApps</span><span>/</span><span>Instant Share</span><span class="dot">·</span><span>Published by SCAFFApps</span></div>
+  <div class="rule r1"></div>
+  <div class="bigword"><div class="w1">Useful apps</div><div class="w2">for every laptop.</div><div class="sel"><b></b><b></b><b></b><b></b></div></div>
+  <div class="ruler" aria-hidden="true"></div>
+  <div class="rule r2"></div>
+  <p class="cta">Instant Share is one of the SCAFFApps apps: small, focused tools for people who work on a laptop all day. Each installs in a moment and keeps itself up to date.</p>
+  <div class="concrete"></div>
+  <div class="family">
+    <div><img src="img/family-multi-screens.svg" alt="">Multi Screens</div>
+    <div><img src="img/family-smart-snap.svg" alt="">Smart Snap</div>
+    <div><img src="img/family-instant-share.svg" alt="">Instant Share</div>
+    <div><img src="img/family-suite.svg" alt="">SCAFFApps Suite</div>
+    <div><span class="more">+</span>And more to come</div>
+  </div>
+  <div class="ask">
+    <div class="sticker"><h2>Every app, <em>in one window.</em></h2></div>
+    <p>The <b>SCAFFApps Suite</b> installs, opens and updates them all, and updates itself: one place to see which version you have and what is new. Get it, and every app, from <b>github.com/Rady193</b>.</p>
+    <div class="askgrid">
+      <div class="shot"><img src="img/suite-home.png" alt=""></div>
+      <div class="shot"><img src="img/suite-updates.png" alt=""></div>
+      <div class="shot"><img src="img/suite-settings.png" alt=""></div>
+      <div class="shot"><img src="img/suite-home-light.png" alt=""></div>
+    </div>
+  </div>
+  <div class="end">
+    <div class="col">
+      <img class="lgs" src="img/logo-st.svg" alt="SCAFFApps">
+    </div>
+    <div class="col">
+      <div class="qr"><img src="img/qr.png" alt="QR code for www.scaffapps.com"><i></i><i></i><i></i><i></i></div>
+      <div class="url">www.scaffapps.com</div>
+      <div class="ct">Contact us</div>
+      <div class="mail">info@scaffapps.com</div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // as the brochure: the footer's wordmark, a ruler down the outer edge of every page with a tab (ticks every
+  // centimetre), the folio numbers, and the page numbers of the contents and the cover lines, from the page order
+  const pages = [...document.querySelectorAll('.page')]
+  const mm = 96 / 25.4
+  pages.forEach(p => { const f = p.querySelector('.folio'); if (f) f.insertAdjacentHTML('afterbegin', '<img class="wmi" src="img/logo-wm.svg" alt="SCAFFApps">')
+    if (p.querySelector('.tab') && !p.querySelector('.ruler')) p.insertAdjacentHTML('beforeend', '<div class="ruler" aria-hidden="true"></div>') })
+  document.querySelectorAll('.ruler').forEach(r => { const h = r.getBoundingClientRect().height / mm
+    for (let y = 0, k = 1; y <= h; y += 10, k++) r.insertAdjacentHTML('beforeend', `<i style="top:${y}mm"></i><div style="top:${y}mm">${String(k).padStart(2, '0')}</div>`) })
+  pages.forEach((p, i) => p.querySelectorAll('.folio .n').forEach(n => { n.textContent = String(i + 1).padStart(2, '0') }))
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    const to = document.getElementById(a.getAttribute('href').slice(1)), n = String(pages.indexOf(to) + 1).padStart(2, '0')
+    const slot = a.querySelector('.n'); if (slot) slot.textContent = n; else if (!a.textContent) a.textContent = n
+  })
+</script>
 </body>
 </html>

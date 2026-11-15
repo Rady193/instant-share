@@ -16,3 +16,8 @@ desktop.ini
 
 # Android build output
 android/build/
+
+# The handbook build: its page previews and its print folder
+handbook/preview/
+handbook/build/
+handbook/__pycache__/

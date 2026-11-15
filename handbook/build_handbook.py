@@ -1,10 +1,13 @@
 """Makes the Instant Share handbook: "Instant Share Handbook.pdf" in the project folder and, for the Releases page,
-release/Instant-Share-Handbook-<version>.pdf.
+release/Instant-Share-Handbook-<version>.pdf (the name the SCAFFApps Suite looks for).
 
     C:\\venvs\\textshare-build\\Scripts\\python.exe handbook\\build_handbook.py              pictures, then the PDF
     C:\\venvs\\textshare-build\\Scripts\\python.exe handbook\\build_handbook.py --no-shots   the PDF only
+    ... --preview                                                                   also a PNG of every page
 
-Needs Microsoft Edge, and Playwright and Pillow in the build environment (py build.py installs them). The pictures
+The layout and every word are in handbook.html, in the SCAFFApps brochure style; kit.py, brochure.css and handbook.css
+are the same in every SCAFFApps app. Needs Microsoft Edge, and Playwright, Pillow and pypdfium2 in the build
+environment. The pictures
 come from the real pages: Instant Share runs inside this script on a spare port with a made-up history and made-up
 devices (OFFICE-PC, LAPTOP-1, ...), never this computer's name. The app's own pages (setup, the pop-up) are drawn from
 app.py with a stand-in for the app behind them. A window frame is drawn around the full-window pictures.
@@ -30,6 +33,8 @@ IMG = HERE / "img"
 sys.path.insert(0, str(ROOT))
 import instantshare as textshare  # noqa: E402
 import app  # noqa: E402
+sys.path.insert(0, str(HERE))
+import kit  # noqa: E402
 
 PORT = 18799
 URL = f"http://localhost:{PORT}/"
@@ -59,7 +64,7 @@ def site_photo():
         d.line([(x, 0), (x, h)], fill=(225, 228, 222))
     for y in range(0, h, 40):
         d.line([(0, y), (w, y)], fill=(225, 228, 222))
-    blue, red = (38, 84, 160), (190, 50, 50)
+    blue, red = (91, 44, 131), (190, 50, 50)            # (the SCAFFApps purple marker)
     d.rectangle([120, 90, 600, 380], outline=blue, width=6)
     for x in range(160, 600, 80):
         d.line([(x, 90), (x, 380)], fill=blue, width=3)
@@ -166,8 +171,10 @@ def online(store, away=("RECEPTION",)):
 OPTIONS = json.dumps({"update_check": True, "update": {"current": textshare.VERSION, "latest": textshare.VERSION,
                                                         "available": False, "checked": 1}, "windows": True,
                       "on_top": False, "auto_copy": True, "host": True,
-                      "folder": "C:\\Users\\you\\AppData\\Local\\InstantShare",
-                      "save_folder": "C:\\Users\\you\\Downloads", "save_chosen": False})
+                      "folder": "",
+                      "save_folder": "C:\\Users\\Alex\\Downloads", "save_chosen": False})
+UPDATE_OPTIONS = OPTIONS.replace('"available": false', '"available": true, "can_install": true').replace(
+    '"latest": "' + textshare.VERSION + '"', '"latest": "1.4.0"')
 STUB = """
 window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise.resolve(
   name === "find" ? { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765, version: "1.2.0" }],
@@ -175,6 +182,7 @@ window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise
   : name === "get_options" ? """ + OPTIONS + """
   : { ok: true }) }) };
 """
+STUB_UPDATE = STUB.replace(OPTIONS, UPDATE_OPTIONS)
 
 
 ANDROID = """
@@ -189,6 +197,11 @@ window.TextShareAndroid = new Proxy({}, { get: (_, m) => (...a) => {
 } });
 """
 
+
+# the made-up devices run this version
+ANDROID = ANDROID.replace('"1.2.0"', '"' + textshare.VERSION + '"')
+STUB = STUB.replace('version: "1.2.0"', 'version: "' + textshare.VERSION + '"')
+STUB_UPDATE = STUB_UPDATE.replace('version: "1.2.0"', 'version: "' + textshare.VERSION + '"')
 
 def frame(path, theme, title, scale):
     """Draws a window title bar (as Windows draws it for the app) above a picture of the window's inside."""
@@ -218,13 +231,11 @@ def frame(path, theme, title, scale):
 
 def shots(browser, store):
     IMG.mkdir(exist_ok=True)
-    for old in IMG.glob("*.png"):
-        old.unlink()
 
-    def page(width, height, theme, scale=2, to=()):
+    def page(width, height, theme, scale=2, to=(), stub=None):
         ctx = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=scale,
                                   locale="en-GB")
-        ctx.add_init_script(STUB + f"localStorage.setItem('textshare.to', {json.dumps(json.dumps([DEV[t] for t in to]))});")
+        ctx.add_init_script((stub or STUB) + f"localStorage.setItem('textshare.to', {json.dumps(json.dumps([DEV[t] for t in to]))});")
         ctx.route("**/api/hello", lambda route: route.fulfill(json={     # the made-up name, not this computer's
             "server": "OFFICE-PC", "version": textshare.VERSION, "you": "192.168.1.20", "name": ME, "id": DEV[ME],
             "addresses": ["https://OFFICE-PC:8765/", "https://192.168.1.20:8765/"], "paired": True, "encrypted": True}))
@@ -275,6 +286,7 @@ def shots(browser, store):
                 "x": x0, "y": y0, "width": max(card_box["x"] + card_box["width"], menu_box["x"] + menu_box["width"]) - x0 + 10,
                 "height": max(card_box["y"] + card_box["height"], menu_box["y"] + menu_box["height"]) - y0 + 10})
             pg.keyboard.press("Escape")
+            pg.locator(".top").screenshot(path=IMG / "top.png")       # the top: status, this device, pin, Settings
             # the top when the computer that keeps the history cannot be reached
             pg.route("**/api/items*", lambda route: route.abort())
             pg.wait_for_selector("#status.off", timeout=10000)
@@ -282,22 +294,40 @@ def shots(browser, store):
             pg.screenshot(path=IMG / "offline.png", clip={"x": 0, "y": 0, "width": 900, "height": top["height"]})
         pg.context.close()
 
-    # Settings, whole (a tall window), on the computer that keeps the history
-    for theme in ("dark",):
-        pg = page(1180, 2300, theme, 1.5)
-        pg.locator("#gear").click()
-        pg.wait_for_selector(".hero")
-        pg.wait_for_timeout(500)
-        sheet, last = pg.locator(".sheet").bounding_box(), pg.locator(".sheet .sec").last.bounding_box()
-        pg.screenshot(path=IMG / "settings.png", clip={"x": sheet["x"], "y": sheet["y"], "width": sheet["width"],
-                                                      "height": last["y"] + last["height"] + 12 - sheet["y"]})
-        pg.locator(".sec.viz").screenshot(path=IMG / "storage.png")
-        # Devices, with a pairing code made for the next one
-        pg.locator("#addDevice").click()
-        pg.wait_for_selector("#codeLine:not([hidden])")
-        pg.wait_for_timeout(400)
-        pg.locator("#secDevices").screenshot(path=IMG / "devices.png")
-        pg.context.close()
+    # Settings, on the computer that keeps the history: a laptop-sized window, its sections in columns
+    pg = page(1280, 860, "dark", 1.5)
+    pg.locator("#gear").click()
+    pg.wait_for_selector(".hero")
+    pg.wait_for_timeout(500)
+    sheet = pg.locator(".sheet").bounding_box()
+    bottom = pg.evaluate("Math.max(...[...document.querySelectorAll('.sheet .sec')].filter(s => s.offsetParent)"
+                         ".map(s => s.getBoundingClientRect().bottom))")
+    pg.screenshot(path=IMG / "settings.png", clip={"x": sheet["x"], "y": sheet["y"], "width": sheet["width"],
+                                                  "height": bottom + 12 - sheet["y"]})
+    pg.locator(".sec.viz").screenshot(path=IMG / "storage.png")
+    # Devices, with a pairing code made for the next one
+    pg.locator("#addDevice").click()
+    pg.wait_for_selector("#codeLine:not([hidden])")
+    pg.wait_for_timeout(400)
+    pg.locator("#secDevices").screenshot(path=IMG / "devices.png")
+    pg.context.close()
+    # an update waiting: the About part of Settings (the version and its notes are an example)
+    pg = page(1280, 860, "dark", 1.5, stub=STUB_UPDATE)
+    pg.locator("#gear").click()
+    pg.wait_for_selector(".hero")
+    pg.wait_for_timeout(500)
+    pg.locator(".sheet .sec").filter(has=pg.locator("h3", has_text="About")).screenshot(path=IMG / "updates.png")
+    pg.context.close()
+
+    # the first start on a Windows account: the welcome page, your name and e-mail
+    ctx = browser.new_context(viewport={"width": 1000, "height": 700}, device_scale_factor=1.5)
+    ctx.add_init_script(STUB)
+    pg = ctx.new_page()
+    pg.set_content(app.local_page("register", {}, "dark"))
+    pg.wait_for_timeout(400)
+    pg.screenshot(path=IMG / "register.png")
+    frame(IMG / "register.png", "dark", "Instant Share", 1.5)
+    ctx.close()
 
     # a laptop joining OFFICE-PC: the pairing code
     ctx = browser.new_context(viewport={"width": 1000, "height": 560}, device_scale_factor=1.5)
@@ -374,34 +404,33 @@ def shots(browser, store):
     print("pictures: " + ", ".join(sorted(p.name for p in IMG.glob("*.png"))))
 
 
-def pdf(browser):
-    pg = browser.new_page()
-    pg.goto((HERE / "handbook.html").as_uri())
-    pg.wait_for_load_state("networkidle")
-    out = ROOT / "Instant Share Handbook.pdf"
-    pg.pdf(path=out, format="A4", print_background=True,
-           margin={"top": "0.6in", "bottom": "0.8in", "left": "0.6in", "right": "0.6in"},
-           display_header_footer=True, header_template="<span></span>",
-           footer_template='<div style="width:100%;padding:0 15mm;display:flex;justify-content:space-between;'
-                           'font:7.5pt Segoe UI,sans-serif;color:#8b93a5"><span>Instant Share Handbook</span>'
-                           '<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>')
-    release = ROOT / "release"
-    release.mkdir(exist_ok=True)
-    shutil.copy2(out, release / f"Instant-Share-Handbook-{textshare.VERSION}.pdf")
-    print(f"Saved {out} ({out.stat().st_size // 1024} KB) and release/Instant-Share-Handbook-{textshare.VERSION}.pdf")
-
-
 def main():
     ap = argparse.ArgumentParser(description="Make the Instant Share handbook (PDF).")
     ap.add_argument("--no-shots", action="store_true", help="keep the pictures in handbook/img as they are")
+    ap.add_argument("--preview", action="store_true", help="also a PNG of every page, in handbook/preview")
     args = ap.parse_args()
-    with sync_playwright() as p:
-        browser = p.chromium.launch(channel="msedge", headless=True)
-        if not args.no_shots:
+    if not args.no_shots:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(channel="msedge", headless=True)
             with demo_server() as store:
                 shots(browser, store)
-        pdf(browser)
-        browser.close()
+            browser.close()
+        # the back cover, the same in every SCAFFApps handbook: the apps' icons, the Suite's views
+        kit.family_icons(IMG, ROOT.parent)
+        kit.suite_pictures(IMG, ROOT.parent)
+    # printed in handbook/build (never open anywhere), then copied: beside the source and, named for the release, in
+    # release/; a copy a PDF reader has open is left as it is, and said so
+    (HERE / "build").mkdir(exist_ok=True)
+    pdf = kit.print_pdf(HERE / "handbook.html", HERE / "build" / "Instant Share Handbook.pdf",
+                        HERE / "preview" if args.preview else None)
+    print(f"{pdf} ({pdf.stat().st_size // 1024} KB)")
+    (ROOT / "release").mkdir(exist_ok=True)
+    for target in (ROOT / "Instant Share Handbook.pdf", ROOT / "release" / f"Instant-Share-Handbook-{textshare.VERSION}.pdf"):
+        try:
+            shutil.copy2(pdf, target)
+            print(f"and {target}")
+        except PermissionError:
+            print(f"!! {target} is open in another program: close it and build again to replace it")
 
 
 if __name__ == "__main__":

@@ -50,7 +50,7 @@ BODY = """
       <button class="link" id="other2">Choose another computer</button>
     </section>
   </div>
-  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share {version} · SCAFFApps</span>
+  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share {version}</span><span>Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>

@@ -9,6 +9,19 @@
   --danger-fill: #e5484d; --ok: #1a7f37; color-scheme: light }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
+/* SCAFFApps scrollbars, as the SCAFFERP system and www.scaffapps.com: a slim thumb on no track, wider under the
+   pointer; never the grey Windows bar with its arrows. Purple, stronger in the dark appearance to show on the dark grey.
+   Touch screens keep their own. */
+@media (pointer: fine) {
+  :root { --sb-thumb: rgba(91, 44, 131, .85); --sb-thumb-on: #5b2c83 }
+  :root[data-theme="light"] { --sb-thumb: rgba(91, 44, 131, .55); --sb-thumb-on: rgba(91, 44, 131, .85) }
+  ::-webkit-scrollbar { width: 12px; height: 12px; background: transparent }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0 }
+  ::-webkit-scrollbar-thumb { background-color: var(--sb-thumb); border: 3px solid transparent; border-radius: 12px;
+    background-clip: padding-box; min-height: 40px; min-width: 40px }
+  ::-webkit-scrollbar-thumb:hover, ::-webkit-scrollbar-thumb:active { background-color: var(--sb-thumb-on); border-width: 1.5px }
+}
 body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
   font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
   display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px }
@@ -102,7 +115,7 @@ input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var
       <button class="link" id="other2">Choose another computer</button>
     </section>
   </div>
-  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share 1.3.3 · SCAFFApps</span>
+  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share 1.3.3</span><span>Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
