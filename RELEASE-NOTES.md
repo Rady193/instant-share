@@ -1,5 +1,39 @@
 # Release notes
 
+## 1.3.4 — 16 November 2026
+
+The handbook in the SCAFFApps style, Settings without scrolling, and scrollbars in the SCAFFApps colours.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.3.4.exe` | 13.8 MB | `82890597DE5D6762DE53BD75B28E3D3E60028ECA4D2B19877DED5697EB92EB75` |
+| `Instant-Share-1.3.4.apk` | 70 KB | `80327A7CCF54A3B0A9639D4DD0ED3C6D78CF5102B2E5542261DA36EA563B52C9` |
+| `instantshare.py` | 169 KB | `0B7C207D5BD63D2EA2C43C1BF869451E7720692F66D307DEA6F407A0FA780F23` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `0FEE3D7AD39B18F748FC67EE2ABDDF5CCF77E01668709074FEEEB52D522CD01C` |
+| `Instant-Share-Handbook-1.3.4.pdf` | 3.1 MB | `BA2B788D48AF47D3D2D635C9E2970B11CDB7755DB957783B6DD18213C9C7D4E9` |
+
+For 64-bit Windows 10 and 11, and Android 10 and newer. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
+
+### Changed
+
+- **The handbook**, `Instant-Share-Handbook-1.3.4.pdf`: 15 pages with pictures in the SCAFFApps brochure style, from setting up to privacy. The SCAFFApps Suite opens it from Handbooks.
+- **Settings without scrolling**: on a laptop-wide window the sheet is wider, with its sections in two or three columns; phones keep one column.
+- **Scrollbars in the SCAFFApps style**: a slim purple bar on no track, wider under the pointer; never the grey Windows bar. Phones keep their own.
+- **"Published by SCAFFApps - www.scaffapps.com"** on the welcome page, the setup page, the page's footer, Settings > About, and the Android app's setup screen.
+
+### Updating
+
+- **Windows, from 1.3.0 to 1.3.3:** Settings > Updates > **Update now**, or **Update** in the SCAFFApps Suite.
+- **Android:** install the new app over the old one, or **Update now** in the app.
+
+### Tested
+
+- Updated from 1.3.3 by the installed SCAFFApps Suite 1.0.1, against a stand-in for GitHub offering this installer: downloaded, checked against both published checksums, Windows' permission, installed in 10 seconds; Windows lists 1.3.4.
+- Microsoft Defender finds nothing in the installer or the Android app.
+- The handbook's pictures were taken from this version's own pages, with a made-up history and made-up devices.
+
 ## 1.3.3 — 16 November 2026
 
 "Published by SCAFFApps · www.scaffapps.com" wherever Instant Share names its publisher, and no browser-blue links.

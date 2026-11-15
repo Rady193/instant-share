@@ -1,5 +1,5 @@
 ; Instant Share's installer (NSIS), made by build.py:
-;   makensis /DVERSION=1.3.3 /DPROGRAM_DIR=<the folder PyInstaller made> /DOUTFILE=<...Setup.exe> build\installer.nsi
+;   makensis /DVERSION=1.3.4 /DPROGRAM_DIR=<the folder PyInstaller made> /DOUTFILE=<...Setup.exe> build\installer.nsi
 ;
 ; The program is a folder: Instant Share.exe and its resources folder (Python, the libraries, the icons). Until 1.3.0
 ; it was one self-unpacking .exe; 1.3.1 called the folder _internal (PyInstaller's name), removed when updating.
