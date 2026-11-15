@@ -1,5 +1,43 @@
 # Release notes
 
+## 1.3.1 — 16 November 2026
+
+Instant Share for Windows is installed as a folder instead of one self-unpacking file: it opens faster and is less likely to alarm antivirus programs. The welcome page's form is centred.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.3.1.exe` | 13.8 MB | `4A798095B542CDA2BA20EA0A95866BBE2F4F343B2D5EB676B84C489E0057CF0E` |
+| `Instant-Share-1.3.1.apk` | 70 KB | `D395A92A1548EAB0C7672E2EAE038026EF284B2DCEAB9AD179910F302F31EE88` |
+| `instantshare.py` | 167 KB | `C14B68CB3B784A628FB69886146065B8A456558EB8431763CD3258AA238227D7` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `E22C83BA5CED2E695E88319754B1ECA9C274B035DEAFF1E368C54C24D9F9987A` |
+
+For 64-bit Windows 10 and 11. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
+
+### Changed
+
+- **The program is a folder.** `C:\Program Files\SCAFFApps\Instant Share` now holds `Instant Share.exe` and an `_internal` folder with Python and the libraries it uses (34 MB in all), like the other SCAFFApps apps, instead of one 17 MB file that unpacked itself into a temporary folder every time it started. It opens sooner (its window in about 0.65 s instead of about 1 s on the test laptop), leaves nothing in the temporary folder, and self-unpacking programs are a common reason for antivirus false alarms. The installer is smaller: 13.8 MB instead of 16.8 MB. Updating clears the version before's libraries first, and uninstalling removes the folder.
+- **The welcome page's form is centred** under its heading (it sat to the left).
+- Nothing else changed: the same pages, settings and history. The Android app and `instantshare.py` are 1.3.1 only to keep the versions together.
+
+### Updating from 1.3.0
+
+- **Windows:** Settings > Updates > **Update now**, or **Update** in the SCAFFApps Suite. Windows asks for permission; Instant Share closes, is updated in the same folder and opens again.
+- **Android:** nothing changed for phones; update when convenient.
+- From 1.2 or earlier: run the installer once (see 1.3.0).
+
+### Tested
+
+- **Update now** in the installed 1.3.0, against a stand-in for GitHub offering a 1.3.1 build (the same as this one except for the centring): downloaded, checked against its SHA-256, Windows' permission, 1.3.0 closed, 1.3.1 installed in the same folder and opened, in 8 seconds. Windows lists 1.3.1. This release's installer was then run over it without pages, as Update now runs it: the installed files are identical to the build.
+- Microsoft Defender finds nothing in the installer or the installed program.
+- The new program, isolated (its own data folder): the welcome page (centred at 600, 1200 and its own window width), the setup page, keeping the history (the page it serves), handing the Android app to phones.
+- Start to window, three runs each: 1.3.0 0.92 to 1.38 s, 1.3.1 0.60 to 0.78 s.
+
+### Not tested
+
+- Uninstalling 1.3.1, and the Android app on a real phone.
+
 ## 1.3.0 — 16 November 2026
 
 An installer instead of the single file, the SCAFFApps colours, and your name and e-mail asked once.

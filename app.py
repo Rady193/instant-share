@@ -1622,7 +1622,7 @@ REGISTER = """
   <div class="brand">{mark}</div>
   <h1>Welcome to Instant Share</h1>
   <p class="lead">Before you start, please tell us who you are. You are asked only once.</p>
-  <div style="width: min(380px, 100%); text-align: left">
+  <div style="width: min(380px, 100%); margin: 0 auto; text-align: left">
     <label style="display: block; margin-bottom: 12px; font-weight: 600">Your name
       <input id="name" autocomplete="name" maxlength="150" style="display: block; width: 100%; height: 36px; margin-top: 6px; padding: 0 10px; background: var(--inset); border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); font: inherit; font-weight: 400"></label>
     <label style="display: block; margin-bottom: 12px; font-weight: 600">E-mail address
@@ -1630,7 +1630,7 @@ REGISTER = """
     <p class="err" id="err"></p>
     <button class="btn primary" id="go" style="width: 100%; height: 38px">Continue</button>
   </div>
-  <p class="lead" style="font-size: 12px; max-width: 460px; margin-top: 22px">Your name and e-mail address are sent to
+  <p class="lead" style="font-size: 12px; max-width: 460px; margin: 22px auto 0">Your name and e-mail address are sent to
   SCAFFApps with this app's name and version and your Windows version, so we know who uses our apps. Nothing else about
   you or this computer is sent. The other SCAFFApps apps on this Windows account use the same details and do not ask
   again. Published by SCAFFApps · www.scaffapps.com</p>

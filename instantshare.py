@@ -39,8 +39,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-VERSION = "1.3.0"
-FROZEN = getattr(sys, "frozen", False)                       # running as the packed .exe
+VERSION = "1.3.1"
+FROZEN = getattr(sys, "frozen", False)                       # running as the built program (Instant Share.exe)
 APP_FILE = Path(sys.executable if FROZEN else __file__).resolve()
 
 
