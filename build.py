@@ -183,6 +183,15 @@ def main():
     print("\n".join(lines))
     (release / "SHA256.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
+    # release/ keeps only the newest version: installers, phone apps and portable files of earlier versions go (they
+    # stay on their GitHub releases); a newer one is never touched. Handbooks are left to handbook/build_handbook.py.
+    newest = tuple(int(x) for x in v.split("."))
+    for old in release.iterdir():
+        m = re.fullmatch(r"Instant-Share-(?:Setup-)?(\d+(?:\.\d+)*)(?:-portable)?\.(?:exe|apk)", old.name)
+        if m and tuple(int(x) for x in m.group(1).split(".")) < newest:
+            old.unlink(missing_ok=True)
+            print(f"removed the older {old.name}")
+
 
 if __name__ == "__main__":
     main()
