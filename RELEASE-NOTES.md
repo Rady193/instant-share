@@ -12,13 +12,13 @@ The handbook in the SCAFFApps style, Settings without scrolling, and scrollbars 
 | `Instant-Share-1.3.4.apk` | 70 KB | `80327A7CCF54A3B0A9639D4DD0ED3C6D78CF5102B2E5542261DA36EA563B52C9` |
 | `instantshare.py` | 169 KB | `0B7C207D5BD63D2EA2C43C1BF869451E7720692F66D307DEA6F407A0FA780F23` |
 | `THIRD-PARTY-NOTICES.txt` | 143 KB | `0FEE3D7AD39B18F748FC67EE2ABDDF5CCF77E01668709074FEEEB52D522CD01C` |
-| `Instant-Share-Handbook-1.3.4.pdf` | 3.1 MB | `BA2B788D48AF47D3D2D635C9E2970B11CDB7755DB957783B6DD18213C9C7D4E9` |
+| `Instant-Share-Handbook-1.3.4.pdf` | 3.2 MB | `31DFF741B903A42F4ECE4A75624655BD5F19F77FDD11F9A00CF8CCC44FDF2BCA` |
 
 For 64-bit Windows 10 and 11, and Android 10 and newer. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
 
 ### Changed
 
-- **The handbook**, `Instant-Share-Handbook-1.3.4.pdf`: 15 pages with pictures in the SCAFFApps brochure style, from setting up to privacy. The SCAFFApps Suite opens it from Handbooks.
+- **The handbook**, `Instant-Share-Handbook-1.3.4.pdf`: 15 pages with pictures in the SCAFFApps brochure style, from setting up to privacy. The SCAFFApps Suite opens it from Handbooks. Replaced on 16 November 2026: its pictures retaken, mixed between the dark and light appearance, and the SCAFFApps Suite on the back page as it is in 1.0.3.
 - **Settings without scrolling**: on a laptop-wide window the sheet is wider, with its sections in two or three columns; phones keep one column.
 - **Scrollbars in the SCAFFApps style**: a slim purple bar on no track, wider under the pointer; never the grey Windows bar. Phones keep their own.
 - **"Published by SCAFFApps - www.scaffapps.com"** on the welcome page, the setup page, the page's footer, Settings > About, and the Android app's setup screen.

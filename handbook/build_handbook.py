@@ -1,5 +1,5 @@
-"""Makes the Instant Share handbook: "Instant Share Handbook.pdf" in the project folder and, for the Releases page,
-release/Instant-Share-Handbook-<version>.pdf (the name the SCAFFApps Suite looks for).
+"""Makes the Instant Share handbook: release/Instant-Share-Handbook-<version>.pdf, its only copy (the name the SCAFFApps
+Suite looks for; attached to the GitHub release).
 
     C:\\venvs\\textshare-build\\Scripts\\python.exe handbook\\build_handbook.py              pictures, then the PDF
     C:\\venvs\\textshare-build\\Scripts\\python.exe handbook\\build_handbook.py --no-shots   the PDF only
@@ -252,7 +252,7 @@ def shots(browser, store):
         pg.mouse.move(0, 0)
         pg.wait_for_timeout(600)
 
-    # the whole window, in both appearances
+    # the whole window, in both appearances; the close-ups mixed between the two through the handbook
     for theme in ("dark", "light"):
         pg = page(1400, 860, theme, 1.5, to=["LAPTOP-1"])
         draft(pg)
@@ -275,6 +275,12 @@ def shots(browser, store):
             pg.screenshot(path=IMG / "history.png", clip={"x": bar["x"] - 10, "y": bar["y"] - 10,
                                                          "width": bar["width"] + 20,
                                                          "height": third["y"] + third["height"] - bar["y"] + 20})
+            # the top when the computer that keeps the history cannot be reached
+            pg.route("**/api/items*", lambda route: route.abort())
+            pg.wait_for_selector("#status.off", timeout=10000)
+            top = pg.locator(".top").bounding_box()
+            pg.screenshot(path=IMG / "offline.png", clip={"x": 0, "y": 0, "width": 900, "height": top["height"]})
+        else:
             # an item's menu: OFFICE-PC's own message (edited) can be changed and deleted by it
             own = pg.locator(".item").filter(has_text="SELECT id")
             own.locator(".more-btn").click()
@@ -287,46 +293,48 @@ def shots(browser, store):
                 "height": max(card_box["y"] + card_box["height"], menu_box["y"] + menu_box["height"]) - y0 + 10})
             pg.keyboard.press("Escape")
             pg.locator(".top").screenshot(path=IMG / "top.png")       # the top: status, this device, pin, Settings
-            # the top when the computer that keeps the history cannot be reached
-            pg.route("**/api/items*", lambda route: route.abort())
-            pg.wait_for_selector("#status.off", timeout=10000)
-            top = pg.locator(".top").bounding_box()
-            pg.screenshot(path=IMG / "offline.png", clip={"x": 0, "y": 0, "width": 900, "height": top["height"]})
         pg.context.close()
 
-    # Settings, on the computer that keeps the history: a laptop-sized window, its sections in columns
-    pg = page(1280, 860, "dark", 1.5)
-    pg.locator("#gear").click()
-    pg.wait_for_selector(".hero")
-    pg.wait_for_timeout(500)
+    # Settings, on the computer that keeps the history: a laptop-sized window, its sections in columns (light)
+    def settings(theme, stub=None):
+        pg = page(1280, 860, theme, 1.5, stub=stub)
+        pg.locator("#gear").click()
+        pg.wait_for_selector(".hero")
+        pg.wait_for_timeout(500)
+        return pg
+
+    pg = settings("light")
     sheet = pg.locator(".sheet").bounding_box()
     bottom = pg.evaluate("Math.max(...[...document.querySelectorAll('.sheet .sec')].filter(s => s.offsetParent)"
                          ".map(s => s.getBoundingClientRect().bottom))")
     pg.screenshot(path=IMG / "settings.png", clip={"x": sheet["x"], "y": sheet["y"], "width": sheet["width"],
                                                   "height": bottom + 12 - sheet["y"]})
-    pg.locator(".sec.viz").screenshot(path=IMG / "storage.png")
-    # Devices, with a pairing code made for the next one
+    # Devices, with a pairing code made for the next one (light)
     pg.locator("#addDevice").click()
     pg.wait_for_selector("#codeLine:not([hidden])")
     pg.wait_for_timeout(400)
     pg.locator("#secDevices").screenshot(path=IMG / "devices.png")
     pg.context.close()
-    # an update waiting: the About part of Settings (the version and its notes are an example)
-    pg = page(1280, 860, "dark", 1.5, stub=STUB_UPDATE)
+    # the storage (dark)
+    pg = settings("dark")
+    pg.locator(".sec.viz").screenshot(path=IMG / "storage.png")
+    pg.context.close()
+    # an update waiting: the About part of Settings (the version and its notes are an example; light)
+    pg = page(1280, 860, "light", 1.5, stub=STUB_UPDATE)
     pg.locator("#gear").click()
     pg.wait_for_selector(".hero")
     pg.wait_for_timeout(500)
     pg.locator(".sheet .sec").filter(has=pg.locator("h3", has_text="About")).screenshot(path=IMG / "updates.png")
     pg.context.close()
 
-    # the first start on a Windows account: the welcome page, your name and e-mail
+    # the first start on a Windows account: the welcome page, your name and e-mail (light)
     ctx = browser.new_context(viewport={"width": 1000, "height": 700}, device_scale_factor=1.5)
     ctx.add_init_script(STUB)
     pg = ctx.new_page()
-    pg.set_content(app.local_page("register", {}, "dark"))
+    pg.set_content(app.local_page("register", {}, "light"))
     pg.wait_for_timeout(400)
     pg.screenshot(path=IMG / "register.png")
-    frame(IMG / "register.png", "dark", "Instant Share", 1.5)
+    frame(IMG / "register.png", "light", "Instant Share", 1.5)
     ctx.close()
 
     # a laptop joining OFFICE-PC: the pairing code
@@ -341,8 +349,8 @@ def shots(browser, store):
     frame(IMG / "pair.png", "dark", "Instant Share", 1.5)
     ctx.close()
 
-    # a photo waiting to be shared, with a line about it (a low window, so the editor is short)
-    pg = page(1400, 520, "dark", 1.5, to=["LAPTOP-1"])
+    # a photo waiting to be shared, with a line about it (a low window, so the editor is short; light)
+    pg = page(1400, 520, "light", 1.5, to=["LAPTOP-1"])
     pg.locator("#fileInput").set_input_files({"name": "east side.jpg", "mimeType": "image/jpeg", "buffer": PHOTO})
     pg.locator("#editor").fill("The east side, as agreed this morning.")
     pg.wait_for_selector("#attach:not([hidden])")
@@ -353,12 +361,12 @@ def shots(browser, store):
                                                 "width": area["width"] + 20, "height": area["height"] + 16})
     pg.context.close()
 
-    # the Android app: its setup, and the history (a stand-in answers for the app's Java side)
+    # the Android app: its setup (light), and the history (dark) (a stand-in answers for the app's Java side)
     phone = dict(viewport={"width": 390, "height": 760}, device_scale_factor=2, is_mobile=True, has_touch=True)
     ctx = browser.new_context(**phone)
     ctx.add_init_script(ANDROID)
     pg = ctx.new_page()
-    pg.goto((ROOT / "android" / "assets" / "setup.html").as_uri() + "?theme=dark")
+    pg.goto((ROOT / "android" / "assets" / "setup.html").as_uri() + "?theme=light")
     pg.wait_for_selector("#found button")
     pg.wait_for_timeout(300)
     pg.screenshot(path=IMG / "android-setup.png")
@@ -418,19 +426,12 @@ def main():
         # the back cover, the same in every SCAFFApps handbook: the apps' icons, the Suite's views
         kit.family_icons(IMG, ROOT.parent)
         kit.suite_pictures(IMG, ROOT.parent)
-    # printed in handbook/build (never open anywhere), then copied: beside the source and, named for the release, in
-    # release/; a copy a PDF reader has open is left as it is, and said so
+    # printed in handbook/build (never open anywhere), then moved into release/, named for the release: the only
+    # copy (the name the SCAFFApps Suite looks for, attached to the GitHub release)
     (HERE / "build").mkdir(exist_ok=True)
     pdf = kit.print_pdf(HERE / "handbook.html", HERE / "build" / "Instant Share Handbook.pdf",
                         HERE / "preview" if args.preview else None)
-    print(f"{pdf} ({pdf.stat().st_size // 1024} KB)")
-    (ROOT / "release").mkdir(exist_ok=True)
-    for target in (ROOT / "Instant Share Handbook.pdf", ROOT / "release" / f"Instant-Share-Handbook-{textshare.VERSION}.pdf"):
-        try:
-            shutil.copy2(pdf, target)
-            print(f"and {target}")
-        except PermissionError:
-            print(f"!! {target} is open in another program: close it and build again to replace it")
+    kit.to_release(pdf, ROOT / "release" / f"Instant-Share-Handbook-{textshare.VERSION}.pdf")
     # release/ keeps only the newest handbook; the earlier ones stay on their GitHub releases
     newest = tuple(int(x) for x in textshare.VERSION.split("."))
     for old in (ROOT / "release").glob("Instant-Share-Handbook-*.pdf"):

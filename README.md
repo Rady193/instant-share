@@ -7,7 +7,7 @@ joined with a pairing code get in. Sharing needs no internet: nothing shared eve
 
 Version 1.3.4 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
 
-The **[handbook](Instant%20Share%20Handbook.pdf)** explains everything, with pictures.
+The **[handbook](https://github.com/Rady193/instant-share/releases/latest)** (`Instant-Share-Handbook-<version>.pdf`, on the Releases page) explains everything, with pictures.
 
 ## Contents
 
@@ -227,7 +227,7 @@ You need Windows and Python 3.10 or newer (the release is built with Python 3.14
   into the program and copies it to `release`. The first build makes the signing key,
   `%LOCALAPPDATA%\ScaffERP-android-tools\textshare-release.keystore`: **keep it and back it up**, since Android
   installs an update over the app only when it is signed with the same key.
-- Produce the handbook (`Instant Share Handbook.pdf`, and a copy in `release`):
+- Produce the handbook (`release\Instant-Share-Handbook-<version>.pdf`, its only copy):
   `C:\venvs\textshare-build\Scripts\python.exe handbook\build_handbook.py`. It retakes the pictures from the real
   pages with a made-up history; `--no-shots` keeps the pictures as they are.
 
