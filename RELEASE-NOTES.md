@@ -1,6 +1,6 @@
 # Release notes
 
-## 1.3.5 — 16 November 2026
+## 1.3.6 — 16 November 2026
 
 The tray icon's menu in the SCAFFApps style, the same as Smart Snap's and the SCAFFApps Suite's.
 
@@ -8,18 +8,21 @@ The tray icon's menu in the SCAFFApps style, the same as Smart Snap's and the SC
 
 | File | Size | SHA-256 |
 |---|---|---|
-| `Instant-Share-Setup-1.3.5.exe` | 13.8 MB | `E78E484008F8D7A1C609A9A6F4F8EFEDA867403B18E7F6C5B386A8494152E50B` |
-| `Instant-Share-1.3.5.apk` | 70 KB | `4162EEDC3752DCC2E2183392E7B10E556A50F01C579A95B6C5D4D4D65A14BDB6` |
-| `instantshare.py` | 169 KB | `8C469656DACE2F6F350FCECBF48752E4C7DE55C3BAB6BF3AD99E0F6124FDF0EA` |
-| `THIRD-PARTY-NOTICES.txt` | 143 KB | `37ACF9EACA00F9AC02612B3CE090B68794FAD430D1AA6BE9FB58412A0C60133A` |
-| `Instant-Share-Handbook-1.3.5.pdf` | 3.2 MB | `4E42CD38C2C592A034F3EBB9876EEBCC5EE3E7DEEB9749F31425B47010B3B540` |
+| `Instant-Share-Setup-1.3.6.exe` | 13.8 MB | `80C82D240274DE81253970FB8C5C45AAC93AA8465B3DFC1C521475E22C0A8CB8` |
+| `Instant-Share-1.3.6.apk` | 70 KB | `F721D016F621CD48350DCE9231927283232D90AD802F2A3730A9917D7B59EE0F` |
+| `instantshare.py` | 169 KB | `1B92FF7C493D3DF5868015D41DCE06BD1024C237D9A8002567CA61C5FDE4B3C9` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `DF09683971A8AC3754A73BA27E0A40FB2F14535DB0C554ADA30A2C62E85E6A07` |
+| `Instant-Share-Handbook-1.3.6.pdf` | 3.2 MB | `18C957EA76AC7904D24ED0B4501B5245784EDCE598996AFF4B61F144832129BE` |
 
 For 64-bit Windows 10 and 11, and Android 10 and newer. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
 
 ### Changed
 
-- **The tray icon's menu** is now the menu every SCAFFApps app has: taller rows, the whole row lit under the pointer, rounded corners, dark or light as Windows is. The same items as before: Open Instant Share, Add a device…, Start with Windows (ticked when it is on), Change setup… and Quit Instant Share. Instant Share draws it itself, still without any third-party code.
-- **The handbook**, `Instant-Share-Handbook-1.3.5.pdf`: 1.3.4's pages and pictures, with the new version.
+- **The tray icon's menu** is now the menu every SCAFFApps app has: taller rows, the whole row lit under the pointer, rounded corners, dark or light as Windows is. The same items as before: Open Instant Share, Add a device…, Start with Windows, Change setup… and Quit Instant Share. Instant Share draws it itself, still without any third-party code.
+- **No empty gap on the left**: the menu makes room for the tick only while **Start with Windows** is ticked.
+- **The handbook**, `Instant-Share-Handbook-1.3.6.pdf`: 1.3.4's pages and pictures, with the new version.
+
+(1.3.5 was made but not published: 1.3.6 is the same with the gap gone.)
 
 ### Updating
 
@@ -28,9 +31,9 @@ For 64-bit Windows 10 and 11, and Android 10 and newer. Not code-signed, so Wind
 
 ### Tested
 
-- From the source code in a test profile: the tray icon right-clicked the way Windows tells it, the menu drawn, **Start with Windows** ticked through it (into a test entry, not the real list), Esc closes it, **Quit Instant Share** ends the program.
-- The menu next to Smart Snap's, both at 150 %: the same size to the pixel (259 × 273 against Electron's 258 × 273), the same rows, colours, tick, text and hover, in the dark and the light appearance. Windows 11 gives it a slightly larger shadow.
-- Installed over 1.3.4 on a working computer the way the updates do it (silently, with Windows' permission): Windows lists 1.3.5, Instant Share opened again, and its tray menu opens in the new look and closes with Esc.
+- From the source code in a test profile: the tray icon right-clicked the way Windows tells it, the menu drawn without the tick's room, **Start with Windows** ticked through it (into a test entry, not the real list) and the menu then drawn with it, Esc closes it, **Quit Instant Share** ends the program.
+- The menu next to Smart Snap's, both at 150 %, with an item ticked: the same size to the pixel (259 × 273 against Electron's 258 × 273), the same rows, colours, tick, text and hover, in the dark and the light appearance. Windows 11 gives it a slightly larger shadow.
+- Installed over 1.3.5 on a working computer the way the updates do it (silently, with Windows' permission): Windows lists 1.3.6, Instant Share opened again, and its tray menu opens without the gap and closes with Esc.
 - Microsoft Defender finds nothing in the installer or the Android app.
 
 ## 1.3.4 — 16 November 2026

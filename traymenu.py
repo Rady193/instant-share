@@ -5,8 +5,9 @@ ctypes; no third-party library. The master copy is SCAFFApps Brand/apps/python/t
 The look, measured from Electron's menu (sizes in DIP, i.e. at 100 %; colours follow Windows' dark or light app mode,
 as Electron's do):
 
-    Segoe UI 12, ClearType · rows 28 high · padding 12 above the first row, 13 below the last · label 20 from the left (48 when
-    the menu has an item that can be ticked; the tick is Material's check, 16 square, at 20) · shortcut text right-
+    Segoe UI 12, ClearType · rows 28 high · padding 12 above the first row, 13 below the last · label 20 from the left (48
+    while an item is ticked, to make room for the tick: Material's check, 16 square, at 20. Electron keeps that room for
+    any item that could be ticked; the owner found the empty gap odd, 16 Nov 2026) · shortcut text right-
     aligned, 22 from the right edge, at least 13 after the label · separator: 8, a 1 px line, 8 · the hover fills the
     whole row · corners rounded (8) with the shadow Windows 11 gives them; no border.
 
@@ -191,7 +192,7 @@ class _Menu:
         s = self.scale
         px = lambda dip: int(dip * s + 0.5)
         self.row, self.sep, self.pad_top, self.pad_bottom = px(ROW), 2 * px(SEP) + max(1, int(s)), px(PAD_TOP), px(PAD_BOTTOM)
-        ticks = any(it and it.get("checked") is not None for it in self.items)
+        ticks = any(it and it.get("checked") for it in self.items)   # room for the tick only while one shows
         self.left, self.tick_x, self.tick, self.right, self.gap = px(LEFT_TICKS if ticks else LEFT), px(LEFT), px(TICK), px(RIGHT), px(GAP)
         self.font = gdi32.CreateFontW(-px(FONT), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI")   # ClearType, as Chromium
         dc = user32.GetDC(None)
