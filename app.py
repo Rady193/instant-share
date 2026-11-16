@@ -40,6 +40,7 @@ from urllib.parse import quote, urlsplit
 
 import instantshare as ts
 import registration as reg
+import traymenu
 
 APP = "Instant Share"
 # how Windows knows Instant Share's notifications (its name and icon in them and in the Notification Centre);
@@ -203,10 +204,11 @@ def save_in_downloads(name, data, folder=None):
 
 
 class Tray:
-    """The icon by the clock and its menu, made with Windows' own functions (no third-party library).
+    """The icon by the clock and its menu, made with Windows' own functions (no third-party library). The menu is the
+    SCAFFApps menu (traymenu.py), drawn like the tray menus of the Electron apps (Smart Snap, SCAFFApps Suite).
 
     items: [(label, action, checked)] where checked is None or a function saying whether to tick it; None in the
-    list is a separator. The first item is the default (bold), and a left click on the icon does it."""
+    list is a separator. A left click on the icon does the first item."""
 
     WM_TRAY = 0x8000 + 1                                  # WM_APP + 1: what the icon sends its window
     CLASS = "SCAFFApps.TextShare.Tray"
@@ -246,14 +248,7 @@ class Tray:
         u.LoadImageW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR, wintypes.UINT, ctypes.c_int, ctypes.c_int,
                                  wintypes.UINT]
         u.LoadImageW.restype = wintypes.HANDLE
-        u.CreatePopupMenu.restype = wintypes.HMENU
-        u.AppendMenuW.argtypes = [wintypes.HMENU, wintypes.UINT, ctypes.c_size_t, wintypes.LPCWSTR]
-        u.TrackPopupMenu.argtypes = [wintypes.HMENU, wintypes.UINT, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                     wintypes.HWND, wintypes.LPVOID]
-        u.SetMenuDefaultItem.argtypes = [wintypes.HMENU, wintypes.UINT, wintypes.UINT]
-        u.DestroyMenu.argtypes = [wintypes.HMENU]
         u.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-        u.SetForegroundWindow.argtypes = [wintypes.HWND]
         u.DestroyWindow.argtypes = [wintypes.HWND]
         u.RegisterWindowMessageW.argtypes = [wintypes.LPCWSTR]
         k.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
@@ -266,7 +261,7 @@ class Tray:
         self.ready.wait(5)
 
     def run(self):
-        try:                                             # menus in Windows' dark mode when it is on
+        try:                                             # Windows' own menus (the title bar's) dark when Windows is
             uxtheme = ctypes.WinDLL("uxtheme")
             uxtheme[135](1)                              # SetPreferredAppMode(AllowDark)
             uxtheme[136]()                               # FlushMenuThemes
@@ -328,22 +323,11 @@ class Tray:
         return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
 
     def menu(self):
-        menu = user32.CreatePopupMenu()
-        for n, item in enumerate(self.items, 1):
-            if item is None:
-                user32.AppendMenuW(menu, 0x0800, 0, None)             # MF_SEPARATOR
-            else:
-                label, _, checked = item
-                user32.AppendMenuW(menu, 0x0008 if checked and checked() else 0, n, label)   # MF_CHECKED
-        user32.SetMenuDefaultItem(menu, 1, 0)
-        point = wintypes.POINT()
-        user32.GetCursorPos(ctypes.byref(point))
-        user32.SetForegroundWindow(self.hwnd)            # so the menu closes when clicking elsewhere
-        chosen = user32.TrackPopupMenu(menu, 0x0100 | 0x0080 | 0x0002 | 0x0020, point.x, point.y, 0, self.hwnd, None)
-        user32.PostMessageW(self.hwnd, 0, 0, 0)          # WM_NULL, as Windows asks after a tray menu
-        user32.DestroyMenu(menu)
-        if chosen:
-            self.do(chosen - 1)
+        chosen = traymenu.popup([None if item is None else
+                                 dict(label=item[0], checked=None if item[2] is None else bool(item[2]()))
+                                 for item in self.items])
+        if chosen is not None:
+            self.do(chosen)
 
     def do(self, index):
         item = self.items[index]

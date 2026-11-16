@@ -39,7 +39,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-VERSION = "1.3.4"
+VERSION = "1.3.5"
 FROZEN = getattr(sys, "frozen", False)                       # running as the built program (Instant Share.exe)
 APP_FILE = Path(sys.executable if FROZEN else __file__).resolve()
 

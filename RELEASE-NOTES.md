@@ -1,5 +1,38 @@
 # Release notes
 
+## 1.3.5 — 16 November 2026
+
+The tray icon's menu in the SCAFFApps style, the same as Smart Snap's and the SCAFFApps Suite's.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.3.5.exe` | 13.8 MB | `E78E484008F8D7A1C609A9A6F4F8EFEDA867403B18E7F6C5B386A8494152E50B` |
+| `Instant-Share-1.3.5.apk` | 70 KB | `4162EEDC3752DCC2E2183392E7B10E556A50F01C579A95B6C5D4D4D65A14BDB6` |
+| `instantshare.py` | 169 KB | `8C469656DACE2F6F350FCECBF48752E4C7DE55C3BAB6BF3AD99E0F6124FDF0EA` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `37ACF9EACA00F9AC02612B3CE090B68794FAD430D1AA6BE9FB58412A0C60133A` |
+| `Instant-Share-Handbook-1.3.5.pdf` | 3.2 MB | `4E42CD38C2C592A034F3EBB9876EEBCC5EE3E7DEEB9749F31425B47010B3B540` |
+
+For 64-bit Windows 10 and 11, and Android 10 and newer. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
+
+### Changed
+
+- **The tray icon's menu** is now the menu every SCAFFApps app has: taller rows, the whole row lit under the pointer, rounded corners, dark or light as Windows is. The same items as before: Open Instant Share, Add a device…, Start with Windows (ticked when it is on), Change setup… and Quit Instant Share. Instant Share draws it itself, still without any third-party code.
+- **The handbook**, `Instant-Share-Handbook-1.3.5.pdf`: 1.3.4's pages and pictures, with the new version.
+
+### Updating
+
+- **Windows, from 1.3.0 to 1.3.4:** Settings > Updates > **Update now**, or **Update** in the SCAFFApps Suite.
+- **Android:** nothing changed in the app but its version number; **Update now** in the app installs it, or keep 1.3.4.
+
+### Tested
+
+- From the source code in a test profile: the tray icon right-clicked the way Windows tells it, the menu drawn, **Start with Windows** ticked through it (into a test entry, not the real list), Esc closes it, **Quit Instant Share** ends the program.
+- The menu next to Smart Snap's, both at 150 %: the same size to the pixel (259 × 273 against Electron's 258 × 273), the same rows, colours, tick, text and hover, in the dark and the light appearance. Windows 11 gives it a slightly larger shadow.
+- Installed over 1.3.4 on a working computer the way the updates do it (silently, with Windows' permission): Windows lists 1.3.5, Instant Share opened again, and its tray menu opens in the new look and closes with Esc.
+- Microsoft Defender finds nothing in the installer or the Android app.
+
 ## 1.3.4 — 16 November 2026
 
 The handbook in the SCAFFApps style, Settings without scrolling, and scrollbars in the SCAFFApps colours.

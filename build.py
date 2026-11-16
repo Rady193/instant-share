@@ -131,6 +131,16 @@ def android(v, release):
     run("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", HERE / "android" / "build.ps1", "-Tools", tools)
     apk = HERE / "android" / "build" / "Instant-Share.apk"
     shutil.copy2(apk, release / f"Instant-Share-{v}.apk")
+    # the owner's one folder of every SCAFFApps Android app's newest version (OneDrive\Scaffapps\Android apps), where it
+    # exists: this one in, earlier Instant Share versions out (a newer one is never touched)
+    shelf = HERE.parent / "Android apps"
+    if shelf.is_dir():
+        newest = tuple(int(x) for x in v.split("."))
+        for old in shelf.glob("Instant-Share-*.apk"):
+            m = re.fullmatch(r"Instant-Share-(\d+(?:\.\d+)*)\.apk", old.name)
+            if m and tuple(int(x) for x in m.group(1).split(".")) < newest:
+                old.unlink(missing_ok=True)
+        shutil.copy2(apk, shelf / f"Instant-Share-{v}.apk")
     return apk
 
 
