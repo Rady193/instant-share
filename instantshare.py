@@ -39,7 +39,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
-VERSION = "1.3.6"
+VERSION = "1.4.0"
 FROZEN = getattr(sys, "frozen", False)                       # running as the built program (Instant Share.exe)
 APP_FILE = Path(sys.executable if FROZEN else __file__).resolve()
 
@@ -103,7 +103,7 @@ LINES = "length(i.text) - length(replace(i.text, char(10), '')) + 1"
 COLUMNS = (f"i.id, i.at, i.device, length(i.text), {LINES}, "
            f"CASE WHEN length(i.text) <= {FULL_LIMIT} THEN i.text ELSE substr(i.text, 1, {PREVIEW}) END, "
            "i.sender, i.recipients, i.file_name, i.file_type, i.file_size, i.file_key, i.edited_at, i.file_kind, "
-           "COALESCE(m.pinned, 0), COALESCE(m.archived, 0)")
+           "COALESCE(m.pinned, 0), COALESCE(m.archived, 0), i.written_at")
 MARKS = "items i LEFT JOIN marks m ON m.item = i.id AND m.device = ?"          # this device's pins and archive
 VISIBLE = "(i.recipients IS NULL OR i.sender = ? OR instr(i.recipients, ?) > 0)"   # for everyone, from me, or to me
 DEVICE_ID = re.compile(r"[A-Za-z0-9_-]{8,64}")
@@ -111,6 +111,8 @@ ONLINE_MS = 15_000               # a device is online when it was heard from in 
 FORGET_MS = 30 * 86_400_000      # devices not heard from for 30 days leave the list
 
 FILE_MAX = 5 * 1024 * 1024       # one file, up to 5 MB
+WAITED_SHOWN = 60_000            # a share that waited on its device longer than this shows when it was written
+WAITED_MAX = 366 * 86_400_000    # (and no longer than a year, whatever a device's clock says)
 CODE_MINUTES = 10                # a pairing code is good for 10 minutes,
 CODE_TRIES = 5                   # and 5 tries; then a new one must be made
 COOKIE = "is_key"                # a browser's device key, kept by the browser after pairing
@@ -231,9 +233,12 @@ class Store:
                              ("file_key", "TEXT"),        # secret part of the file's address
                              ("file", "BLOB"),
                              ("file_kind", "TEXT"),       # photo, document, audio, video, archive (storage view)
-                             ("edited_at", "INTEGER")):   # when its sender last changed its text
+                             ("edited_at", "INTEGER"),    # when its sender last changed its text
+                             ("uid", "TEXT"),             # the id its device gave it (1.4): it is never kept twice
+                             ("written_at", "INTEGER")):  # when it was written, if it waited on its device to be sent
             if column not in have:
                 self.db.execute(f"ALTER TABLE items ADD COLUMN {column} {kind}")
+        self.db.execute("CREATE INDEX IF NOT EXISTS items_uid ON items (uid) WHERE uid IS NOT NULL")
         self.db.execute("UPDATE items SET file_kind = CASE WHEN file_type LIKE 'image/%' THEN 'photo' "
                         "ELSE 'document' END WHERE file_key IS NOT NULL AND file_kind IS NULL")    # from 1.0
         self.db.execute("""CREATE TABLE IF NOT EXISTS devices (
@@ -386,11 +391,11 @@ class Store:
 
     def _item(self, r, names, me):
         (item_id, at, device, size, lines, text, sender, recipients, fname, ftype, fsize, fkey, edited, fkind,
-         pinned, archived) = r
+         pinned, archived, written) = r
         to = json.loads(recipients) if recipients else None
         return {"id": item_id, "at": at, "device": device, "from": sender or "", "size": size,
                 "lines": lines if size else 0, "text": text, "big": size > len(text),
-                "mine": bool(sender) and sender == me, "edited": edited, "pinned": bool(pinned),
+                "mine": bool(sender) and sender == me, "edited": edited, "written": written, "pinned": bool(pinned),
                 "archived": bool(archived),
                 "to": [{"id": d, "name": names.get(d, "a device")} for d in to] if to else None,
                 "file": {"name": fname, "type": ftype, "size": fsize, "kind": fkind or "document",
@@ -504,12 +509,18 @@ class Store:
                             "FROM items").fetchone()
         return r[0] + r[1]
 
-    def add(self, text, device, sender="", to=None, file=None):
-        """Keeps a new item. The same text again (no file), right after itself, is not kept twice. Refused when
-        the history would pass 2 GB."""
+    def add(self, text, device, sender="", to=None, file=None, uid=None, written=None):
+        """Keeps a new item. The same text again (no file), right after itself, is not kept twice; nor is a share
+        that comes again with the id its device gave it (sent again when the answer was lost on the way). Refused
+        when the history would pass 2 GB. written: when it was written, if it waited on its device ("Send later")."""
         sender = sender if DEVICE_ID.fullmatch(sender or "") else None
+        uid = uid if sender and DEVICE_ID.fullmatch(uid or "") else None
         recipients = json.dumps(sorted(set(to))) if to else None
         with self.lock:
+            if uid:
+                same = self.db.execute("SELECT id FROM items WHERE uid = ? AND sender = ?", (uid, sender)).fetchone()
+                if same:
+                    return self._summary(same[0]), True
             if not file:
                 same = self.db.execute(
                     "SELECT id FROM items WHERE id = (SELECT MAX(id) FROM items) AND text = ? AND file_key IS NULL "
@@ -521,9 +532,9 @@ class Store:
                 raise HistoryFull()
             cur = self.db.execute(
                 "INSERT INTO items (at, device, text, sender, recipients, file_name, file_type, file_size, file_key, "
-                "file, file_kind) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "file, file_kind, uid, written_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (now_ms(), device, text, sender, recipients, fname, ftype, len(fdata) if file else None,
-                 secrets.token_urlsafe(12) if file else None, fdata, fkind))
+                 secrets.token_urlsafe(12) if file else None, fdata, fkind, uid, written))
             self.db.commit()
             self.changed()
             return self._summary(cur.lastrowid), False
@@ -1324,8 +1335,14 @@ class Handler(BaseHTTPRequestHandler):
         to = [d for d in to if isinstance(d, str) and DEVICE_ID.fullmatch(d)][:50] if isinstance(to, list) else []
         if to and me:
             to = [d for d in to if d != me]
+        # written while this computer could not be reached ("Send later"): its device says how long it waited (by
+        # its own clock, so the two clocks need not agree), and the item shows when it was written
+        uid = data.get("uid") if isinstance(data.get("uid"), str) else None
+        waited = data.get("waited")
+        waited = int(waited) if isinstance(waited, (int, float)) and not isinstance(waited, bool) else 0
+        written = now_ms() - min(waited, WAITED_MAX) if waited >= WAITED_SHOWN else None
         try:
-            item, duplicate = self.server.store.add(text, device, me, to or None, upload)
+            item, duplicate = self.server.store.add(text, device, me, to or None, upload, uid, written)
         except HistoryFull:
             return self.fail(507, f"The history on {socket.gethostname()} is full ({HISTORY_MAX // 1024 ** 3} GB). "
                                   "Delete some old files there to make room.")
@@ -1336,7 +1353,8 @@ class Handler(BaseHTTPRequestHandler):
             if upload:
                 what.append(f"a file of kind {upload[2]} ({len(upload[3]) // 1024} KB)")
             log(f"{device} shared {' and '.join(what)}" + (f", for {len(to)} device{'s' if len(to) > 1 else ''}"
-                                                           if to else ""))
+                                                           if to else "")
+                + (f", written {round(waited / 60_000)} min before (it waited on its device)" if written else ""))
         self.reply(200 if duplicate else 201, {"item": item, "duplicate": duplicate})
 
     def pair_start(self):
@@ -1894,7 +1912,15 @@ a.btn { color: inherit; text-decoration: none }
 .group-label { margin: 4px 2px 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--dim) }
 .pinned-mark { display: inline-flex; color: var(--accent) }
 .pinned-mark .icon { width: 13px; height: 13px }
-.edited { white-space: nowrap; font-style: italic }
+.edited, .written { white-space: nowrap; font-style: italic }
+/* waiting to send: written while the computer that keeps the history could not be reached */
+#outbox { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px }
+.item.waiting { border-style: dashed; border-color: var(--accent-line) }
+.item.waiting.failed { border-color: var(--danger) }
+.wait { white-space: nowrap; flex: none }
+.why { margin: 6px 12px 0; color: var(--danger); font-size: 12px }
+.file .chip.still { cursor: default }
+.file .chip.still:hover { border-color: var(--line) }
 .to { color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 16em }
 .btn.more-btn { width: 26px; padding: 0; font-size: 16px; line-height: 1 }
 
@@ -2077,6 +2103,7 @@ input.switch:checked::after { transform: translateX(16px); background: #fff }
       <input id="search" type="search" placeholder="Search the history" autocomplete="off">
     </div>
     <div class="scroll">
+      <div id="outbox" hidden></div>
       <div id="list"></div>
       <p id="empty" class="empty" hidden></p>
       <p id="limit" class="note" hidden></p>
@@ -2230,6 +2257,12 @@ const androidApp = android && {
   check_update: () => androidAsk("checkUpdate"),
   update_now: () => androidAsk("updateNow"),
   set_option: (name, value) => Promise.resolve(JSON.parse(android.setOption(name, !!value))),
+  // waiting to send (1.4): the app keeps it, and shares it as soon as it can, also with the app closed
+  outbox_list: android.outboxList && (() => Promise.resolve(JSON.parse(android.outboxList()))),
+  outbox_add: android.outboxAdd && ((entry) => Promise.resolve(JSON.parse(android.outboxAdd(JSON.stringify(entry))))),
+  outbox_get: android.outboxGet && ((uid) => Promise.resolve(JSON.parse(android.outboxGet(uid)))),
+  outbox_remove: android.outboxRemove && ((uid) => Promise.resolve(JSON.parse(android.outboxRemove(uid)))),
+  outbox_send: android.outboxSend && ((uid) => Promise.resolve(JSON.parse(android.outboxSend(uid || "")))),
 };
 const app = () => (window.pywebview && window.pywebview.api) || androidApp || null;
 
@@ -2249,6 +2282,7 @@ let devices = [];                 // every device the server knows, for "Who sho
 let targets = new Set();          // the devices chosen; none = everyone
 try { targets = new Set(JSON.parse(saved.get("to", "[]"))); } catch {}
 let attachment = null;            // {name, type, size, data (base64), url}
+let waiting = [];                 // written while the server could not be reached, waiting to send, oldest first
 let editing = null;               // {id, at}: changing one of this device's own items, in place
 let view = "list";                // "list", or "archived": what this device put away
 let archivedCount = 0;
@@ -2262,7 +2296,15 @@ async function api(path, opts = {}) {
   const init = { method: opts.method || "GET", cache: "no-store", credentials: "same-origin", headers: {
     "X-TextShare": "1", "X-TextShare-Kind": KIND, "X-TextShare-Name": encodeURIComponent(device || "") } };
   if (opts.body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(opts.body); }
-  const res = await fetch(path, init);           // throws when the server cannot be reached
+  let stop = 0;
+  if (opts.timeout && window.AbortController) {  // gives up like an unreachable server (no answer in time)
+    const ctl = new AbortController();
+    init.signal = ctl.signal;
+    stop = setTimeout(() => ctl.abort(), opts.timeout);
+  }
+  let res;
+  try { res = await fetch(path, init); }         // throws when the server cannot be reached
+  finally { clearTimeout(stop); }
   let data = {};
   try { data = await res.json(); } catch {}
   if (!res.ok) {
@@ -2313,6 +2355,7 @@ async function poll() {
     setOnline(true);
     skew = data.now - Date.now();
     if (!data.same) { rev = data.rev; revQuery = key; take(data); }
+    if (waiting.some((w) => !w.error)) sendWaiting();      // back in reach: what waited goes now
   } catch (e) {
     if (my !== pollSeq) return;
     setOnline(false, unreachable(e) ? "" : e.message);
@@ -2326,9 +2369,19 @@ function drawStatus() {
   const s = $("#status");
   s.className = "status " + (isOnline ? "on" : isOnline === false ? "off" : "");
   const others = devices.filter((d) => d.online && d.id !== deviceId).length;
+  const kept = waiting.length ? " · " + waiting.length + " waiting to send" : "";
   s.querySelector("span").textContent = isOnline
-    ? "Connected to " + serverName + (others ? ` · ${others} other device${others === 1 ? "" : "s"} online` : "")
-    : statusMsg || "Can't reach " + serverName + ". Is Instant Share running there? Retrying…";
+    ? "Connected to " + serverName + (others ? ` · ${others} other device${others === 1 ? "" : "s"} online` : "") + kept
+    : (statusMsg || "Can't reach " + serverName + ". Is Instant Share running there? Retrying…") + kept;
+  drawShareLabel();
+}
+/* Share, or, while the computer that keeps the history can't be reached, Send later (it waits on this device) */
+function drawShareLabel() {
+  if (editing) return;
+  const later = isOnline === false;
+  $("#shareLabel").textContent = later ? "Send later" : "Share";
+  shareBtn.title = later ? "Can't reach " + serverName + " now: it waits on this device, and is shared as soon as "
+    + serverName + " answers" : "";
 }
 
 /* ---------------- devices: who should see it ---------------- */
@@ -2492,7 +2545,7 @@ function card(it) {
   const node = document.createElement("article");
   node.className = "item";
   node.innerHTML = '<div class="head"><span class="who"></span><span class="to" hidden></span><time></time>'
-    + '<span class="edited" hidden></span><span class="meta"></span><span class="pinned-mark" hidden title="Pinned on this device"></span>'
+    + '<span class="written" hidden></span><span class="edited" hidden></span><span class="meta"></span><span class="pinned-mark" hidden title="Pinned on this device"></span>'
     + '<span class="acts"></span></div><div class="file" hidden></div>'
     + '<pre dir="auto"></pre><button class="more" type="button" hidden>Show all</button>';
   node.querySelector(".who").textContent = node.querySelector(".who").title = it.device;
@@ -2506,6 +2559,13 @@ function card(it) {
   t.dataset.at = it.at;
   t.title = new Date(it.at).toLocaleString();
   t.textContent = ago(it.at);
+  if (it.written) {               // it waited on its device ("Send later"): shared when the server was in reach again
+    const w = node.querySelector(".written");
+    w.hidden = false;
+    w.textContent = "· written " + when(it.written);
+    w.title = "Written " + new Date(it.written).toLocaleString() + " on " + it.device + ", while it could not reach "
+      + serverName + "; shared " + new Date(it.at).toLocaleString() + ", when it could";
+  }
   if (it.edited) {
     const e = node.querySelector(".edited");
     e.hidden = false;
@@ -2727,6 +2787,7 @@ function showView(v) {
   $("#archBack").hidden = v !== "archived";
   for (const [, el] of rows) el.remove();
   rows.clear();
+  drawOutbox();
   refresh();
 }
 $("#archBack").addEventListener("click", () => showView("list"));
@@ -2771,7 +2832,7 @@ async function startEdit(node) {
 function endEdit() {
   editing = null;
   $("#editing").hidden = true;
-  $("#shareLabel").textContent = "Share";
+  drawShareLabel();
   ["#to", "#attachBtn"].forEach((s) => { $(s).disabled = false; });
 }
 $("#editCancel").addEventListener("click", () => { endEdit(); setEditor(saved.get("draft", "")); editor.focus(); });
@@ -2837,11 +2898,15 @@ async function share() {
     return;
   }
   if (!text.trim() && !attachment) { toast("Nothing to share yet: write or paste something, or add a file."); editor.focus(); return; }
+  // its own id: if the answer is lost on the way and it is sent again, the history still keeps it once
+  const entry = { uid: newId(), text, to: [...targets], to_names: targetNames(), written: Date.now(),
+                  file: attachment ? { name: attachment.name, type: attachment.type || "", size: attachment.size, data: attachment.data } : null };
   shareBtn.disabled = true;
   try {
-    const body = { text, device, to: [...targets] };
-    if (attachment) body.file = { name: attachment.name, data: attachment.data };
-    const r = await api("/api/items", { method: "POST", body });
+    if (isOnline === false) { await keepForLater(entry); return; }      // known to be out of reach: no waiting for it
+    const body = { text, device, to: entry.to, uid: entry.uid };
+    if (entry.file) body.file = { name: entry.file.name, data: entry.file.data };
+    const r = await api("/api/items", { method: "POST", body, timeout: 30000 });
     setEditor("");
     attachment = null;
     showAttachment();
@@ -2849,12 +2914,225 @@ async function share() {
       : targets.size ? "Shared with " + targetNames().join(", ") + " only." : "Shared. Every device has it now.");
     poll();
   } catch (e) {
-    toast("Not shared: " + (unreachable(e) ? "can't reach the computer that keeps the history. Your text is still here." : e.message), true);
+    if (unreachable(e)) await keepForLater(entry);
+    else toast("Not shared: " + e.message, true);
   } finally {
     shareBtn.disabled = false;
     editor.focus();
   }
 }
+
+/* ---------------- waiting to send: written while the computer that keeps the history can't be reached ---------------- */
+
+/* What is shared while the server is out of reach waits on this device and goes, oldest first, the moment it answers.
+   The Windows and Android apps keep it themselves (so it goes with the window closed too, and they take it from their
+   own "Can't reach" page); a browser keeps it in its own storage for this page, sent while the page is open. */
+const webBox = {
+  db: null,
+  open() {
+    if (!this.db) this.db = new Promise((resolve, reject) => {
+      const r = indexedDB.open("textshare", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("outbox", { keyPath: "uid" });
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => { this.db = null; reject(r.error); };
+    });
+    return this.db;
+  },
+  async run(mode, work) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const t = db.transaction("outbox", mode), r = work(t.objectStore("outbox"));
+      t.oncomplete = () => resolve(r ? r.result : undefined);
+      t.onerror = t.onabort = () => reject(t.error);
+    });
+  },
+  async all() { return ((await this.run("readonly", (s) => s.getAll())) || []).sort((a, b) => a.written - b.written); },
+  async list() { return (await this.all()).map(summaryOf); },
+  async add(entry) { await this.run("readwrite", (s) => s.put(entry)); return { ok: true }; },
+  async get(uid) { return (await this.run("readonly", (s) => s.get(uid))) || null; },
+  async remove(uid) { await this.run("readwrite", (s) => s.delete(uid)); return { ok: true }; },
+  async send(uid) {
+    const w = uid && await this.get(uid);
+    if (w && w.error) { delete w.error; await this.add(w); }
+    sendFromBrowser();
+    return { ok: true };
+  },
+};
+const appBox = {
+  list: () => app().outbox_list(), add: (entry) => app().outbox_add(entry), get: (uid) => app().outbox_get(uid),
+  remove: (uid) => app().outbox_remove(uid), send: (uid) => app().outbox_send(uid || ""),
+};
+function summaryOf(w) {           // what the list shows: no file data, the text's start only
+  const text = w.text || "";
+  return { uid: w.uid, text: text.slice(0, PREVIEW_CHARS), size: text.length, lines: text ? text.split("\n").length : 0,
+           to: w.to || [], to_names: w.to_names || [], written: w.written, error: w.error || "",
+           file: w.file ? { name: w.file.name, type: w.file.type || "", size: w.file.size } : null };
+}
+const PREVIEW_CHARS = 4000;
+const appReady = new Promise((resolve) => {
+  if (KIND !== "app" || android || (window.pywebview && window.pywebview.api)) resolve();
+  else { window.addEventListener("pywebviewready", resolve, { once: true }); setTimeout(resolve, 4000); }
+});
+/** Where this device keeps what waits: the app's own outbox when it has one (1.4 and newer), else this page's. */
+async function box() {
+  await appReady;
+  const a = app();
+  return a && a.outbox_add ? appBox : webBox;
+}
+
+async function keepForLater(entry) {
+  let r;
+  try { r = await (await box()).add(entry); } catch (e) { r = { error: (e && e.message) || String(e) }; }
+  if (!r || r.error) {
+    toast("Not shared: can't reach " + serverName + ", and this device could not keep it for later"
+      + (r && r.error ? " (" + r.error + ")" : "") + ". Your text is still here.", true);
+    return false;
+  }
+  setEditor("");
+  attachment = null;
+  showAttachment();
+  toast("Can't reach " + serverName + " now. It waits on this device, and is shared as soon as " + serverName + " answers.");
+  await refreshOutbox();
+  return true;
+}
+
+async function refreshOutbox(news) {
+  try { const got = await (await box()).list(); waiting = Array.isArray(got) ? got : []; } catch { waiting = []; }
+  drawOutbox();
+  drawStatus();
+  if (news && news.sent) {        // the app shared what waited (the page is in front: it says so itself)
+    toast(sentLater(news.sent));
+    poll();
+  }
+}
+window.textShareOutbox = refreshOutbox;      // the apps call it when their outbox changes
+const sentLater = (n) => (n === 1 ? "The message written while away is" : plural(n, "message") + " written while away are")
+  + " shared now.";
+
+let sendingAt = 0, sendingNow = false;
+/** The server answers again: the app shares what waits (it is told at most every few seconds), or the page does. */
+async function sendWaiting() {
+  const b = await box();
+  if (b === appBox) {
+    if (Date.now() - sendingAt < 5000) return;
+    sendingAt = Date.now();
+    try { await appBox.send(""); } catch {}
+  } else sendFromBrowser();
+}
+async function sendFromBrowser() {
+  if (sendingNow) return;
+  sendingNow = true;
+  let sent = 0;
+  try {
+    for (const w of await webBox.all()) {
+      if (w.error) continue;
+      const body = { text: w.text || "", device, to: w.to || [], uid: w.uid, waited: Math.max(0, Date.now() - w.written) };
+      if (w.file) body.file = { name: w.file.name, data: w.file.data };
+      try {
+        await api("/api/items", { method: "POST", body, timeout: 60000 });
+        await webBox.remove(w.uid);
+        sent++;
+      } catch (e) {
+        if (unreachable(e) || e.http === 401 || e.http >= 500 && e.http !== 507) break;     // out of reach again: later
+        w.error = e.message;                       // refused (too big, not allowed, history full): kept, with why
+        await webBox.add(w);
+      }
+    }
+  } catch {} finally { sendingNow = false; }
+  await refreshOutbox(sent ? { sent } : null);
+}
+
+function drawOutbox() {
+  const el = $("#outbox");
+  el.textContent = "";
+  el.hidden = !waiting.length || view !== "list";
+  if (el.hidden) return;
+  el.append(groupLabel("Waiting to send · " + waiting.length));
+  for (const w of waiting) el.append(waitingCard(w));
+}
+
+function waitingCard(w) {
+  const node = document.createElement("article");
+  node.className = "item waiting" + (w.error ? " failed" : "");
+  node.innerHTML = '<div class="head"><span class="who"></span><span class="to" hidden></span><span class="wait"></span>'
+    + '<span class="meta"></span><span class="acts"></span></div><p class="why" hidden></p><div class="file" hidden></div>'
+    + '<pre dir="auto"></pre>';
+  node.querySelector(".who").textContent = device || "This device";
+  if (w.to_names && w.to_names.length) {
+    const to = node.querySelector(".to");
+    to.hidden = false;
+    to.textContent = "→ " + w.to_names.join(", ");
+    to.title = "Only for " + w.to_names.join(", ");
+  }
+  const wait = node.querySelector(".wait");
+  wait.textContent = (w.error ? "written " : "waiting since ") + when(w.written);
+  wait.title = "Written " + new Date(w.written).toLocaleString() + (w.error ? ""
+    : ". It is shared as soon as " + serverName + " answers.");
+  if (w.error) {                  // the history refused it: why, on a line of its own
+    const why = node.querySelector(".why");
+    why.hidden = false;
+    why.textContent = "Not shared: " + w.error;
+  }
+  const meta = [];
+  if (w.size) meta.push(plural(w.lines, "line"), plural(w.size, "character"));
+  if (w.file) meta.push(size(w.file.size));
+  node.querySelector(".meta").textContent = "· " + meta.join(" · ");
+  if (w.file) {
+    const holder = node.querySelector(".file"), chip = document.createElement("div"), nm = document.createElement("span"),
+          sm = document.createElement("small");
+    holder.hidden = false;
+    chip.className = "chip still";
+    nm.className = "nm"; nm.textContent = w.file.name; sm.textContent = size(w.file.size);
+    chip.append(badgeFor(w.file.name), nm, sm);
+    holder.append(chip);
+  }
+  const acts = node.querySelector(".acts");
+  if (w.error) acts.append(button("w-retry", "Try again", "Share it now, if " + serverName + " takes it"));
+  acts.append(button("w-edit", "Edit", "Back to the editor: it stops waiting"), button("w-del", "Delete", "It has not been shared: it goes from this device"));
+  const pre = node.querySelector("pre");
+  if (w.size) pre.textContent = w.text + (w.size > w.text.length ? "\n…" : ""); else pre.hidden = true;
+  node._waiting = w;
+  return node;
+}
+
+$("#outbox").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const w = btn.closest(".item")._waiting;
+  try {
+    const b = await box();
+    if (btn.classList.contains("w-retry")) {
+      await b.send(w.uid);
+      toast(isOnline ? "Sharing it again…" : "It is shared as soon as " + serverName + " answers.");
+      setTimeout(refreshOutbox, 1500);
+    } else if (btn.classList.contains("w-del")) {
+      if (!await ask("Delete it?", "It has not been shared: it goes from this device, and nobody sees it.", "Delete")) return;
+      await b.remove(w.uid);
+      refreshOutbox();
+    } else if (btn.classList.contains("w-edit")) {
+      const full = await b.get(w.uid);
+      if (!full) return refreshOutbox();
+      if ((editor.value.trim() || attachment) && !await ask("Replace what is in the editor?", "What you wrote there is not shared yet.", "Replace")) return;
+      if (editing) endEdit();
+      await b.remove(w.uid);
+      setEditor(full.text || "");
+      attachment = null;
+      if (full.file && full.file.data) {
+        const f = full.file;
+        attachment = { name: f.name, type: f.type || "", size: f.size, data: f.data, ext: extOf(f.name),
+                       url: "data:" + (f.type || "application/octet-stream") + ";base64," + f.data };
+      }
+      showAttachment();
+      targets = new Set(full.to || []);
+      keepTargets();
+      editor.focus();
+      refreshOutbox();
+      toast("Back in the editor: it no longer waits. Press " + (isOnline === false ? "Send later" : "Share") + " when it is ready.");
+    }
+  } catch (err) {
+    toast("Not done: " + ((err && err.message) || err), true);
+  }
+});
 
 let draftTimer = 0;
 editor.addEventListener("input", () => {
@@ -3278,7 +3556,7 @@ function ago(at) {
   return d.toLocaleDateString(undefined, opts) + " " + time;
 }
 
-function showMe() { $("#meName").textContent = device || "…"; }
+function showMe() { $("#meName").textContent = device || "…"; drawOutbox(); }     // (what waits shows this name too)
 function showTitle() { document.title = (unseen ? "(" + unseen + ") " : "") + baseTitle; }
 
 let searchTimer = 0;
@@ -3342,7 +3620,7 @@ function sharedIn(s) {
     }
   }
   editor.focus();
-  toast("Ready to share: choose who should see it, then press Share.");
+  toast("Ready to share: choose who should see it, then press " + (isOnline === false ? "Send later" : "Share") + ".");
 }
 window.textShareIncoming = sharedIn;
 
@@ -3354,6 +3632,7 @@ showMe();
 showTargets();
 hello().finally(() => { poll(); loadDevices(); });
 setInterval(loadDevices, 5000);
+refreshOutbox();
 if (android) { try { sharedIn(JSON.parse(android.takeShared() || "null")); } catch {} }
 inApp();
 </script>

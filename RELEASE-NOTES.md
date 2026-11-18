@@ -1,5 +1,50 @@
 # Release notes
 
+## 1.4.0 — 18 November 2026
+
+**Send later**: share even when the computer that keeps the history can't be reached; it goes by itself when it can.
+
+### Downloads
+
+| File | Size | SHA-256 |
+|---|---|---|
+| `Instant-Share-Setup-1.4.0.exe` | 13.9 MB | `3AE5D331308784C9CFB4693BCD4F776234DC6DC93BA12AB192DAEACD88B7539F` |
+| `Instant-Share-1.4.0.apk` | 82 KB | `00D826C21E8D2E8626EB996FD263653959C69102A19F5FB176BA633166DC6D88` |
+| `instantshare.py` | 183 KB | `5F57A0AC71062D3A288A908F7EF476DD8D78D5457C394E4B7B4E1DE5F8158BE4` |
+| `THIRD-PARTY-NOTICES.txt` | 143 KB | `8FF26BF1606907D85C4D91E93E6ECD255B7487CBEC3B77CAE06277308D5656A5` |
+| `Instant-Share-Handbook-1.4.0.pdf` | 3.4 MB | `C7DCA9482A523CF2FA13F72A590801E774EA05F12C018BECB5621634CA016E2F` |
+
+For 64-bit Windows 10 and 11, and Android 10 and newer. Not code-signed, so Windows SmartScreen may ask for confirmation on first run.
+
+### New
+
+- **Send later.** Away from the office network, or with the computer that keeps the history asleep, share as usual: the red status says so, **Share** becomes **Send later**, and what you share waits on your own device. It goes by itself, oldest first, the moment that computer answers again, with who should see it as you chose; the Windows and Android apps send it even with their window closed, and say so in a notification.
+- **Waiting to send**, above the history: what waits on this device, with **Edit** (back into the editor; it stops waiting) and **Delete** (after a question: nobody has seen it).
+- **Write for later** on the apps' "Can't reach…" page: started while away, Windows and Android have a box of their own there, with a file, **To** (the devices as last seen) and the list of what waits. When the computer answers again while something is written there, the page says "… answers again" and keeps it, with **Share** and **Open the history**, instead of making way for the history.
+- **"written 09:14"** on items that waited: the others see when it was written, not only when it arrived.
+- **Never twice.** Each share carries its own id: one sent again after an answer was lost on the way is still kept once.
+- **Refused ones stay, with why** (too big, a kind of file it does not take, the history full), for **Try again**, Edit or Delete.
+
+### Changed
+
+- **The Android app's "Can't reach…" screen** no longer reloads itself every few seconds (which would lose what is written there): it asks quietly, and also looks for the computer on the Wi-Fi by its name, in case its address changed.
+- **The handbook**, `Instant-Share-Handbook-1.4.0.pdf`: a new chapter, "Writing while away" (16 pages), and every picture retaken.
+
+### Updating
+
+- **The computer that keeps the history first:** its page brings Send later to every device, and the "written" mark and the never-twice check come from it. A 1.4 app talking to a 1.3 computer still keeps what is written on its "Can't reach…" page and sends it, without them.
+- **Windows, from 1.3.0 to 1.3.6:** Settings > Updates > **Update now**, or **Update** in the SCAFFApps Suite.
+- **Android:** **Update now** in the app, or install the new app over the old one.
+- Browsers keep what waits too, but send it only while Instant Share's page is open in them.
+
+### Tested
+
+- In a browser against a real server: the network gone, shares kept (tried and failed, or kept at once when already known to be away), a photo for one device only, Edit, Delete; the network back: shared oldest first, once each, for the chosen device, marked "written" two hours earlier; a refused file kept with its reason; the same share sent again by hand not kept twice; the page on a phone-sized screen. No page errors.
+- The Windows app from the source, in a test profile against a server in its own process: the server stopped while the page was open (kept in the app's outbox folder, shared when it came back, the device list remembered); started while the server was away (the "Can't reach…" page, Write for later, **To** from the remembered devices); the server back with a draft on that page ("answers again", **Share**, on to the history, both shared, the first marked "written").
+- The packaged program from this installer's build, in a test profile: it starts on the "Can't reach…" page and keeps what is written there.
+- The Android app's "Can't reach…" page in a phone-sized browser, with a stand-in for the app: it keeps through the app, takes a share from another app, and goes on to the history by itself, or says "answers again" with a draft. The Android app itself was built and checked by Microsoft Defender, not run on a phone for this release.
+- Microsoft Defender finds nothing in the installer, the Android app or the handbook.
+
 ## 1.3.6 — 16 November 2026
 
 The tray icon's menu in the SCAFFApps style, the same as Smart Snap's and the SCAFFApps Suite's.

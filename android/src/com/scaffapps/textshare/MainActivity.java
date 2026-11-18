@@ -54,6 +54,9 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private String shared;                         // something shared from another app, waiting for the page
+    /** Shared what waited, or kept one: the page (Instant Share's, or the can't-reach page) shows the list again. */
+    private final Outbox.Watcher watcher = sent -> runOnUiThread(() ->
+            web.evaluateJavascript("window.textShareOutbox && window.textShareOutbox({sent:" + sent + "})", null));
 
     @Override
     protected void onCreate(Bundle state) {
@@ -84,6 +87,7 @@ public class MainActivity extends Activity {
         });
         applyTheme(theme());
         Net.prefs(this).edit().remove("stopped").apply();      // opened again after Quit: listening again
+        Outbox.watcher = watcher;                              // the page shows the outbox again when it changes
         take(getIntent());
         if (Net.base(this) == null) setup(false);
         else if (!Net.paired(this)) pairing("");
@@ -217,7 +221,8 @@ public class MainActivity extends Activity {
         }
         intent.setAction(Intent.ACTION_MAIN);                  // not taken twice (after turning the phone, say)
         String url = web.getUrl(), base = Net.base(this);
-        if (shared != null && url != null && base != null && url.startsWith(base)) {
+        boolean away = url != null && url.startsWith(SETUP) && url.contains("unreachable=1");   // "Write for later" takes it
+        if (shared != null && url != null && (away || base != null && url.startsWith(base))) {
             String s = shared;
             shared = null;
             web.evaluateJavascript("window.textShareIncoming && window.textShareIncoming(" + s + ")", null);
@@ -301,6 +306,12 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() { foreground = false; super.onPause(); }
+
+    @Override
+    protected void onDestroy() {
+        if (Outbox.watcher == watcher) Outbox.watcher = null;
+        super.onDestroy();
+    }
 
     @Override
     @SuppressWarnings("deprecation")
@@ -544,6 +555,63 @@ public class MainActivity extends Activity {
                     answer(call, error("Could not save it: " + e.getMessage()));
                 }
             }, "textshare-save").start();
+        }
+
+        // ---- waiting to send (1.4): what is written while the computer is out of reach, kept by Outbox
+
+        @JavascriptInterface
+        public String outboxList() { return Outbox.list(MainActivity.this).toString(); }
+
+        @JavascriptInterface
+        public String outboxAdd(String entry) {
+            JSONObject r = Outbox.add(MainActivity.this, entry);
+            if (r.optBoolean("ok")) Outbox.sendSoon(MainActivity.this);        // in reach after all: it goes at once
+            return r.toString();
+        }
+
+        @JavascriptInterface
+        public String outboxGet(String uid) {
+            JSONObject e = Outbox.get(MainActivity.this, uid);
+            return e == null ? "null" : e.toString();
+        }
+
+        @JavascriptInterface
+        public String outboxRemove(String uid) { return Outbox.remove(MainActivity.this, uid).toString(); }
+
+        /** Share what waits now (and one the history refused before, tried again). */
+        @JavascriptInterface
+        public String outboxSend(String uid) {
+            if (uid != null && !uid.isEmpty()) Outbox.setError(MainActivity.this, uid, "");
+            Outbox.sendSoon(MainActivity.this);
+            return Outbox.ok().toString();
+        }
+
+        /** The other devices, as last seen while in reach: the can't-reach page's "To". */
+        @JavascriptInterface
+        public String devices() { return Net.prefs(MainActivity.this).getString("devices", "[]"); }
+
+        /** Does the computer that keeps the history answer (again)? If not at its address, it is looked for on the
+         *  Wi-Fi by its name, in case its address changed. The can't-reach page asks every few seconds. */
+        @JavascriptInterface
+        public void reachable(int call) {
+            new Thread(() -> {
+                boolean ok = Net.reachable(MainActivity.this);
+                if (!ok) {
+                    try {
+                        JSONArray found = Net.discover(MainActivity.this, 1500);
+                        for (int i = 0; i < found.length(); i++) {
+                            JSONObject f = found.getJSONObject(i);
+                            if (f.optString("name").equalsIgnoreCase(Net.hostName(MainActivity.this))) {
+                                Net.prefs(MainActivity.this).edit().putString("address", f.getString("address"))
+                                        .putInt("port", f.optInt("port", Net.PORT)).apply();
+                                ok = Net.reachable(MainActivity.this);
+                                break;
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+                try { answer(call, new JSONObject().put("ok", ok)); } catch (Exception ignored) {}
+            }, "textshare-reach").start();
         }
     }
 }

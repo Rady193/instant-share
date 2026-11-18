@@ -54,6 +54,7 @@ REPO = "Rady193/instant-share"   # where new versions are published (GitHub rele
 UPDATE_EVERY = 24 * 3600         # the daily check for a new version (when on)
 HOST_PORTS = 10                  # when 8765 is taken by another program, the next free one of 8765..8774
 EVERY = 3                        # seconds between the app's questions to the computer that keeps the history
+OUTBOX_EVERY = 15                # seconds between tries to share what waits ("Send later"), while anything does
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -362,6 +363,118 @@ class Settings(dict):
         tmp.replace(self.path)
 
 
+class Outbox:
+    """What this computer wrote while it could not reach the computer that keeps the history ("Send later"): one
+    file each in the outbox folder, shared oldest first as soon as that computer answers, also with the window
+    closed. Each carries the id it was given when written, so the history never keeps one twice, even when an answer
+    is lost on the way and it is sent again. One the history refuses (too big, not allowed, history full) stays,
+    with why, until it is tried again, taken back into the editor or deleted."""
+
+    TEXT_MAX = 20 * 1024 * 1024
+
+    def __init__(self, folder):
+        self.folder = folder / "outbox"
+        self.lock = threading.Lock()
+
+    def _files(self):
+        try:
+            return sorted(self.folder.glob("*.json"))
+        except OSError:
+            return []
+
+    @staticmethod
+    def _read(path):
+        try:
+            entry = json.loads(path.read_text(encoding="utf-8"))
+            return entry if isinstance(entry, dict) and ts.DEVICE_ID.fullmatch(str(entry.get("uid", ""))) else None
+        except (OSError, ValueError):
+            return None
+
+    def _write(self, entry):
+        self.folder.mkdir(parents=True, exist_ok=True)
+        path = self.folder / f"{int(entry['written']):013d}-{entry['uid']}.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(entry), encoding="utf-8")
+        tmp.replace(path)
+
+    def _find(self, uid):
+        return next((p for p in self._files() if p.stem.partition("-")[2] == str(uid)), None)    # <written>-<uid>.json
+
+    def entries(self):
+        with self.lock:
+            return [e for e in map(self._read, self._files()) if e]
+
+    def summary(self):
+        """For the pages: oldest first, without the files' contents, the start of the text only."""
+        out = []
+        for e in self.entries():
+            text, file = e.get("text") or "", e.get("file")
+            out.append({"uid": e["uid"], "text": text[:4000], "size": len(text),
+                        "lines": text.count("\n") + 1 if text else 0, "to": e.get("to") or [],
+                        "to_names": e.get("to_names") or [], "written": e["written"], "error": e.get("error") or "",
+                        "file": {"name": file["name"], "type": file.get("type", ""), "size": file["size"]}
+                        if file else None})
+        return out
+
+    def sendable(self):
+        return any(not e.get("error") for e in self.entries())
+
+    def add(self, entry):
+        """A share to keep, as the page made it: {uid, text, to, to_names, file: {name, type, size, data}, written}."""
+        if not isinstance(entry, dict) or not ts.DEVICE_ID.fullmatch(str(entry.get("uid", ""))):
+            return {"error": "That was not a proper share."}
+        text = entry.get("text") or ""
+        if not isinstance(text, str) or len(text.encode("utf-8")) > self.TEXT_MAX:
+            return {"error": "That is too long to share (more than 20 MB)."}
+        file = entry.get("file") or None
+        if file:
+            if not isinstance(file, dict) or not isinstance(file.get("data"), str) or not file.get("name"):
+                return {"error": "The file could not be read."}
+            size = len(file["data"]) * 3 // 4 - file["data"][-2:].count("=")
+            if size > ts.FILE_MAX:
+                return {"error": f"That file is {size / 1048576:.2f} MB. Files can be up to 5 MB."}
+            file = {"name": str(file["name"])[:255], "type": str(file.get("type") or "")[:100], "size": size,
+                    "data": file["data"]}
+        if not text.strip() and not file:
+            return {"error": "There is nothing to share."}
+        to = [d for d in entry.get("to") or [] if isinstance(d, str) and ts.DEVICE_ID.fullmatch(d)][:50]
+        names = [str(n)[:60] for n in entry.get("to_names") or [] if isinstance(n, str)][:50] if to else []
+        now = int(time.time() * 1000)
+        written = entry.get("written")
+        written = int(written) if isinstance(written, (int, float)) and 0 < written <= now else now
+        with self.lock:
+            try:
+                self._write({"uid": entry["uid"], "text": text, "to": to, "to_names": names, "file": file,
+                             "written": written})
+            except OSError as e:
+                return {"error": f"Could not keep it on this computer: {e}"}
+        return {"ok": True}
+
+    def get(self, uid):
+        with self.lock:
+            path = self._find(uid)
+            return self._read(path) if path else None
+
+    def remove(self, uid):
+        with self.lock:
+            path = self._find(uid)
+            if path:
+                path.unlink(missing_ok=True)
+        return {"ok": True}
+
+    def set_error(self, uid, error):
+        """Refused by the history (error), or to be tried again ("")."""
+        with self.lock:
+            path = self._find(uid)
+            entry = self._read(path) if path else None
+            if entry:
+                if error:
+                    entry["error"] = str(error)[:300]
+                else:
+                    entry.pop("error", None)
+                self._write(entry)
+
+
 class Instance:
     """One app per data folder. The first one listens, on this computer only, for a later one asking it to come to
     the front (that is what double-clicking the program again does)."""
@@ -487,6 +600,9 @@ class App:
         self.attempt = 0                 # each new connection attempt makes the older ones give up
         self.wake = threading.Event()    # "Try again" on the can't-reach page
         self.listening = 0               # each new connection makes the older questioner stop
+        self.outbox = Outbox(self.data)  # written while the computer that keeps the history could not be reached
+        self.outbox_wake = threading.Event()
+        self.held = None                 # (host, port): it answers again, but the can't-reach page has a draft
 
     @property
     def name(self):
@@ -573,6 +689,7 @@ class App:
             if autostart_moved(self.data) or (mine(command, self.data) and command != autostart_command(self.data)):
                 autostart_set(autostart_command(self.data))
         threading.Thread(target=self.update_checks, daemon=True, name="updates").start()
+        threading.Thread(target=self.outbox_loop, daemon=True, name="outbox").start()
         if self.args.after_update:
             threading.Thread(target=finish_update, args=(self, Path(self.args.after_update)), daemon=True).start()
         if mode == "host":
@@ -903,6 +1020,9 @@ class App:
                                              "history was replaced). Join it again with a new code.")
                     where = f"[{host}]" if ":" in host else host
                     self.listen(f"https://{where}:{port}")
+                    if shown_problem and self.holding_draft():
+                        self.held = (host, port)     # the page says it answers again; the user opens the history
+                        return
                     self.window.load_url(self.page_url(host, port))
                     return
                 old = old_version(host, port)
@@ -926,9 +1046,27 @@ class App:
                         return
                     if not shown_problem:
                         shown_problem = True
-                        self.window.load_html(self.local_page("unreachable", {"name": name}))
+                        self.window.load_html(self.local_page("unreachable", {
+                            "name": name, "devices": self.settings.get("devices") or []}))
                     self.wake.wait(5)
                     self.wake.clear()
+
+    def holding_draft(self):
+        """The can't-reach page has something written that is not kept yet: it is not swept away by the history's
+        page; the page says the computer answers again instead (and opens the history when told to)."""
+        try:
+            return bool(self.window.evaluate_js("window.holdForDraft ? window.holdForDraft() : false"))
+        except Exception:
+            return False
+
+    def open_history(self):
+        """From the can't-reach page, once the computer answers again (if it went away meanwhile: connecting again,
+        which shows the can't-reach page as long as it does not answer)."""
+        held, self.held = self.held, None
+        if held and self.mode == "join" and self.base and hello(held[0], held[1], self.pin, self.key):
+            self.window.load_url(self.page_url(*held))
+        else:
+            self.resume()
 
     def choose_join(self, name, address, port):
         if (self.settings.get("host", "").lower(), int(self.settings.get("port", 0) or 0)) != (name.lower(), port):
@@ -966,24 +1104,30 @@ class App:
         self.base = base
         self.listening += 1
         threading.Thread(target=self.questions, args=(base, self.listening), daemon=True, name="questions").start()
+        self.outbox_wake.set()           # in reach: what waits goes now
 
     def questions(self, base, turn):
         """Anything new for this device? One question kept open (the computer that keeps the history answers the
         moment something arrives, or after 25 s), asked again at once. It also keeps this device on the others'
         lists as online."""
         after = None
+        away = True
         while turn == self.listening and not self.quitting:
             started = time.monotonic()
             try:
                 answer = self.ask("/api/events" + (f"?after={after}&wait=25" if after is not None else ""), base,
                                   timeout=45)
+                if away:                         # (back) in reach: the device list for writing while away, and
+                    away = False                 # whatever waits to be sent
+                    self.remember_devices(base)
+                    self.outbox_wake.set()
                 if after is not None and answer["items"] and turn == self.listening:
                     self.pop_up(base, answer["items"])
                 after = answer["newest"] if after is None else max(after, answer["newest"])
                 if answer["items"] or time.monotonic() - started > 1:
                     continue                     # straight back to waiting
             except (OSError, ValueError, KeyError):
-                pass                             # away for now: the page says so; asked again shortly
+                away = True                      # away for now: the page says so; asked again shortly
             threading.Event().wait(EVERY)
 
     def pop_up(self, base, items):
@@ -1021,6 +1165,76 @@ class App:
             self.notes.trouble(f"Could not get it from the computer that keeps the history: {e}")
             return {"error": str(e)}
         return {"error": "Nothing to copy."}
+
+    # ---- waiting to send: written while the computer that keeps the history could not be reached
+
+    def remember_devices(self, base):
+        """The other devices, kept for the can't-reach page's "To" (who should see what is written there)."""
+        try:
+            found = self.ask("/api/devices", base)["devices"]
+        except Exception:
+            return
+        devices = [{"id": d["id"], "name": d["name"]} for d in found if not d.get("me")]
+        if devices != self.settings.get("devices"):
+            self.settings["devices"] = devices
+            self.settings.save()
+
+    def outbox_loop(self):
+        """Shares what waits, oldest first: as soon as the computer that keeps the history answers (the questioner
+        and the page say so), when something is added, and every few seconds while anything waits."""
+        while not self.quitting:
+            self.outbox_wake.wait(OUTBOX_EVERY)
+            self.outbox_wake.clear()
+            if self.quitting:
+                return
+            if self.base and self.mode in ("host", "join") and self.outbox.sendable():
+                try:
+                    self.send_waiting(self.base)
+                except Exception:
+                    traceback.print_exc()
+
+    def send_waiting(self, base):
+        sent = changed = 0
+        for entry in self.outbox.entries():
+            if entry.get("error"):
+                continue
+            body = {"text": entry.get("text") or "", "device": self.name, "to": entry.get("to") or [],
+                    "uid": entry["uid"], "waited": max(0, int(time.time() * 1000) - int(entry["written"]))}
+            if entry.get("file"):
+                body["file"] = {"name": entry["file"]["name"], "data": entry["file"]["data"]}
+            try:
+                status, ctype, data, _ = ts.call(base, "/api/items", pin=self.pin, key=self.key, method="POST",
+                                                 body=body, timeout=60,
+                                                 headers={"X-TextShare-Name": quote(self.name), "X-TextShare-Kind": "app"})
+            except Exception:
+                break                            # out of reach again: later
+            if status in (200, 201):
+                self.outbox.remove(entry["uid"])
+                sent += 1
+                changed += 1
+                continue
+            if status == 401 or (status >= 500 and status != 507):
+                break                            # not joined any more (the questioner says so), or trouble there
+            try:
+                why = json.loads(data).get("error") if ctype == "application/json" else ""
+            except ValueError:
+                why = ""
+            self.outbox.set_error(entry["uid"], why or f"the computer answered {status}")
+            changed += 1
+        if sent:
+            log(f"shared {sent} item{'s' if sent > 1 else ''} written while away")
+        if changed:
+            self.tell_pages({"sent": sent})
+            main = my_windows().get("main")
+            if sent and not (main and user32.GetForegroundWindow() == main and user32.IsWindowVisible(main)):
+                self.notes.sent_later(sent, self.settings.get("host", "") if self.mode == "join" else self.me)
+
+    def tell_pages(self, news=None):
+        """The page in the window (Instant Share's, or the can't-reach page) shows the outbox again."""
+        try:
+            self.window.evaluate_js(f"window.textShareOutbox && window.textShareOutbox({json.dumps(news or {})})")
+        except Exception:
+            pass
 
 
 class Notifier:
@@ -1134,6 +1348,17 @@ class Notifier:
   <text>Saved</text><text>{esc(path.name)} is in {esc(path.parent)}</text></binding></visual>
   <actions><action content="Show in folder" arguments="folder|{esc(path)}" activationType="foreground"/></actions>
   <audio silent="true"/></toast>''')
+
+    def sent_later(self, n, host):
+        """What was written while away is shared now (said when the window is not in front; the page says it there)."""
+        what = "The message you wrote while away is" if n == 1 else f"The {n} messages you wrote while away are"
+        if not self.ok:
+            if self.app.tray:
+                self.app.tray.balloon(f"{what} in the history on {host} now.", APP)
+            return
+        self._send(f'''<toast launch="open|" activationType="foreground"><visual><binding template="ToastGeneric">
+  <text>Shared what you wrote while away</text><text>{html.escape(what)} in the history on {html.escape(host)} now.</text>
+  </binding></visual><audio silent="true"/></toast>''')
 
     def trouble(self, message):
         if self.ok:
@@ -1425,6 +1650,34 @@ class Api:
         except Exception as e:
             return {"error": f"Could not save it: {e}"}
 
+    # waiting to send (1.4): Instant Share's page and the can't-reach page keep here what is written while the
+    # computer that keeps the history is out of reach; the app shares it as soon as it can
+
+    def outbox_list(self):
+        return self._app.outbox.summary()
+
+    def outbox_add(self, entry):
+        answer = self._app.outbox.add(entry)
+        if answer.get("ok"):
+            self._app.outbox_wake.set()
+        return answer
+
+    def outbox_get(self, uid):
+        return self._app.outbox.get(str(uid))
+
+    def outbox_remove(self, uid):
+        return self._app.outbox.remove(str(uid))
+
+    def outbox_send(self, uid=""):
+        """Share what waits now (and one the history refused before, tried again)."""
+        if uid:
+            self._app.outbox.set_error(str(uid), "")
+        self._app.outbox_wake.set()
+        return {"ok": True}
+
+    def open_history(self):
+        threading.Thread(target=self._app.open_history, daemon=True).start()
+
 
 # ---------------------------------------------------------------- the app's own pages
 
@@ -1685,8 +1938,329 @@ ready(() => {
 """
 
 
+# "Write for later" on the can't-reach page (Windows) and the Android app's (android/make_setup.py takes it from here):
+# what is written there waits on the device, kept by the app, and is shared oldest first as soon as the computer that
+# keeps the history answers. later(io) runs it; io is the app's side: list, add, get, remove, send (the outbox), the
+# devices last seen, the computer's name, and what to do when it answers again (answered, open).
+
+LATER_STYLE = """
+:root { --accent-line: rgba(240, 195, 60, .5) }
+:root[data-theme="light"] { --accent-line: rgba(91, 44, 131, .4) }
+.later { margin-top: 26px; text-align: left }
+.later .note { margin: 0 0 12px }
+.later textarea { display: block; width: 100%; min-height: 130px; resize: vertical; padding: 10px 12px; background: var(--inset);
+  border: 1px solid var(--line); border-radius: 8px; color: var(--text); outline: none;
+  font: 13px/1.55 "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  transition: border-color .12s, box-shadow .12s }
+.later textarea:focus, .later.drop textarea { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
+.later textarea::placeholder { color: var(--dim); opacity: .8 }
+.later .bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap }
+.later .err { margin: 8px 0 0 }
+.later .err:empty { display: none }
+#laterTo { gap: 5px }
+.grow { flex: 1 }
+.dim { color: var(--dim) }
+.att { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px; background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 8px }
+.att img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; flex: none }
+.att-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.x { margin-left: auto; flex: none; width: 28px; height: 28px; background: none; border: 0; border-radius: 6px; color: var(--dim) }
+.x:hover { background: var(--surface-3); color: var(--text) }
+.badge { display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 6px; color: #fff;
+  font-size: 10px; font-weight: 700; letter-spacing: .03em; background: #5b2c83 }
+.to-wrap { position: relative }
+.pop { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 10; width: 280px; max-height: 320px; overflow-y: auto;
+  padding: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .45) }
+.pop-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer }
+.pop-row:hover { background: var(--surface-3) }
+.pop-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.pop-note { margin: 6px 8px 4px; color: var(--dim); font-size: 11px }
+.btn.sm { height: 26px; padding: 0 9px; font-size: 12px; border-radius: 6px }
+.btn.danger, .btn.danger:hover { color: #fff; background: var(--danger-fill); border-color: transparent }
+.waiting { margin-top: 22px; text-align: left }
+.waiting h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--dim) }
+.wlist { display: flex; flex-direction: column; gap: 8px }
+.wcard { background: var(--surface); border: 1px dashed var(--accent-line); border-radius: 10px; padding: 7px 8px 10px 12px }
+.wcard.failed { border-color: var(--danger) }
+.whead { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim) }
+.wcard.failed .when { color: var(--danger) }
+.whead .to { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.whead .acts { margin-left: auto; display: flex; gap: 4px; flex: none }
+.wfile { margin-top: 6px; font-weight: 600; overflow-wrap: anywhere }
+.wcard pre { margin: 6px 0 0; font: 12.5px/1.55 "Cascadia Mono", Consolas, ui-monospace, monospace; white-space: pre-wrap;
+  overflow-wrap: anywhere; max-height: calc(1.55em * 5); overflow: hidden }
+.wrap.away { width: min(720px, 100%) }
+.away .row { justify-content: flex-start; margin-top: 0 }
+"""
+
+LATER_HTML = """
+<section class="card later" id="later">
+  <h2>Write for later</h2>
+  <p class="note dim" id="laterNote"></p>
+  <textarea id="laterText" dir="auto" spellcheck="false" placeholder="Write or paste what to share, or add a file"></textarea>
+  <div id="laterFile" class="att" hidden><img id="laterThumb" alt="" hidden><span id="laterBadge" class="badge" hidden></span>
+    <span class="att-name" id="laterName"></span><span class="dim" id="laterSize"></span>
+    <button class="x" id="laterDrop" type="button" title="Remove the file">✕</button></div>
+  <div class="bar">
+    <button class="btn" id="laterAttach" type="button" title="Add a file, up to 5 MB">File</button>
+    <input id="laterInput" type="file" hidden>
+    <span class="grow"></span>
+    <div class="to-wrap"><button class="btn" id="laterTo" type="button" title="Who should see it">To: <span id="laterToLabel">Everyone</span> ▾</button>
+      <div class="pop" id="laterPop" hidden>
+        <label class="pop-row"><input type="checkbox" id="laterAll"><span class="nm">Everyone</span></label>
+        <div id="laterList"></div><p class="pop-note" id="laterToNote"></p>
+      </div></div>
+    <button class="btn primary" id="laterGo" type="button">Send later</button>
+  </div>
+  <p class="err" id="laterErr"></p>
+</section>
+<section class="waiting" id="waiting" hidden><h3 id="waitTitle"></h3><div class="wlist" id="waitList"></div></section>
+"""
+
+LATER_SCRIPT = """
+const LATER_ALLOWED = {allowed};          // the endings the history takes (it checks the contents too)
+const LATER_MAX = 5 * 1024 * 1024;
+function later(io) {
+  const text = $("#laterText"), go = $("#laterGo"), card = $("#later");
+  const devices = (io.devices || []).filter((d) => d && d.id && d.name);
+  const targets = new Set();
+  let file = null, answered = false;
+  const say = (t) => { $("#laterErr").textContent = t || ""; };
+  const size = (b) => b < 1024 ? b + " bytes" : b < 1048576 ? Math.round(b / 1024) + " KB" : (b / 1048576).toFixed(2) + " MB";
+  const plural = (n, w) => n.toLocaleString() + " " + w + (n === 1 ? "" : "s");
+  const when = (at) => {
+    const d = new Date(at), t = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " " + t;
+  };
+  const extOf = (n) => { const m = /\\.[^.]+$/.exec(n || ""); return m ? m[0].toLowerCase() : ""; };
+  const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
+  $("#laterNote").textContent = "What you write here waits on " + io.where + ", and is shared as soon as " + io.host
+    + " answers, even with " + io.closed + " closed.";
+
+  /* a file: the File button, pasting a picture, or dropping it here */
+  function attach(f, data) {
+    if (!f) return;
+    const ext = extOf(f.name) || ({ "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[f.type] || "");
+    if (!LATER_ALLOWED.includes(ext)) return say("That kind of file can't be shared. Photos, PDFs, Office documents, text, audio, short videos and ZIP files can.");
+    if (f.size > LATER_MAX) return say("That file is " + size(f.size) + ". Files can be up to 5 MB.");
+    const take = (b64) => {
+      file = { name: extOf(f.name) ? f.name : "pasted image" + ext, type: f.type || "", size: f.size, data: b64, ext,
+               url: "data:" + (f.type || "application/octet-stream") + ";base64," + b64 };
+      drawFile(); say("");
+    };
+    if (data != null) return take(data);
+    const r = new FileReader();
+    r.onload = () => { const url = String(r.result); take(url.slice(url.indexOf(",") + 1)); };
+    r.onerror = () => say("Could not read that file.");
+    r.readAsDataURL(f);
+  }
+  function drawFile() {
+    $("#laterFile").hidden = !file;
+    if (!file) return;
+    const image = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].includes(file.ext);
+    $("#laterThumb").hidden = !image;
+    if (image) $("#laterThumb").src = file.url;
+    $("#laterBadge").hidden = image;
+    $("#laterBadge").textContent = (file.ext.slice(1) || "FILE").toUpperCase().slice(0, 4);
+    $("#laterName").textContent = file.name;
+    $("#laterSize").textContent = size(file.size);
+  }
+  $("#laterInput").accept = LATER_ALLOWED.join(",");
+  $("#laterAttach").addEventListener("click", () => $("#laterInput").click());
+  $("#laterInput").addEventListener("change", (e) => { attach(e.target.files[0]); e.target.value = ""; });
+  $("#laterDrop").addEventListener("click", () => { file = null; drawFile(); });
+  text.addEventListener("paste", (e) => {
+    const f = e.clipboardData && e.clipboardData.files && e.clipboardData.files[0];
+    if (f) { e.preventDefault(); attach(f); }
+  });
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+  card.addEventListener("dragover", (e) => { if (hasFiles(e)) { e.preventDefault(); card.classList.add("drop"); } });
+  card.addEventListener("dragleave", (e) => { if (!card.contains(e.relatedTarget)) card.classList.remove("drop"); });
+  card.addEventListener("drop", (e) => { card.classList.remove("drop"); if (hasFiles(e)) { e.preventDefault(); attach(e.dataTransfer.files[0]); } });
+  window.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener("drop", (e) => { if (hasFiles(e)) e.preventDefault(); });     // never open the file instead
+
+  /* who should see it: the devices as last seen while in reach */
+  const names = () => [...targets].map((id) => (devices.find((d) => d.id === id) || {}).name || "a device");
+  function drawTo() {
+    const n = names();
+    $("#laterToLabel").textContent = !n.length ? "Everyone" : n[0] + (n.length > 1 ? " +" + (n.length - 1) : "");
+    $("#laterAll").checked = !targets.size;
+    const list = $("#laterList");
+    list.textContent = "";
+    for (const d of devices) {
+      const row = document.createElement("label"), box = document.createElement("input"), nm = document.createElement("span");
+      row.className = "pop-row"; box.type = "checkbox"; box.checked = targets.has(d.id);
+      box.addEventListener("change", () => { box.checked ? targets.add(d.id) : targets.delete(d.id); drawTo(); });
+      nm.className = "nm"; nm.textContent = d.name;
+      row.append(box, nm);
+      list.append(row);
+    }
+    $("#laterToNote").textContent = devices.length ? "Tick devices to share with them only: the others will not see it."
+      : "The other devices are listed here once " + io.where + " has reached " + io.host + ".";
+  }
+  $("#laterAll").addEventListener("change", () => { if ($("#laterAll").checked) targets.clear(); drawTo(); });
+  $("#laterTo").addEventListener("click", (e) => { e.stopPropagation(); $("#laterPop").hidden = !$("#laterPop").hidden; });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".to-wrap")) $("#laterPop").hidden = true; });
+  drawTo();
+
+  /* Send later: kept by the app (or, once it answers again, Share: kept, sent at once, and on to the history) */
+  async function keep() {
+    say("");
+    if (!text.value.trim() && !file) { say("Write or paste something first, or add a file."); text.focus(); return; }
+    go.disabled = true;
+    let r;
+    try {
+      r = await io.add({ uid: newId(), text: text.value, to: [...targets], to_names: names(), written: Date.now(),
+                         file: file && { name: file.name, type: file.type, size: file.size, data: file.data } });
+    } catch (e) { r = { error: String((e && e.message) || e) }; }
+    go.disabled = false;
+    if (!r || !r.ok) { say((r && r.error) || "Could not keep it."); return; }
+    text.value = ""; file = null; drawFile();
+    if (answered) { io.open(); return; }
+    await refresh();
+  }
+  go.addEventListener("click", keep);
+  text.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); keep(); } });
+
+  /* what waits, oldest first: Edit takes it back into the box above, Delete (twice) drops it */
+  async function refresh() {
+    let list = [];
+    try { const got = await io.list(); if (Array.isArray(got)) list = got; } catch {}
+    $("#waiting").hidden = !list.length;
+    $("#waitTitle").textContent = "Waiting to send · " + list.length;
+    const box = $("#waitList");
+    box.textContent = "";
+    for (const w of list) box.append(waitingRow(w));
+  }
+  function waitingRow(w) {
+    const el = document.createElement("div");
+    el.className = "wcard" + (w.error ? " failed" : "");
+    el.innerHTML = '<div class="whead"><span class="when"></span><span class="to"></span><span class="acts"></span></div>'
+      + '<div class="wfile" hidden></div><pre dir="auto"></pre>';
+    el.querySelector(".when").textContent = w.error ? "Not shared: " + w.error
+      : "Written " + when(w.written) + (w.size ? " · " + plural(w.size, "character") : "");
+    if (w.to_names && w.to_names.length) el.querySelector(".to").textContent = "→ " + w.to_names.join(", ");
+    if (w.file) { const f = el.querySelector(".wfile"); f.hidden = false; f.textContent = w.file.name + " · " + size(w.file.size); }
+    const pre = el.querySelector("pre");
+    if (w.size) pre.textContent = w.text + (w.size > w.text.length ? "\\n…" : ""); else pre.hidden = true;
+    const acts = el.querySelector(".acts");
+    const add = (label, run) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "btn sm"; b.textContent = label;
+      b.addEventListener("click", run);
+      acts.append(b);
+      return b;
+    };
+    if (w.error) add("Try again", async () => { await io.send(w.uid); setTimeout(refresh, 1500); });
+    add("Edit", async () => {
+      if (text.value.trim() || file) { say("Send or clear what is in the box first, then edit this one."); return; }
+      const full = await io.get(w.uid);
+      if (!full) return refresh();
+      await io.remove(w.uid);
+      text.value = full.text || "";
+      if (full.file && full.file.data) attach({ name: full.file.name, type: full.file.type || "", size: full.file.size }, full.file.data);
+      else { file = null; drawFile(); }
+      targets.clear();
+      (full.to || []).forEach((id) => targets.add(id));
+      drawTo();
+      refresh();
+      text.focus();
+    });
+    const del = add("Delete", async () => {
+      if (!del.classList.contains("danger")) {                   // asked twice: it has not been shared
+        del.classList.add("danger"); del.textContent = "Delete it";
+        setTimeout(() => { del.classList.remove("danger"); del.textContent = "Delete"; }, 4000);
+        return;
+      }
+      await io.remove(w.uid);
+      refresh();
+    });
+    return el;
+  }
+  window.textShareOutbox = () => refresh();       // the app shared some (or kept one): the list again
+
+  /* it answers again while something is written here: the page says so instead of making way for the history */
+  function hold() {
+    if (!text.value.trim() && !file) return false;
+    if (!answered) { answered = true; go.textContent = "Share"; io.answered(); }
+    return true;
+  }
+  window.holdForDraft = hold;
+  /* shared from another app (Android's Share menu) */
+  function take(s) {
+    if (!s) return;
+    if (s.text) text.value = text.value.trim() ? text.value.replace(/\\s*$/, "") + "\\n" + s.text : s.text;
+    if (s.file) attach({ name: s.file.name, type: s.file.type || "", size: s.file.size }, s.file.data);
+  }
+  refresh();
+  return { hold, take, has: () => !!(text.value.trim() || file) };
+}
+"""
+
+UNREACHABLE = """
+<div class="wrap away">
+  <div class="brand">{mark}</div>
+  <h1 id="awayTitle">Can't reach {name}</h1>
+  <p class="lead" id="awayText">Instant Share must be running on {name}, and both computers must be on the same network.
+  Trying again every few seconds…</p>
+  <div class="row"><button class="btn" id="retry">Try again now</button><button class="btn primary" id="openHistory" hidden>Open the history</button>
+    <button class="btn" id="setup">Choose another computer</button></div>
+  {later}
+</div>
+<script>
+{ready}
+const info = {info};
+{later_script}
+ready(() => {
+  const api = window.pywebview.api, r = $("#retry"), open = $("#openHistory");
+  r.addEventListener("click", () => {
+    r.disabled = true; r.textContent = "Trying…"; api.retry();
+    setTimeout(() => { r.disabled = false; r.textContent = "Try again now"; }, 6000);
+  });
+  $("#setup").addEventListener("click", () => api.open_setup());
+  const box = later({
+    list: () => api.outbox_list(), add: (e) => api.outbox_add(e), get: (uid) => api.outbox_get(uid),
+    remove: (uid) => api.outbox_remove(uid), send: (uid) => api.outbox_send(uid),
+    devices: info.devices, host: info.name, where: "this computer", closed: "the window",
+    open: () => api.open_history(),
+    answered: () => {
+      $("#awayTitle").textContent = info.name + " answers again";
+      $("#awayText").textContent = "Share what you wrote below, or open the history without it.";
+      r.hidden = true; open.hidden = false;
+    },
+  });
+  open.addEventListener("click", () => {
+    if (box.has() && !open.classList.contains("danger")) {     // asked twice: what is written here is not kept
+      open.classList.add("danger"); open.textContent = "Open it, leaving what you wrote";
+      setTimeout(() => { open.classList.remove("danger"); open.textContent = "Open the history"; }, 4000);
+      return;
+    }
+    open.disabled = true;
+    api.open_history();
+  });
+  $("#laterText").focus();
+});
+</script>
+"""
+
+
+def later_parts():
+    """The "Write for later" box, its style and its script, for the can't-reach pages (here and on Android)."""
+    script = LATER_SCRIPT.replace("{allowed}", json.dumps(sorted(ts.FILE_TYPES)))
+    return LATER_STYLE, LATER_HTML, script
+
+
 def local_page(kind, info=None, theme="dark"):
     info = info or {}
+    style, later_html, later_script = later_parts()
+    if kind == "unreachable":
+        body = (UNREACHABLE.replace("{later_script}", later_script).replace("{later}", later_html)
+                .replace("{mark}", MARK).replace("{name}", html.escape(info.get("name", ""))).replace("{ready}", READY)
+                .replace("{info}", json.dumps(info).replace("</", "<\\/")))
+        return (f'<!DOCTYPE html><html lang="en" data-theme="{theme}"><head><meta charset="utf-8"><title>{APP}</title>'
+                f"<style>{PAGE_STYLE}{style}</style></head><body>{body}</body></html>")
     if kind == "setup":
         body = (SETUP.replace("{mark}", MARK).replace("{version}", ts.VERSION).replace("{ready}", READY)
                 .replace("{info}", json.dumps(info).replace("</", "<\\/")))
@@ -1700,11 +2274,6 @@ def local_page(kind, info=None, theme="dark"):
         title, text, buttons = {
             "starting": ("Starting…", "", ""),
             "connecting": (f"Connecting to {name}…", "", ""),
-            "unreachable": (f"Can't reach {name}",
-                            f"Instant Share must be running on {name}, and both computers must be on the same network. "
-                            "Trying again every few seconds…",
-                            '<div class="row"><button class="btn" id="retry">Try again now</button>'
-                            '<button class="btn" id="setup">Choose another computer</button></div>'),
             "problem": (html.escape(info.get("title", "")), html.escape(info.get("text", "")),
                         '<div class="row"><button class="btn" id="setup">Setup</button></div>'),
         }[kind]

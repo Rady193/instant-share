@@ -15,11 +15,13 @@ import instantshare as textshare  # noqa: E402
 BODY = """
 <div class="wrap">
   <div class="brand">{mark}</div>
-  <div id="away" hidden>
+  <div id="away" class="away" hidden>
     <h1 id="awayTitle"></h1>
     <p class="lead" id="awayText"></p>
-    <div class="row"><button class="btn primary" id="retry">Try again</button>
+    <div class="row"><button class="btn" id="retry">Try again</button>
+      <button class="btn primary" id="openHistory" hidden>Open the history</button>
       <button class="btn" id="other">Choose another computer</button></div>
+    {later}
   </div>
   <div id="choose" hidden>
     <h1>Set up Instant Share on this phone</h1>
@@ -129,17 +131,61 @@ $("#other2").addEventListener("click", () => { $("#pair").hidden = true; choose(
 $("#go").addEventListener("click", go);
 $("#addr").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
 $("#back").addEventListener("click", () => A.back());
-$("#retry").addEventListener("click", () => { $("#retry").disabled = true; $("#retry").textContent = "Trying…"; A.retry(); });
 $("#other").addEventListener("click", choose);
 
-if (q.get("pair") && info.host) {               // set up, but not joined (yet, or any more)
-  pairing(info.host, q.get("why") || "");
-} else if (q.get("unreachable") && info.host) {        // set up, but the computer does not answer: say so, try again by itself
+{later_script}
+
+/* set up, but the computer does not answer: say so, write for later meanwhile, and look again every few seconds
+   (without reloading this page, which would lose what is being written); once it answers, on to the history,
+   unless something is written here: then the page says it answers again */
+function away() {
   $("#awayTitle").textContent = "Can't reach " + info.host;
   $("#awayText").textContent = "Instant Share must be running on " + info.host + ", and this phone must be on the same "
     + "Wi-Fi. Trying again every few seconds…";
   $("#away").hidden = false;
-  setTimeout(() => A.retry(), 6000);
+  const retry = $("#retry"), open = $("#openHistory"), json = (s) => JSON.parse(s);
+  const box = later({
+    list: async () => json(A.outboxList()), add: async (e) => json(A.outboxAdd(JSON.stringify(e))),
+    get: async (uid) => json(A.outboxGet(uid)), remove: async (uid) => json(A.outboxRemove(uid)),
+    send: async (uid) => json(A.outboxSend(uid || "")),
+    devices: json(A.devices()), host: info.host, where: "this phone", closed: "the app",
+    open: () => A.retry(),
+    answered: () => {
+      $("#awayTitle").textContent = info.host + " answers again";
+      $("#awayText").textContent = "Share what you wrote below, or open the history without it.";
+      retry.hidden = true; open.hidden = false;
+    },
+  });
+  window.textShareIncoming = (s) => box.take(s);           // Android's Share menu, while here
+  try { box.take(JSON.parse(A.takeShared() || "null")); } catch {}
+  let looking = false, timer = 0;
+  async function look(byHand) {
+    if (looking) return;
+    looking = true;
+    clearTimeout(timer);
+    const r = await ask("reachable");
+    looking = false;
+    if (r && r.ok) { if (!box.hold()) A.retry(); return; }     // answers: the history (or "answers again")
+    if (byHand) { retry.disabled = false; retry.textContent = "Try again"; }
+    timer = setTimeout(look, 5000);
+  }
+  retry.addEventListener("click", () => { retry.disabled = true; retry.textContent = "Trying…"; look(true); });
+  open.addEventListener("click", () => {
+    if (box.has() && !open.classList.contains("danger")) {     // asked twice: what is written here is not kept
+      open.classList.add("danger"); open.textContent = "Open it, leaving what you wrote";
+      setTimeout(() => { open.classList.remove("danger"); open.textContent = "Open the history"; }, 4000);
+      return;
+    }
+    open.disabled = true;
+    A.retry();
+  });
+  timer = setTimeout(look, 5000);
+}
+
+if (q.get("pair") && info.host) {               // set up, but not joined (yet, or any more)
+  pairing(info.host, q.get("why") || "");
+} else if (q.get("unreachable") && info.host) {
+  away();
 } else {
   choose();
 }
@@ -150,17 +196,20 @@ EXTRA_STYLE = """
 .wrap { padding-top: 8px }
 .card { padding: 18px }
 .foot { flex-wrap: wrap }
+.away .row { flex-wrap: wrap }
 @media (max-width: 520px) { body { justify-content: flex-start; padding: 28px 18px } h1 { font-size: 21px } }
 """
 
 
 def main():
-    body = BODY.replace("{mark}", app.MARK).replace("{version}", textshare.VERSION)
+    later_style, later_html, later_script = app.later_parts()      # "Write for later", as on Windows
+    body = (BODY.replace("{later_script}", later_script).replace("{later}", later_html)
+            .replace("{mark}", app.MARK).replace("{version}", textshare.VERSION))
     page = ('<!DOCTYPE html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Instant Share</title>'
             '<script>document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") === "light"'
             ' ? "light" : "dark";</script>'
-            f"<style>{app.PAGE_STYLE}{EXTRA_STYLE}</style></head><body>{body}</body></html>")
+            f"<style>{app.PAGE_STYLE}{later_style}{EXTRA_STYLE}</style></head><body>{body}</body></html>")
     out = HERE / "assets" / "setup.html"
     out.parent.mkdir(exist_ok=True)
     out.write_text(page, encoding="utf-8")

@@ -122,6 +122,7 @@ HISTORY = [
      ("Quotation 1147.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", XLSX)),
     (12, "LAPTOP-2", "Please read and sign before Monday.", None, ("Site induction checklist.pdf", "application/pdf", PDF)),
     (7, "PHONE", "", None, ("voice note.mp3", "audio/mpeg", MP3)),
+    (18, "LAPTOP-1", "Measured on site: bay width 2.57 m, lift height 2.0 m, 14 bays on the east side", None, None),
     (3, "LAPTOP-1", "git pull origin main\nnpm ci\nnpm run build", None, None),
 ]
 
@@ -142,6 +143,8 @@ def demo_server():
                  "k" + DEV[who][:10] + str(minutes) if file else None, file[2] if file else None, kind))
         # OFFICE-PC changed its own message a little later; it pinned the delivery address
         store.db.execute("UPDATE items SET edited_at = ? WHERE text LIKE 'SELECT id%'", (now - 20 * MIN,))
+        # LAPTOP-1 measured on site, away from OFFICE-PC: written 70 minutes ago, shared when it was back (Send later)
+        store.db.execute("UPDATE items SET written_at = ? WHERE text LIKE 'Measured on site%'", (now - 70 * MIN,))
         store.db.execute("INSERT INTO marks (device, item, pinned, archived) SELECT ?, id, ?, 0 FROM items "
                          "WHERE text LIKE 'Delivery address%'", (DEV[ME], now - 60 * MIN))
         store.db.commit()
@@ -180,8 +183,25 @@ window.pywebview = { api: new Proxy({}, { get: (_, name) => (...args) => Promise
   name === "find" ? { found: [{ name: "OFFICE-PC", address: "192.168.1.20", port: 8765, version: "1.2.0" }],
                       me: "LAPTOP-1", mode: null, host: "" }
   : name === "get_options" ? """ + OPTIONS + """
+  : name === "outbox_list" ? (window.__waiting || [])
   : { ok: true }) }) };
 """
+
+
+def waiting_js(entries):
+    """A made-up outbox ("Waiting to send"): (minutes ago, text, for, file name, file size)."""
+    rows = []
+    for minutes, text, to, fname, fsize in entries:
+        rows.append({"uid": f"w{minutes:09d}aa", "text": text, "size": len(text),
+                     "lines": text.count("\n") + 1 if text else 0, "to": [DEV[t] for t in to], "to_names": list(to),
+                     "error": "", "minutes": minutes,
+                     "file": {"name": fname, "type": "image/jpeg", "size": fsize} if fname else None})
+    return ("window.__waiting = " + json.dumps(rows) + ".map((w) => Object.assign(w, { written: Date.now() - "
+            "w.minutes * 60000 }));")
+
+
+WAITING = [(38, "Site visit, Al Khuwair:\n- east side braced, ties checked\n- bay 3 needs two more ledgers", (), None, 0),
+           (21, "The base plates, before the second lift", ("LAPTOP-2",), "base plates.jpg", 1_826_406)]
 STUB_UPDATE = STUB.replace(OPTIONS, UPDATE_OPTIONS)
 
 
@@ -232,16 +252,16 @@ def frame(path, theme, title, scale):
 def shots(browser, store):
     IMG.mkdir(exist_ok=True)
 
-    def page(width, height, theme, scale=2, to=(), stub=None):
+    def page(width, height, theme, scale=2, to=(), stub=None, who=ME):
         ctx = browser.new_context(viewport={"width": width, "height": height}, device_scale_factor=scale,
                                   locale="en-GB")
         ctx.add_init_script((stub or STUB) + f"localStorage.setItem('textshare.to', {json.dumps(json.dumps([DEV[t] for t in to]))});")
         ctx.route("**/api/hello", lambda route: route.fulfill(json={     # the made-up name, not this computer's
-            "server": "OFFICE-PC", "version": textshare.VERSION, "you": "192.168.1.20", "name": ME, "id": DEV[ME],
+            "server": "OFFICE-PC", "version": textshare.VERSION, "you": "192.168.1.20", "name": who, "id": DEV[who],
             "addresses": ["https://OFFICE-PC:8765/", "https://192.168.1.20:8765/"], "paired": True, "encrypted": True}))
         online(store)
         pg = ctx.new_page()
-        pg.goto(f"{URL}login?key={KEYS[ME]}&next=" + quote(f"/?app=1&me={ME}&theme={theme}", safe=""))
+        pg.goto(f"{URL}login?key={KEYS[who]}&next=" + quote(f"/?app=1&me={who}&theme={theme}", safe=""))
         pg.wait_for_selector(".item")
         pg.wait_for_selector("#status.on")
         pg.wait_for_function("() => true")
@@ -294,6 +314,33 @@ def shots(browser, store):
             pg.keyboard.press("Escape")
             pg.locator(".top").screenshot(path=IMG / "top.png")       # the top: status, this device, pin, Settings
         pg.context.close()
+
+    # writing while away (LAPTOP-1, out of reach of OFFICE-PC; light): the dot red, Share says Send later, and two
+    # messages waiting above the history (the app's outbox, made up)
+    pg = page(1400, 560, "light", 1.5, stub=STUB + waiting_js(WAITING), who="LAPTOP-1")   # a low window
+    pg.route("**/api/**", lambda route: route.abort())
+    pg.wait_for_selector("#status.off", timeout=10000)
+    pg.locator("#editor").fill("Bay 3: two more ledgers, and toe boards on the second lift.")
+    pg.wait_for_selector("#outbox:not([hidden]) .item.waiting")
+    pg.mouse.move(0, 0)
+    pg.wait_for_timeout(600)
+    pg.screenshot(path=IMG / "away.png")
+    frame(IMG / "away.png", "light", "Instant Share · OFFICE-PC", 1.5)
+    pg.context.close()
+    # opened while away: the app's can't-reach page, with Write for later and one message waiting (dark)
+    ctx = browser.new_context(viewport={"width": 800, "height": 900}, device_scale_factor=1.5, locale="en-GB")
+    ctx.add_init_script(STUB + waiting_js(WAITING[:1]))
+    pg = ctx.new_page()
+    pg.set_content(app.local_page("unreachable", {"name": "OFFICE-PC", "devices": [
+        {"id": DEV[n], "name": n} for n in ("LAPTOP-2", "RECEPTION", "PHONE")]}, "dark"))
+    pg.wait_for_selector("#waiting:not([hidden]) .wcard")
+    pg.locator("#laterText").fill("Toe boards for the second lift: 24 pieces, 3.0 m")
+    pg.mouse.move(0, 0)
+    pg.set_viewport_size({"width": 800, "height": pg.evaluate("document.documentElement.scrollHeight")})
+    pg.wait_for_timeout(400)
+    pg.screenshot(path=IMG / "later.png")
+    frame(IMG / "later.png", "dark", "Instant Share", 1.5)
+    ctx.close()
 
     # Settings, on the computer that keeps the history: a laptop-sized window, its sections in columns (light)
     def settings(theme, stub=None):

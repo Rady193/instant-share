@@ -73,18 +73,92 @@ input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var
 @media (max-width: 760px) { .cards { grid-template-columns: 1fr } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none } }
 
+:root { --accent-line: rgba(240, 195, 60, .5) }
+:root[data-theme="light"] { --accent-line: rgba(91, 44, 131, .4) }
+.later { margin-top: 26px; text-align: left }
+.later .note { margin: 0 0 12px }
+.later textarea { display: block; width: 100%; min-height: 130px; resize: vertical; padding: 10px 12px; background: var(--inset);
+  border: 1px solid var(--line); border-radius: 8px; color: var(--text); outline: none;
+  font: 13px/1.55 "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  transition: border-color .12s, box-shadow .12s }
+.later textarea:focus, .later.drop textarea { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft) }
+.later textarea::placeholder { color: var(--dim); opacity: .8 }
+.later .bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap }
+.later .err { margin: 8px 0 0 }
+.later .err:empty { display: none }
+#laterTo { gap: 5px }
+.grow { flex: 1 }
+.dim { color: var(--dim) }
+.att { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 6px; background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 8px }
+.att img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; flex: none }
+.att-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.x { margin-left: auto; flex: none; width: 28px; height: 28px; background: none; border: 0; border-radius: 6px; color: var(--dim) }
+.x:hover { background: var(--surface-3); color: var(--text) }
+.badge { display: inline-grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 6px; color: #fff;
+  font-size: 10px; font-weight: 700; letter-spacing: .03em; background: #5b2c83 }
+.to-wrap { position: relative }
+.pop { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 10; width: 280px; max-height: 320px; overflow-y: auto;
+  padding: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .45) }
+.pop-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer }
+.pop-row:hover { background: var(--surface-3) }
+.pop-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.pop-note { margin: 6px 8px 4px; color: var(--dim); font-size: 11px }
+.btn.sm { height: 26px; padding: 0 9px; font-size: 12px; border-radius: 6px }
+.btn.danger, .btn.danger:hover { color: #fff; background: var(--danger-fill); border-color: transparent }
+.waiting { margin-top: 22px; text-align: left }
+.waiting h3 { margin: 0 0 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--dim) }
+.wlist { display: flex; flex-direction: column; gap: 8px }
+.wcard { background: var(--surface); border: 1px dashed var(--accent-line); border-radius: 10px; padding: 7px 8px 10px 12px }
+.wcard.failed { border-color: var(--danger) }
+.whead { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--dim) }
+.wcard.failed .when { color: var(--danger) }
+.whead .to { color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0 }
+.whead .acts { margin-left: auto; display: flex; gap: 4px; flex: none }
+.wfile { margin-top: 6px; font-weight: 600; overflow-wrap: anywhere }
+.wcard pre { margin: 6px 0 0; font: 12.5px/1.55 "Cascadia Mono", Consolas, ui-monospace, monospace; white-space: pre-wrap;
+  overflow-wrap: anywhere; max-height: calc(1.55em * 5); overflow: hidden }
+.wrap.away { width: min(720px, 100%) }
+.away .row { justify-content: flex-start; margin-top: 0 }
+
 .wrap { padding-top: 8px }
 .card { padding: 18px }
 .foot { flex-wrap: wrap }
+.away .row { flex-wrap: wrap }
 @media (max-width: 520px) { body { justify-content: flex-start; padding: 28px 18px } h1 { font-size: 21px } }
 </style></head><body>
 <div class="wrap">
   <div class="brand"><svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#5b2c83"/><path d="M7 12h17l-4-4M25 20H8l4 4" fill="none" stroke="#f0c33c" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Instant Share</div>
-  <div id="away" hidden>
+  <div id="away" class="away" hidden>
     <h1 id="awayTitle"></h1>
     <p class="lead" id="awayText"></p>
-    <div class="row"><button class="btn primary" id="retry">Try again</button>
+    <div class="row"><button class="btn" id="retry">Try again</button>
+      <button class="btn primary" id="openHistory" hidden>Open the history</button>
       <button class="btn" id="other">Choose another computer</button></div>
+    
+<section class="card later" id="later">
+  <h2>Write for later</h2>
+  <p class="note dim" id="laterNote"></p>
+  <textarea id="laterText" dir="auto" spellcheck="false" placeholder="Write or paste what to share, or add a file"></textarea>
+  <div id="laterFile" class="att" hidden><img id="laterThumb" alt="" hidden><span id="laterBadge" class="badge" hidden></span>
+    <span class="att-name" id="laterName"></span><span class="dim" id="laterSize"></span>
+    <button class="x" id="laterDrop" type="button" title="Remove the file">✕</button></div>
+  <div class="bar">
+    <button class="btn" id="laterAttach" type="button" title="Add a file, up to 5 MB">File</button>
+    <input id="laterInput" type="file" hidden>
+    <span class="grow"></span>
+    <div class="to-wrap"><button class="btn" id="laterTo" type="button" title="Who should see it">To: <span id="laterToLabel">Everyone</span> ▾</button>
+      <div class="pop" id="laterPop" hidden>
+        <label class="pop-row"><input type="checkbox" id="laterAll"><span class="nm">Everyone</span></label>
+        <div id="laterList"></div><p class="pop-note" id="laterToNote"></p>
+      </div></div>
+    <button class="btn primary" id="laterGo" type="button">Send later</button>
+  </div>
+  <p class="err" id="laterErr"></p>
+</section>
+<section class="waiting" id="waiting" hidden><h3 id="waitTitle"></h3><div class="wlist" id="waitList"></div></section>
+
   </div>
   <div id="choose" hidden>
     <h1>Set up Instant Share on this phone</h1>
@@ -115,7 +189,7 @@ input:not([type]):focus { border-color: var(--accent); box-shadow: 0 0 0 3px var
       <button class="link" id="other2">Choose another computer</button>
     </section>
   </div>
-  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share 1.3.6</span><span>Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span>
+  <div class="foot"><span>This phone: <b id="me"></b></span><span>Instant Share 1.4.0</span><span>Published by <b class="pub">SCAFFApps</b> - www.scaffapps.com</span>
     <span style="flex:1"></span><button class="btn" id="back" hidden>Back</button></div>
 </div>
 <script>
@@ -194,17 +268,240 @@ $("#other2").addEventListener("click", () => { $("#pair").hidden = true; choose(
 $("#go").addEventListener("click", go);
 $("#addr").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
 $("#back").addEventListener("click", () => A.back());
-$("#retry").addEventListener("click", () => { $("#retry").disabled = true; $("#retry").textContent = "Trying…"; A.retry(); });
 $("#other").addEventListener("click", choose);
 
-if (q.get("pair") && info.host) {               // set up, but not joined (yet, or any more)
-  pairing(info.host, q.get("why") || "");
-} else if (q.get("unreachable") && info.host) {        // set up, but the computer does not answer: say so, try again by itself
+
+const LATER_ALLOWED = [".3gp", ".aac", ".amr", ".bmp", ".csv", ".doc", ".docx", ".flac", ".gif", ".heic", ".jpeg", ".jpg", ".m4a", ".md", ".mov", ".mp3", ".mp4", ".odp", ".ods", ".odt", ".ogg", ".opus", ".pdf", ".png", ".ppt", ".pptx", ".rtf", ".txt", ".wav", ".webp", ".xls", ".xlsx", ".zip"];          // the endings the history takes (it checks the contents too)
+const LATER_MAX = 5 * 1024 * 1024;
+function later(io) {
+  const text = $("#laterText"), go = $("#laterGo"), card = $("#later");
+  const devices = (io.devices || []).filter((d) => d && d.id && d.name);
+  const targets = new Set();
+  let file = null, answered = false;
+  const say = (t) => { $("#laterErr").textContent = t || ""; };
+  const size = (b) => b < 1024 ? b + " bytes" : b < 1048576 ? Math.round(b / 1024) + " KB" : (b / 1048576).toFixed(2) + " MB";
+  const plural = (n, w) => n.toLocaleString() + " " + w + (n === 1 ? "" : "s");
+  const when = (at) => {
+    const d = new Date(at), t = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    return d.toDateString() === new Date().toDateString() ? t : d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + " " + t;
+  };
+  const extOf = (n) => { const m = /\.[^.]+$/.exec(n || ""); return m ? m[0].toLowerCase() : ""; };
+  const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
+  $("#laterNote").textContent = "What you write here waits on " + io.where + ", and is shared as soon as " + io.host
+    + " answers, even with " + io.closed + " closed.";
+
+  /* a file: the File button, pasting a picture, or dropping it here */
+  function attach(f, data) {
+    if (!f) return;
+    const ext = extOf(f.name) || ({ "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[f.type] || "");
+    if (!LATER_ALLOWED.includes(ext)) return say("That kind of file can't be shared. Photos, PDFs, Office documents, text, audio, short videos and ZIP files can.");
+    if (f.size > LATER_MAX) return say("That file is " + size(f.size) + ". Files can be up to 5 MB.");
+    const take = (b64) => {
+      file = { name: extOf(f.name) ? f.name : "pasted image" + ext, type: f.type || "", size: f.size, data: b64, ext,
+               url: "data:" + (f.type || "application/octet-stream") + ";base64," + b64 };
+      drawFile(); say("");
+    };
+    if (data != null) return take(data);
+    const r = new FileReader();
+    r.onload = () => { const url = String(r.result); take(url.slice(url.indexOf(",") + 1)); };
+    r.onerror = () => say("Could not read that file.");
+    r.readAsDataURL(f);
+  }
+  function drawFile() {
+    $("#laterFile").hidden = !file;
+    if (!file) return;
+    const image = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"].includes(file.ext);
+    $("#laterThumb").hidden = !image;
+    if (image) $("#laterThumb").src = file.url;
+    $("#laterBadge").hidden = image;
+    $("#laterBadge").textContent = (file.ext.slice(1) || "FILE").toUpperCase().slice(0, 4);
+    $("#laterName").textContent = file.name;
+    $("#laterSize").textContent = size(file.size);
+  }
+  $("#laterInput").accept = LATER_ALLOWED.join(",");
+  $("#laterAttach").addEventListener("click", () => $("#laterInput").click());
+  $("#laterInput").addEventListener("change", (e) => { attach(e.target.files[0]); e.target.value = ""; });
+  $("#laterDrop").addEventListener("click", () => { file = null; drawFile(); });
+  text.addEventListener("paste", (e) => {
+    const f = e.clipboardData && e.clipboardData.files && e.clipboardData.files[0];
+    if (f) { e.preventDefault(); attach(f); }
+  });
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+  card.addEventListener("dragover", (e) => { if (hasFiles(e)) { e.preventDefault(); card.classList.add("drop"); } });
+  card.addEventListener("dragleave", (e) => { if (!card.contains(e.relatedTarget)) card.classList.remove("drop"); });
+  card.addEventListener("drop", (e) => { card.classList.remove("drop"); if (hasFiles(e)) { e.preventDefault(); attach(e.dataTransfer.files[0]); } });
+  window.addEventListener("dragover", (e) => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener("drop", (e) => { if (hasFiles(e)) e.preventDefault(); });     // never open the file instead
+
+  /* who should see it: the devices as last seen while in reach */
+  const names = () => [...targets].map((id) => (devices.find((d) => d.id === id) || {}).name || "a device");
+  function drawTo() {
+    const n = names();
+    $("#laterToLabel").textContent = !n.length ? "Everyone" : n[0] + (n.length > 1 ? " +" + (n.length - 1) : "");
+    $("#laterAll").checked = !targets.size;
+    const list = $("#laterList");
+    list.textContent = "";
+    for (const d of devices) {
+      const row = document.createElement("label"), box = document.createElement("input"), nm = document.createElement("span");
+      row.className = "pop-row"; box.type = "checkbox"; box.checked = targets.has(d.id);
+      box.addEventListener("change", () => { box.checked ? targets.add(d.id) : targets.delete(d.id); drawTo(); });
+      nm.className = "nm"; nm.textContent = d.name;
+      row.append(box, nm);
+      list.append(row);
+    }
+    $("#laterToNote").textContent = devices.length ? "Tick devices to share with them only: the others will not see it."
+      : "The other devices are listed here once " + io.where + " has reached " + io.host + ".";
+  }
+  $("#laterAll").addEventListener("change", () => { if ($("#laterAll").checked) targets.clear(); drawTo(); });
+  $("#laterTo").addEventListener("click", (e) => { e.stopPropagation(); $("#laterPop").hidden = !$("#laterPop").hidden; });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".to-wrap")) $("#laterPop").hidden = true; });
+  drawTo();
+
+  /* Send later: kept by the app (or, once it answers again, Share: kept, sent at once, and on to the history) */
+  async function keep() {
+    say("");
+    if (!text.value.trim() && !file) { say("Write or paste something first, or add a file."); text.focus(); return; }
+    go.disabled = true;
+    let r;
+    try {
+      r = await io.add({ uid: newId(), text: text.value, to: [...targets], to_names: names(), written: Date.now(),
+                         file: file && { name: file.name, type: file.type, size: file.size, data: file.data } });
+    } catch (e) { r = { error: String((e && e.message) || e) }; }
+    go.disabled = false;
+    if (!r || !r.ok) { say((r && r.error) || "Could not keep it."); return; }
+    text.value = ""; file = null; drawFile();
+    if (answered) { io.open(); return; }
+    await refresh();
+  }
+  go.addEventListener("click", keep);
+  text.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); keep(); } });
+
+  /* what waits, oldest first: Edit takes it back into the box above, Delete (twice) drops it */
+  async function refresh() {
+    let list = [];
+    try { const got = await io.list(); if (Array.isArray(got)) list = got; } catch {}
+    $("#waiting").hidden = !list.length;
+    $("#waitTitle").textContent = "Waiting to send · " + list.length;
+    const box = $("#waitList");
+    box.textContent = "";
+    for (const w of list) box.append(waitingRow(w));
+  }
+  function waitingRow(w) {
+    const el = document.createElement("div");
+    el.className = "wcard" + (w.error ? " failed" : "");
+    el.innerHTML = '<div class="whead"><span class="when"></span><span class="to"></span><span class="acts"></span></div>'
+      + '<div class="wfile" hidden></div><pre dir="auto"></pre>';
+    el.querySelector(".when").textContent = w.error ? "Not shared: " + w.error
+      : "Written " + when(w.written) + (w.size ? " · " + plural(w.size, "character") : "");
+    if (w.to_names && w.to_names.length) el.querySelector(".to").textContent = "→ " + w.to_names.join(", ");
+    if (w.file) { const f = el.querySelector(".wfile"); f.hidden = false; f.textContent = w.file.name + " · " + size(w.file.size); }
+    const pre = el.querySelector("pre");
+    if (w.size) pre.textContent = w.text + (w.size > w.text.length ? "\n…" : ""); else pre.hidden = true;
+    const acts = el.querySelector(".acts");
+    const add = (label, run) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "btn sm"; b.textContent = label;
+      b.addEventListener("click", run);
+      acts.append(b);
+      return b;
+    };
+    if (w.error) add("Try again", async () => { await io.send(w.uid); setTimeout(refresh, 1500); });
+    add("Edit", async () => {
+      if (text.value.trim() || file) { say("Send or clear what is in the box first, then edit this one."); return; }
+      const full = await io.get(w.uid);
+      if (!full) return refresh();
+      await io.remove(w.uid);
+      text.value = full.text || "";
+      if (full.file && full.file.data) attach({ name: full.file.name, type: full.file.type || "", size: full.file.size }, full.file.data);
+      else { file = null; drawFile(); }
+      targets.clear();
+      (full.to || []).forEach((id) => targets.add(id));
+      drawTo();
+      refresh();
+      text.focus();
+    });
+    const del = add("Delete", async () => {
+      if (!del.classList.contains("danger")) {                   // asked twice: it has not been shared
+        del.classList.add("danger"); del.textContent = "Delete it";
+        setTimeout(() => { del.classList.remove("danger"); del.textContent = "Delete"; }, 4000);
+        return;
+      }
+      await io.remove(w.uid);
+      refresh();
+    });
+    return el;
+  }
+  window.textShareOutbox = () => refresh();       // the app shared some (or kept one): the list again
+
+  /* it answers again while something is written here: the page says so instead of making way for the history */
+  function hold() {
+    if (!text.value.trim() && !file) return false;
+    if (!answered) { answered = true; go.textContent = "Share"; io.answered(); }
+    return true;
+  }
+  window.holdForDraft = hold;
+  /* shared from another app (Android's Share menu) */
+  function take(s) {
+    if (!s) return;
+    if (s.text) text.value = text.value.trim() ? text.value.replace(/\s*$/, "") + "\n" + s.text : s.text;
+    if (s.file) attach({ name: s.file.name, type: s.file.type || "", size: s.file.size }, s.file.data);
+  }
+  refresh();
+  return { hold, take, has: () => !!(text.value.trim() || file) };
+}
+
+
+/* set up, but the computer does not answer: say so, write for later meanwhile, and look again every few seconds
+   (without reloading this page, which would lose what is being written); once it answers, on to the history,
+   unless something is written here: then the page says it answers again */
+function away() {
   $("#awayTitle").textContent = "Can't reach " + info.host;
   $("#awayText").textContent = "Instant Share must be running on " + info.host + ", and this phone must be on the same "
     + "Wi-Fi. Trying again every few seconds…";
   $("#away").hidden = false;
-  setTimeout(() => A.retry(), 6000);
+  const retry = $("#retry"), open = $("#openHistory"), json = (s) => JSON.parse(s);
+  const box = later({
+    list: async () => json(A.outboxList()), add: async (e) => json(A.outboxAdd(JSON.stringify(e))),
+    get: async (uid) => json(A.outboxGet(uid)), remove: async (uid) => json(A.outboxRemove(uid)),
+    send: async (uid) => json(A.outboxSend(uid || "")),
+    devices: json(A.devices()), host: info.host, where: "this phone", closed: "the app",
+    open: () => A.retry(),
+    answered: () => {
+      $("#awayTitle").textContent = info.host + " answers again";
+      $("#awayText").textContent = "Share what you wrote below, or open the history without it.";
+      retry.hidden = true; open.hidden = false;
+    },
+  });
+  window.textShareIncoming = (s) => box.take(s);           // Android's Share menu, while here
+  try { box.take(JSON.parse(A.takeShared() || "null")); } catch {}
+  let looking = false, timer = 0;
+  async function look(byHand) {
+    if (looking) return;
+    looking = true;
+    clearTimeout(timer);
+    const r = await ask("reachable");
+    looking = false;
+    if (r && r.ok) { if (!box.hold()) A.retry(); return; }     // answers: the history (or "answers again")
+    if (byHand) { retry.disabled = false; retry.textContent = "Try again"; }
+    timer = setTimeout(look, 5000);
+  }
+  retry.addEventListener("click", () => { retry.disabled = true; retry.textContent = "Trying…"; look(true); });
+  open.addEventListener("click", () => {
+    if (box.has() && !open.classList.contains("danger")) {     // asked twice: what is written here is not kept
+      open.classList.add("danger"); open.textContent = "Open it, leaving what you wrote";
+      setTimeout(() => { open.classList.remove("danger"); open.textContent = "Open the history"; }, 4000);
+      return;
+    }
+    open.disabled = true;
+    A.retry();
+  });
+  timer = setTimeout(look, 5000);
+}
+
+if (q.get("pair") && info.host) {               // set up, but not joined (yet, or any more)
+  pairing(info.host, q.get("why") || "");
+} else if (q.get("unreachable") && info.host) {
+  away();
 } else {
   choose();
 }

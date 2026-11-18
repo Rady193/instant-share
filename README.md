@@ -5,7 +5,7 @@ network. Share on one, and the others have it at once, with a notification and a
 share. Everything stays in a history you can search, copy from and delete from. It is encrypted, only devices that
 joined with a pairing code get in. Sharing needs no internet: nothing shared ever leaves your network.
 
-Version 1.3.6 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
+Version 1.4.0 · Windows 10 and 11 (64-bit) · Android 10 and newer · Published by SCAFFApps
 
 The **[handbook](https://github.com/Rady193/instant-share/releases/latest)** (`Instant-Share-Handbook-<version>.pdf`, on the Releases page) explains everything, with pictures.
 
@@ -46,9 +46,9 @@ Download from the [Releases page](https://github.com/Rady193/instant-share/relea
 
 | File | What it is |
 |---|---|
-| `Instant-Share-Setup-1.3.6.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; **Get the app** on Instant Share's page leads to it. The SCAFFApps Suite installs it too. |
-| `Instant-Share-1.3.6.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
-| `Instant-Share-Handbook-1.3.6.pdf` | The handbook: a PDF with pictures, in the SCAFFApps style. The SCAFFApps Suite opens it too. |
+| `Instant-Share-Setup-1.4.0.exe` | The app for Windows: its installer. It installs for everyone in `C:\Program Files\SCAFFApps\Instant Share` (Windows asks for administrator permission once), with shortcuts in the Start menu's SCAFFApps folder and on the desktop, and can be removed from Windows Settings. Install it on every computer; **Get the app** on Instant Share's page leads to it. The SCAFFApps Suite installs it too. |
+| `Instant-Share-1.4.0.apk` | Instant Share for Android 10 and newer. Phones on the same Wi-Fi can also get it from the computer that keeps the history: **Get the Android app** on its page, in the phone's browser. |
+| `Instant-Share-Handbook-1.4.0.pdf` | The handbook: a PDF with pictures, in the SCAFFApps style. The SCAFFApps Suite opens it too. |
 | `instantshare.py` | Instant Share as a plain server, for Mac and Linux: `python3 instantshare.py` (Python 3.10 or newer, nothing else) keeps the history there, and every device uses a browser. |
 | `THIRD-PARTY-NOTICES.txt` | The licences of the parts the Windows app carries inside it. |
 
@@ -78,7 +78,7 @@ Both are required. What is sent is under [Security](#security).
    address). It asks for a pairing code: on the first computer, open **Settings > Devices > Add a device** (or **Add a
    device…** in the tray menu) and type the 6-digit code it shows. Each code is good for 10 minutes and one device.
 3. Leave **Start Instant Share when I sign in to Windows** ticked.
-4. Phones: install `Instant-Share-1.3.6.apk`, choose the computer, and type a code the same way. iPhones and other
+4. Phones: install `Instant-Share-1.4.0.apk`, choose the computer, and type a code the same way. iPhones and other
    browsers open the address in Settings > Phones and browsers (for example `https://OFFICE-PC:8765`), continue past
    the browser's certificate warning the first time, and type a code.
 
@@ -105,6 +105,12 @@ netsh advfirewall firewall add rule name="Instant Share search" dir=in action=al
   programs and scripts are refused, even renamed; documents only ever download, never open as a page.
 - **Choose who sees it**: the **To** button lists the devices, with who is online now. Everyone, or only the devices
   you tick: the others cannot see it or open its file.
+- **Send later**: away from the office network, or with the computer that keeps the history asleep, share as usual:
+  Share says **Send later**, and what you share waits on your device under **Waiting to send** (with **Edit** and
+  **Delete**). It goes by itself, oldest first, the moment that computer answers again, even with the window closed,
+  and a notification says so; the others see it marked "written 09:14". Started while away, the app's "Can't reach…"
+  page has a **Write for later** box of its own. Each share carries its own id, so one sent again after a lost answer
+  is still kept once; one the history refuses stays, with why, for **Try again**, Edit or Delete.
 - **Join with a code**: Settings > **Devices** > **Add a device** shows a 6-digit pairing code for the next device;
   the same list shows every device that joined, with **Remove**.
 - **Windows notifications** when another device shares something with you: who, a preview (the photo itself for a
@@ -122,8 +128,9 @@ netsh advfirewall firewall add rule name="Instant Share search" dir=in action=al
 - **Arabic and other right-to-left text** reads right to left, line by line.
 - **Instant Share for Android**: the same history and settings on the phone; notifications with Copy, Save and Open
   while the app is closed (no Google services: one encrypted connection kept open to the computer that keeps the
-  history); Android's **Share** menu (links, text, photos, documents, voice notes from any app); documents open in the
-  phone's own apps; the Back button closes what is open, then puts the app away.
+  history); Android's **Share** menu (links, text, photos, documents, voice notes from any app); **Send later**, also
+  from its own "Can't reach…" screen and from the Share menu while away, sent when the phone is back on the Wi-Fi;
+  documents open in the phone's own apps; the Back button closes what is open, then puts the app away.
 - **iPhones and other browsers** use the same address (https), without notifications.
 - **Updates**: Settings > About says when a new version is out (a daily check, which can be turned off) and updates in
   a click.
@@ -161,6 +168,7 @@ Starting the program while it is already running brings its window to the front.
 | A log, for troubleshooting | `%LOCALAPPDATA%\InstantShare\textshare.log` on each computer |
 | The encryption key and certificate | `tls-key.pem` and `tls-cert.pem` in the same folder, on the computer that keeps the history. Keep them with `history.db` when moving it; with a new key, every device must join again. |
 | Joined devices' keys | Each device keeps its own in its settings; the computer that keeps the history keeps only a hash of each. |
+| Waiting to send (Send later) | `%LOCALAPPDATA%\InstantShare\outbox`, one file each, on the device that wrote it, until it is shared; the Android app keeps its own, a browser keeps them in its own storage for the page |
 | Saved files | The folder chosen in Settings; Downloads unless you change it |
 | Start with Windows | The usual list of programs that start at sign-in (Settings > Apps > Startup) |
 
@@ -207,7 +215,10 @@ That question and your registration are all that go to the internet; nothing sha
   account; delete passwords or keys from the history once you have pasted them where they belong.
 - **Files up to 5 MB each, of the kinds listed above, and 2 GB in all.** When the history is full, new shares
   are refused: delete old files to make room.
-- **The computer that keeps the history must be on.** When it sleeps, the others can't share.
+- **The computer that keeps the history must be on.** When it sleeps, nothing new reaches the others: what they
+  share waits on their own devices (Send later) and goes when it wakes.
+- **A browser sends what waits only while Instant Share's page is open** in it (the apps send it themselves, also
+  with their window closed), and a browser that cannot reach the computer cannot open the page to write in.
 
 ## Building from source
 

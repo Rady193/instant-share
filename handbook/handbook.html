@@ -69,6 +69,7 @@
         <a href="#share"><span class="n"></span><span><b>Sharing text and files</b><span>Text · a file · what can be shared</span></span></a>
         <a href="#to"><span class="n"></span><span><b>Who should see it</b><span>Everyone, or some devices</span></span></a>
         <a href="#history"><span class="n"></span><span><b>The history</b><span>Copy, save, pin, archive, edit, delete · search</span></span></a>
+        <a href="#away"><span class="n"></span><span><b>Writing while away</b><span>Send later · waiting to send · phones</span></span></a>
         <a href="#settings"><span class="n"></span><span><b>Settings</b><span>Every part · storage</span></span></a>
         <a href="#notify"><span class="n"></span><span><b>Notifications and the tray</b><span>On Windows · keeping it running</span></span></a>
         <a href="#android"><span class="n"></span><span><b>The Android app, and browsers</b><span>Installing it · using it · iPhones</span></span></a>
@@ -99,7 +100,7 @@
         <figcaption><b>The light appearance:</b> the sun or moon button switches it.</figcaption></figure>
     </div>
   </div>
-  <div class="folio"><span>Instant Share handbook · Version 1.3</span><span class="n"></span></div>
+  <div class="folio"><span>Instant Share handbook · Version 1.4</span><span class="n"></span></div>
 </section>
 
 <!-- =============================================================================================== install and set up -->
@@ -113,7 +114,7 @@
       <p class="lede">One installer, for 64-bit Windows 10 and 11, on every computer. Instant Share installs for everyone on the computer, with its shortcut in the Start menu's <b>SCAFFApps</b> folder. Phones get the Android app.</p>
     </div>
     <ol class="hsteps c4">
-      <li><span><b>Download</b>Instant-Share-Setup-1.3.x.exe from the Releases page, or install it from the SCAFFApps Suite.</span></li>
+      <li><span><b>Download</b>Instant-Share-Setup-1.4.x.exe from the Releases page, or install it from the SCAFFApps Suite.</span></li>
       <li><span><b>Install</b>Windows asks for permission once. It closes an older copy first.</span></li>
       <li><span><b>Your name, once</b>The first SCAFFApps app on a Windows account asks for your name and e-mail.</span></li>
       <li><span><b>One question</b>Is this the computer that keeps the history, or does it connect to one?</span></li>
@@ -194,7 +195,7 @@
     <div class="split">
       <table class="tbl tight">
         <tr><th>Part</th><th>What it does</th></tr>
-        <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with how many other devices are online. Red: it cannot be reached.</td></tr>
+        <tr><td>Dot and status</td><td>Green: connected to the computer that keeps the history, with how many other devices are online. Red: it cannot be reached, and Share says Send later (chapter 07).</td></tr>
         <tr><td>This device</td><td>The name shown next to everything it shares. Click it to change it.</td></tr>
         <tr><td>Pin · sun or moon · gear</td><td>Keep the window on top · dark or light · Settings.</td></tr>
       </table>
@@ -314,13 +315,49 @@
   <div class="folio"><span>Instant Share handbook · The history</span><span class="n"></span></div>
 </section>
 
+<!-- =============================================================================================== writing while away -->
+<section class="page" id="away">
+  <div class="tab" style="--c: #141414; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 10 14"/><path d="M21 3l-6.5 18-4.5-7-7-4.5z"/></svg></i><b>LATER</b></div>
+  <div class="grain"></div>
+  <div class="pad">
+    <div class="hd">
+      <div class="kicker">Chapter 07 · Writing while away</div>
+      <h1>Out of reach? <em>Send it later.</em></h1>
+      <p class="lede">Away from the office network, or OFFICE-PC asleep: write and share as usual. What you share waits on your own device, and goes by itself, in the order you wrote it, the moment the computer that keeps the history answers again.</p>
+    </div>
+    <figure><div class="shot fit"><img src="img/away.png" alt=""></div>
+      <figcaption><b>LAPTOP-1, away from OFFICE-PC:</b> the dot is red, Share says <b>Send later</b>, and two messages wait above the history.</figcaption></figure>
+    <div class="split" style="grid-template-columns: .8fr 1.5fr">
+      <figure><div class="shot fit dark-bg"><img src="img/later.png" alt=""></div>
+        <figcaption><b>Opened while away:</b> the can't-reach page has its own box, <b>Write for later</b>.</figcaption></figure>
+      <div class="stack">
+        <ol class="hsteps">
+          <li><span><b>Write as usual</b>Press <b>Send later</b> (or <kbd>Enter</kbd>). It is kept on this device, with who should see it, under <b>Waiting to send</b>.</span></li>
+          <li><span><b>It goes by itself</b>As soon as OFFICE-PC answers, even with the window closed, and a notification says so. The others see it marked <b>written 09:14</b>: when you wrote it.</span></li>
+          <li><span><b>Changed your mind?</b><b>Edit</b> takes it back into the editor; <b>Delete</b> drops it, before anyone has seen it.</span></li>
+        </ol>
+        <div class="gtk gold">
+          <h3>Phones and browsers</h3>
+          <p class="note-p" style="font-size: 8.3pt">The Android app does the same, also from its can't-reach screen and from Android's Share menu. A browser keeps what waits too, but sends it only while Instant Share's page is open there.</p>
+        </div>
+      </div>
+    </div>
+    <div class="facts c3">
+      <div class="fact"><h3>Never twice</h3><p>Each one carries its own number: if the connection breaks halfway and it is sent again, the history keeps it once.</p></div>
+      <div class="fact"><h3>Refused?</h3><p>Too big, a kind of file it does not take, or the history full: it stays, with why, for <b>Try again</b>, Edit or Delete.</p></div>
+      <div class="fact"><h3>Still writing when it answers</h3><p>The can't-reach page says <b>OFFICE-PC answers again</b> and keeps your text: <b>Share</b> it, or open the history.</p></div>
+    </div>
+  </div>
+  <div class="folio"><span>Instant Share handbook · Writing while away</span><span class="n"></span></div>
+</section>
+
 <!-- =============================================================================================== settings -->
 <section class="page" id="settings">
   <div class="tab" style="--c: #5b2c83; --on: #f3f0ea"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg></i><b>SETTINGS</b></div>
   <div class="grain"></div>
   <div class="pad">
     <div class="hd">
-      <div class="kicker">Chapter 07 · Settings</div>
+      <div class="kicker">Chapter 08 · Settings</div>
       <h1>All in one view. <em>No scrolling.</em></h1>
       <p class="lede">The gear at the top right opens Settings, its parts side by side.</p>
     </div>
@@ -354,7 +391,7 @@
   <div class="grain"></div>
   <div class="pad">
     <div class="hd">
-      <div class="kicker">Chapter 08 · Notifications and the tray</div>
+      <div class="kicker">Chapter 09 · Notifications and the tray</div>
       <h1>Told at once. <em>Always running.</em></h1>
       <p class="lede">When another device shares something with this computer, Windows shows a notification, with a sound, even when the Instant Share window is closed: who shared it, the text or the file's name, and the photo itself for a photo. It stays in the Notification Centre until you clear it.</p>
     </div>
@@ -399,7 +436,7 @@
   <div class="grain"></div>
   <div class="pad">
     <div class="hd">
-      <div class="kicker">Chapter 09 · The Android app, and browsers</div>
+      <div class="kicker">Chapter 10 · The Android app, and browsers</div>
       <h1>On the phone, <em>the same.</em></h1>
       <p class="lede">Instant Share for Android does everything the Windows app does, with Android notifications, and takes shares from any other app.</p>
     </div>
@@ -411,7 +448,7 @@
     </div>
     <div class="split">
       <ol class="hsteps">
-        <li><span><b>Install it</b>Copy Instant-Share-1.3.x.apk to the phone, or download it there from the Releases page (or <b>Get the Android app</b> on the computer's page). Open it, allow installing from that source, then Install.</span></li>
+        <li><span><b>Install it</b>Copy Instant-Share-1.4.x.apk to the phone, or download it there from the Releases page (or <b>Get the Android app</b> on the computer's page). Open it, allow installing from that source, then Install.</span></li>
         <li><span><b>Join</b>Tap the computer that keeps the history, then type a pairing code (chapter 02). Allow notifications and running in the background, once.</span></li>
         <li><span><b>Share from any app</b>Tap Share there on a link, a text, a photo, a document or a voice note, and choose Instant Share: it lands in the editor.</span></li>
       </ol>
@@ -434,7 +471,7 @@
   <div class="grain"></div>
   <div class="pad">
     <div class="hd">
-      <div class="kicker">Chapter 10 · Updates</div>
+      <div class="kicker">Chapter 11 · Updates</div>
       <h1>Always the newest. <em>Never a fuss.</em></h1>
       <p class="lede">Settings &gt; About &gt; Updates says which version this is and whether a newer one is out. The history, settings and "start with Windows" stay as they are.</p>
     </div>
@@ -460,7 +497,7 @@
   <div class="grain"></div>
   <div class="pad">
     <div class="hd">
-      <div class="kicker">Chapter 11 · Privacy and security</div>
+      <div class="kicker">Chapter 12 · Privacy and security</div>
       <h1>Your devices only. <em>Nothing else.</em></h1>
       <p class="lede">What keeps strangers out, and what Instant Share does not do for you.</p>
     </div>
@@ -497,7 +534,7 @@
   <div class="grain"></div>
   <div class="pad">
     <div class="hd">
-      <div class="kicker">Chapter 12 · Shortcuts and troubleshooting</div>
+      <div class="kicker">Chapter 13 · Shortcuts and troubleshooting</div>
       <h1>The keys. <em>The fixes.</em></h1>
     </div>
     <table class="tbl tight">
@@ -514,7 +551,7 @@
       <tr><td>Setup finds no computer</td><td>Instant Share must run on the computer that keeps the history, on the same network. Set that network to <b>Private</b> there (Settings &gt; Network &amp; internet), or type its numbered address. A VPN or a guest Wi-Fi can hide devices from each other.</td></tr>
       <tr><td>It asks for a pairing code</td><td>This device has not joined yet, or was removed: Add a device on a device that has joined, and type the code.</td></tr>
       <tr><td>"This is not the … this computer joined"</td><td>That computer shows another key. If Instant Share was set up again there, join it again; if not, someone may be pretending to be it: do not join.</td></tr>
-      <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Instant Share was quit there. Start it: the window reconnects by itself, and what you typed stays.</td></tr>
+      <tr><td>The dot is red: "Can't reach…"</td><td>The computer that keeps the history is off or asleep, or Instant Share was quit there. Start it: the window reconnects by itself, and what you typed stays. What you share meanwhile waits and goes then (chapter 07).</td></tr>
       <tr><td>No notifications on Windows</td><td>Instant Share must be running (in the tray is enough), Do not disturb off, and Instant Share allowed in Settings &gt; System &gt; Notifications.</td></tr>
       <tr><td>No notifications on the phone</td><td>Allow its notifications, and set its battery use to Unrestricted. The phone must be on the same Wi-Fi.</td></tr>
       <tr><td>"The history … is full (2 GB)"</td><td>Delete old files you shared; Settings &gt; Storage shows what takes the room.</td></tr>

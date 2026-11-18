@@ -151,6 +151,15 @@ final class Net {
         return null;
     }
 
+    /** The computer set up here answers now, as itself (by its name; its key is checked when its page opens). */
+    static boolean reachable(Context c) {
+        SharedPreferences p = prefs(c);
+        String host = p.getString("address", p.getString("host", null));
+        if (host == null) return false;
+        JSONObject h = hello(host, p.getInt("port", PORT), 3000);
+        return h != null && !h.has("old") && h.optString("server").equalsIgnoreCase(hostName(c));
+    }
+
     /** Join the computer set up in the preferences with a pairing code; on success its pin and this phone's key are
      *  kept. Throws IOException with a message for the user. */
     static void pair(Context c, String code) throws Exception {

@@ -64,9 +64,11 @@ public class Listen extends Service {
 
     private void listen() {
         long backoff = 2000;
+        boolean away = true;
         while (running) {
             String base = Net.base(this);
             if (!Net.paired(this) || Net.prefs(this).getBoolean("stopped", false)) { stopSelf(); return; }
+            if (Outbox.sendable(this)) Outbox.sendAll(this);      // what was written while away goes first
             String key = "after@" + base;                          // what was last seen, per computer
             long after = Net.prefs(this).getLong(key, -1);
             HttpURLConnection con = null;
@@ -82,7 +84,9 @@ public class Listen extends Service {
                 }
                 Net.prefs(this).edit().putLong(key, Math.max(after, answer.getLong("newest"))).apply();
                 backoff = 2000;
-            } catch (Exception away) {
+                if (away) { away = false; Outbox.rememberDevices(this); }  // (back) in reach: who to write to while away
+            } catch (Exception gone) {
+                away = true;
                 try { Thread.sleep(backoff); } catch (InterruptedException e) { return; }
                 backoff = Math.min(backoff * 2, 60000);            // computer off or no Wi-Fi: back off, up to a minute
             } finally {
